@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+    <title>BerkAI Game Hub</title>
+    <meta name="description" content="BerkAI Game Hub – Who Am I?, Taboo, Hangman and more party games!" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="hub.css" />
+</head>
+
+<body>
+    <canvas id="particles"></canvas>
+
+    <div class="hub-container">
+        <div class="hub-header">
+            <span class="hub-icon">🎮</span>
+            <h1>BerkAI Game Hub</h1>
+            <p class="hub-tagline">Pick a game and let the fun begin!</p>
+        </div>
+
+        <div class="game-grid">
+            <a href="who.html" class="game-card" id="card-who">
+                <span class="game-emoji">🎭</span>
+                <h2>Who Am I?</h2>
+                <p class="game-desc">A character is assigned to you – ask yes/no questions to guess who!</p>
+                <span class="play-badge">Play →</span>
+            </a>
+
+            <a href="taboo.html" class="game-card" id="card-taboo">
+                <span class="game-emoji">🃏</span>
+                <h2>Taboo</h2>
+                <p class="game-desc">Describe the word without saying the forbidden ones – race against the clock!</p>
+                <span class="play-badge">Play →</span>
+            </a>
+
+            <a href="hangman.html" class="game-card" id="card-hangman">
+                <span class="game-emoji">💀</span>
+                <h2>Hangman</h2>
+                <p class="game-desc">Guess the hidden word letter by letter before the stick figure is complete!</p>
+                <span class="play-badge">Play →</span>
+            </a>
+
+            <a href="bottle.html" class="game-card" id="card-bottle">
+                <span class="game-emoji">🍾</span>
+                <h2>Spin the Bottle</h2>
+                <p class="game-desc">Add players, spin the bottle, and see who it picks!</p>
+                <span class="play-badge">Play →</span>
+            </a>
+
+            <a href="wheel.html" class="game-card" id="card-wheel">
+                <span class="game-emoji">🎡</span>
+                <h2>Wheel of Names</h2>
+                <p class="game-desc">Enter names and let the colorful wheel decide who's next!</p>
+                <span class="play-badge">Play →</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Particle background
+        (function () {
+            const canvas = document.getElementById('particles');
+            const ctx = canvas.getContext('2d');
+            let w, h, pts;
+            function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+            window.addEventListener('resize', resize); resize();
+            const C = ['rgba(168,85,247,.35)', 'rgba(99,102,241,.3)', 'rgba(236,72,153,.25)'];
+            pts = Array.from({ length: 60 }, () => ({
+                x: Math.random() * w, y: Math.random() * h,
+                r: Math.random() * 2.5 + 1,
+                dx: (Math.random() - .5) * .4, dy: (Math.random() - .5) * .4,
+                c: C[Math.floor(Math.random() * C.length)]
+            }));
+            (function draw() {
+                ctx.clearRect(0, 0, w, h);
+                for (const p of pts) {
+                    p.x += p.dx; p.y += p.dy;
+                    if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+                    if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = p.c; ctx.fill();
+                }
+                for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+                    const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < 120) {
+                        ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
+                        ctx.strokeStyle = `rgba(168,85,247,${.12 * (1 - d / 120)})`; ctx.lineWidth = .6; ctx.stroke();
+                    }
+                }
+                requestAnimationFrame(draw);
+            })();
+        })();
+    </script>
+</body>
+
+</html>

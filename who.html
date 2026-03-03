@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎭</text></svg>" />
+    <title>Who Am I? – Digital Edition</title>
+    <meta name="description" content="A fun digital Who Am I? party game featuring iconic Turkish TV characters." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <!-- Particle canvas background -->
+    <canvas id="particles"></canvas>
+
+    <!-- ===== START SCREEN ===== -->
+    <div id="screen-start" class="screen active">
+        <div class="glass-card start-card">
+            <div class="logo-area">
+                <span class="logo-icon">🎭</span>
+                <h1>Who Am I?</h1>
+                <p class="tagline">Iconic characters • One question at a time</p>
+            </div>
+            <button id="btn-play" class="btn-primary pulse" aria-label="Start Game">
+                <span class="btn-text">Play</span>
+                <span class="btn-arrow">→</span>
+            </button>
+
+            <div class="divider"><span>or</span></div>
+
+            <div class="generate-section">
+                <div style="display: flex; gap: .5rem; margin-bottom: .8rem;">
+                    <input id="theme-input" class="theme-input" type="text" placeholder="e.g. Marvel superheroes…"
+                        value="iconic Turkish TV series characters" style="flex: 1;" />
+                    <input id="count-input" class="theme-input" type="number" min="5" max="100" value="50"
+                        style="width: 65px; padding: .6rem .4rem; text-align: center;" title="Number of characters" />
+                </div>
+                <button id="btn-generate" class="btn-accent" aria-label="Generate characters with AI">
+                    <span class="btn-icon">✨</span>
+                    <span class="btn-text">Generate with AI</span>
+                </button>
+                <p id="generate-status" class="generate-status"></p>
+            </div>
+
+            <div class="divider"><span>or play</span></div>
+            <a href="index.html" class="btn-secondary" style="text-decoration:none;">🏠 Main Menu</a>
+        </div>
+    </div>
+
+    <!-- ===== COUNTDOWN SCREEN ===== -->
+    <div id="screen-countdown" class="screen">
+        <div class="glass-card countdown-card">
+            <p class="countdown-label">Get Ready!</p>
+            <div class="countdown-ring">
+                <div id="countdown-number" class="countdown-number">5</div>
+                <svg viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="54" />
+                    <circle id="ring-progress" class="ring-fg" cx="60" cy="60" r="54" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHARACTER SCREEN ===== -->
+    <div id="screen-character" class="screen">
+        <div class="glass-card character-card">
+            <p class="character-subtitle">You are…</p>
+            <h2 id="character-name" class="character-name"></h2>
+            <div class="character-decoration">
+                <span class="sparkle s1">✦</span>
+                <span class="sparkle s2">✦</span>
+                <span class="sparkle s3">✦</span>
+            </div>
+            <button id="btn-replay" class="btn-primary" aria-label="Play Again">
+                <span class="btn-text">Play Again</span>
+                <span class="btn-arrow">→</span>
+            </button>
+            <button id="btn-menu" class="btn-secondary" aria-label="Back to Main Menu">
+                <span class="btn-text">Main Menu</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

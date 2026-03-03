@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎡</text></svg>" />
+    <title>Wheel of Names – BerkAI Game Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="wheel.css" />
+</head>
+
+<body>
+    <canvas id="particles"></canvas>
+
+    <div class="app-layout" id="app">
+        <!-- LEFT: Wheel -->
+        <div class="wheel-side">
+            <div class="wheel-wrapper">
+                <div class="wheel-pointer">▼</div>
+                <canvas id="wheel-canvas" width="420" height="420"></canvas>
+            </div>
+            <h2 class="winner-display" id="winner-display"></h2>
+            <div class="wheel-actions">
+                <button id="btn-spin" class="btn-primary btn-spin" disabled>
+                    <span class="btn-text">Spin!</span>
+                </button>
+                <button id="btn-remove-winner" class="btn-danger" style="display:none;">Remove Winner</button>
+            </div>
+        </div>
+
+        <!-- RIGHT: Names list -->
+        <div class="names-side">
+            <div class="glass-card names-card">
+                <h2 class="names-heading">Names</h2>
+                <div class="names-list-scroll" id="names-list"></div>
+                <div class="add-row">
+                    <input id="name-input" class="theme-input" type="text" placeholder="Add a name…" maxlength="25" />
+                    <button id="btn-add" class="btn-accent btn-add">+</button>
+                </div>
+                <a href="index.html" class="btn-secondary" style="text-decoration:none;margin-top:.6rem;">🏠 Main
+                    Menu</a>
+            </div>
+        </div>
+
+        <script src="wheel.js"></script>
+</body>
+
+</html>

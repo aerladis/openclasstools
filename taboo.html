@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
+    <title>Taboo – Digital Edition</title>
+    <meta name="description" content="A fun digital Taboo party game with AI-generated cards." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="taboo.css" />
+</head>
+
+<body>
+    <canvas id="particles"></canvas>
+
+    <!-- ===== SETUP SCREEN ===== -->
+    <div id="screen-setup" class="screen active">
+        <div class="glass-card setup-card">
+            <div class="logo-area">
+                <span class="logo-icon">🃏</span>
+                <h1>Taboo</h1>
+                <p class="tagline">Describe it without the forbidden words!</p>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="team1-name">Team 1</label>
+                    <input id="team1-name" class="theme-input" type="text" value="Team 🔴" />
+                </div>
+                <div class="form-group">
+                    <label for="team2-name">Team 2</label>
+                    <input id="team2-name" class="theme-input" type="text" value="Team 🔵" />
+                </div>
+                <div class="form-group">
+                    <label for="max-pass">Max Passes</label>
+                    <input id="max-pass" class="theme-input" type="number" value="3" min="0" max="10" />
+                </div>
+                <div class="form-group">
+                    <label for="turn-duration">Turn (sec)</label>
+                    <input id="turn-duration" class="theme-input" type="number" value="60" min="10" max="180"
+                        step="5" />
+                </div>
+            </div>
+
+            <button id="btn-start" class="btn-primary pulse">
+                <span class="btn-text">Start Game</span>
+                <span class="btn-arrow">→</span>
+            </button>
+
+            <div class="divider"><span>or</span></div>
+
+            <div class="generate-section">
+                <input id="card-theme" class="theme-input" type="text"
+                    placeholder="e.g. science, movies, Turkish culture…" value="general knowledge and pop culture" />
+                <button id="btn-generate" class="btn-accent">
+                    <span class="btn-icon">✨</span>
+                    <span class="btn-text">Generate Cards with AI</span>
+                </button>
+                <p id="generate-status" class="generate-status"></p>
+            </div>
+
+            <div class="divider"><span>or play</span></div>
+            <a href="index.html" class="btn-secondary" style="text-decoration:none;">🏠 Main Menu</a>
+        </div>
+    </div>
+
+    <!-- ===== TURN INTRO SCREEN ===== -->
+    <div id="screen-turn-intro" class="screen">
+        <div class="glass-card turn-intro-card">
+            <p class="turn-label">Get Ready!</p>
+            <h2 id="turn-team-name" class="team-heading"></h2>
+            <p class="turn-sub">Your turn is about to begin…</p>
+            <button id="btn-go" class="btn-primary">
+                <span class="btn-text">Go!</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== GAME SCREEN ===== -->
+    <div id="screen-game" class="screen">
+        <div class="game-layout">
+            <!-- Top bar -->
+            <div class="game-top-bar">
+                <div class="team-badge" id="current-team-badge"></div>
+                <div class="timer-display" id="timer-display">60</div>
+                <div class="score-display">
+                    <span id="score-1">0</span> – <span id="score-2">0</span>
+                </div>
+            </div>
+
+            <!-- Timer bar -->
+            <div class="timer-bar-track">
+                <div class="timer-bar-fill" id="timer-bar"></div>
+            </div>
+
+            <!-- Taboo card -->
+            <div class="taboo-card" id="taboo-card">
+                <h2 class="taboo-word" id="taboo-word"></h2>
+                <div class="forbidden-list" id="forbidden-list"></div>
+            </div>
+
+            <!-- Pass counter -->
+            <p class="pass-counter" id="pass-counter"></p>
+
+            <!-- Action buttons -->
+            <div class="action-buttons">
+                <button id="btn-correct" class="btn-action btn-correct">✓ Correct</button>
+                <button id="btn-pass" class="btn-action btn-pass">⟳ Pass</button>
+                <button id="btn-taboo" class="btn-action btn-taboo">✗ Taboo!</button>
+            </div>
+
+            <a href="index.html" class="btn-secondary btn-ingame-menu"
+                style="text-decoration:none;margin-top:.4rem;font-size:.75rem;padding:.4rem 1rem;">🏠 Main Menu</a>
+        </div>
+    </div>
+
+    <!-- ===== TURN END SCREEN ===== -->
+    <div id="screen-turn-end" class="screen">
+        <div class="glass-card turn-end-card">
+            <p class="turn-label">Time's Up!</p>
+            <h2 id="turn-end-team" class="team-heading"></h2>
+            <div class="round-stats">
+                <div class="stat-item stat-correct">
+                    <span class="stat-value" id="stat-correct">0</span>
+                    <span class="stat-label">Correct</span>
+                </div>
+                <div class="stat-item stat-passed">
+                    <span class="stat-value" id="stat-passed">0</span>
+                    <span class="stat-label">Passed</span>
+                </div>
+                <div class="stat-item stat-taboo">
+                    <span class="stat-value" id="stat-taboo">0</span>
+                    <span class="stat-label">Taboo</span>
+                </div>
+            </div>
+            <p class="turn-score-text">Net points: <strong id="turn-points">0</strong></p>
+            <button id="btn-next-turn" class="btn-primary">
+                <span class="btn-text">Next Turn</span>
+                <span class="btn-arrow">→</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== SCOREBOARD SCREEN ===== -->
+    <div id="screen-scoreboard" class="screen">
+        <div class="glass-card scoreboard-card">
+            <span class="logo-icon">🏆</span>
+            <h1 class="winner-heading" id="winner-heading"></h1>
+            <div class="final-scores">
+                <div class="final-team">
+                    <p class="final-team-name" id="final-t1-name"></p>
+                    <p class="final-team-score" id="final-t1-score"></p>
+                </div>
+                <div class="score-vs">vs</div>
+                <div class="final-team">
+                    <p class="final-team-name" id="final-t2-name"></p>
+                    <p class="final-team-score" id="final-t2-score"></p>
+                </div>
+            </div>
+            <div class="scoreboard-actions">
+                <button id="btn-new-game" class="btn-primary">New Game</button>
+                <a href="index.html" class="btn-secondary" style="text-decoration:none;">🏠 Main Menu</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="taboo.js"></script>
+</body>
+
+</html>

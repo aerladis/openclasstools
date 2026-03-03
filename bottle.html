@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍾</text></svg>" />
+    <title>Spin the Bottle – BerkAI Game Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="bottle.css" />
+</head>
+
+<body>
+    <canvas id="particles"></canvas>
+
+    <!-- SETUP -->
+    <div id="screen-setup" class="screen active">
+        <div class="glass-card setup-card">
+            <div class="logo-area">
+                <span class="logo-icon">🍾</span>
+                <h1>Spin the Bottle</h1>
+                <p class="tagline">Add players and spin!</p>
+            </div>
+            <div class="players-input-area">
+                <div class="players-list" id="players-list"></div>
+                <div class="add-row">
+                    <input id="player-input" class="theme-input" type="text" placeholder="Player name…"
+                        maxlength="20" />
+                    <button id="btn-add" class="btn-accent btn-add-player">+</button>
+                </div>
+            </div>
+            <button id="btn-start" class="btn-primary pulse" disabled>
+                <span class="btn-text">Start</span>
+                <span class="btn-arrow">→</span>
+            </button>
+            <div class="divider"><span>or</span></div>
+            <a href="index.html" class="btn-secondary" style="text-decoration:none;">🏠 Main Menu</a>
+        </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="screen-game" class="screen">
+        <div class="game-layout">
+            <div class="wheel-wrapper">
+                <canvas id="bottle-canvas" width="380" height="380"></canvas>
+                <!-- Bottle overlay -->
+                <div class="bottle-overlay" id="bottle-overlay">
+                    <svg viewBox="0 0 50 160" class="bottle-svg" id="bottle-svg">
+                        <defs>
+                            <linearGradient id="bottleGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#c084fc" />
+                                <stop offset="50%" stop-color="#a855f7" />
+                                <stop offset="100%" stop-color="#7c3aed" />
+                            </linearGradient>
+                            <linearGradient id="neckGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#d8b4fe" />
+                                <stop offset="100%" stop-color="#a855f7" />
+                            </linearGradient>
+                            <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="rgba(255,255,255,.45)" />
+                                <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="19" y="0" width="12" height="10" rx="3" fill="#e9d5ff" />
+                        <rect x="18" y="10" width="14" height="30" rx="4" fill="url(#neckGrad)" />
+                        <path d="M12,40 Q8,45 8,55 L8,120 Q8,135 25,135 Q42,135 42,120 L42,55 Q42,45 38,40 Z"
+                            fill="url(#bottleGrad)" />
+                        <path d="M16,45 Q14,50 14,58 L14,115 Q14,125 22,128 L22,46 Z" fill="url(#shine)" opacity=".6" />
+                        <rect x="12" y="75" width="26" height="18" rx="3" fill="rgba(255,255,255,.12)" />
+                        <text x="25" y="88" text-anchor="middle" font-size="8" font-weight="bold"
+                            fill="rgba(255,255,255,.5)" font-family="Outfit,sans-serif">🍾</text>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="prompt-display" id="prompt-display"></h2>
+            <button id="btn-spin" class="btn-primary btn-spin-game">
+                <span class="btn-text">Spin!</span>
+            </button>
+            <a href="index.html" class="btn-secondary btn-ingame-menu"
+                style="text-decoration:none;margin-top:.3rem;font-size:.8rem;padding:.45rem 1.2rem;">🏠 Main Menu</a>
+        </div>
+    </div>
+
+    <script src="bottle.js"></script>
+</body>
+
+</html>
