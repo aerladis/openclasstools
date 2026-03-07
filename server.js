@@ -5,6 +5,8 @@
 
 import 'dotenv/config';
 import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,7 +15,57 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 const PORT = process.env.PORT || 8090;
+
+io.on('connection', (socket) => {
+    console.log('A user connected:', socket.id);
+
+    // Host (smartboard) joins a specific game room
+    socket.on('hostJoin', (gameId) => {
+        socket.join(gameId);
+        console.log(`Host joined game: ${gameId}`);
+    });
+
+    // Admin (phone) joins a specific game room
+    socket.on('adminJoin', (gameId, callback) => {
+        socket.join(gameId);
+        console.log(`Admin joined game: ${gameId}`);
+        if (callback) callback({ success: true, message: `Joined ${gameId}` });
+    });
+
+    // Broadcast host updates to other clients (admin panel) in the SAME room
+    socket.on('hostUpdate', (data) => {
+        if (data.gameId) {
+            socket.to(data.gameId).emit('adminUpdate', data);
+        }
+    });
+
+    // Admin asks Host for the current state (like when a new admin connects)
+    socket.on('requestState', (gameId) => {
+        socket.to(gameId).emit('hostSendState');
+    });
+
+    // Host sends full word list to Admin
+    socket.on('syncWordList', (data) => {
+        if (data.gameId) {
+            socket.to(data.gameId).emit('adminWordListSync', data);
+        }
+    });
+
+    // Admin updates the word list on the host
+    socket.on('updateWordListAdmin', (data) => {
+        if (data.gameId) {
+            socket.to(data.gameId).emit('hostWordListUpdate', data);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
@@ -135,6 +187,6 @@ Return ONLY the words, one per line, no numbering, no extra text, no explanation
     }
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🎮 BerkAI Game Hub running → http://localhost:${PORT}`);
 });

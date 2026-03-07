@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - BerkAI Game Hub</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+    <div class="admin-container">
+        <header>
+            <h1>⚙️ Admin Panel</h1>
+            <p>Live game session observer</p>
+        </header>
+
+        <!-- Login Screen -->
+        <div id="login-card" class="card">
+            <h2>Connect to Game</h2>
+            <p style="margin-bottom: 1rem; color: var(--text-muted);">Enter the 4-digit Game ID displayed on the
+                smartboard.</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="game-id-input" placeholder="e.g. A7B2"
+                    style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text); font-size: 1rem; text-transform: uppercase;"
+                    maxlength="4" />
+                <button id="btn-connect" class="btn-primary" style="padding: 0 1.5rem;">Connect</button>
+            </div>
+            <p id="connect-error" style="color: #ef4444; margin-top: 0.5rem; display: none;"></p>
+        </div>
+
+        <!-- Dashboard Setup -->
+        <div id="dashboard-setup" class="hidden">
+            <div id="status-card" class="card">
+                <h2>Connection Status</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div id="connection-status" class="status-indicator disconnected">Disconnected</div>
+                    <div id="connected-game-id"
+                        style="font-family: monospace; font-size: 1.2rem; font-weight: bold; color: var(--primary);">
+                    </div>
+                </div>
+            </div>
+
+            <div id="game-card" class="card">
+                <h2>Current Game: <span id="game-name">None</span></h2>
+
+                <div id="hangman-data" class="game-data hidden">
+                    <h3>Word: <span id="hangman-word" class="highlight">---</span></h3>
+                    <p>Category: <span id="hangman-category">---</span></p>
+                    <p>Wrong Guesses: <span id="hangman-wrong">0</span> / 6</p>
+                    <div id="hangman-state"></div>
+                </div>
+
+                <div id="taboo-data" class="game-data hidden">
+                    <h3>Current Word: <span id="taboo-word" class="highlight">---</span></h3>
+                    <p>Team: <span id="taboo-team">---</span></p>
+                    <p>Time Left: <span id="taboo-time">0</span>s</p>
+                    <div id="taboo-forbidden"
+                        style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+
+                <div id="whoami-data" class="game-data hidden">
+                    <h3>Current Character: <span id="whoami-character" class="highlight">---</span></h3>
+                    <p>The host is currently showing a character on the screen.</p>
+                </div>
+
+                <div id="waiting-message" class="game-data">
+                    <p>Waiting for a game to start on the smartboard...</p>
+                </div>
+            </div>
+
+            <!-- Word Management Card -->
+            <div id="word-manager-card" class="card hidden">
+                <h2>Word Management</h2>
+                <p style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-muted);">View and edit the full
+                    deck/list of the active game.</p>
+
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <button id="btn-add-word" class="btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">+ Add
+                        New</button>
+                    <button id="btn-save-words" class="btn-accent" style="font-size: 0.9rem; padding: 0.5rem 1rem;">Save
+                        & Sync</button>
+                </div>
+
+                <div id="word-list-container"
+                    style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <!-- Word items generated here -->
+                    <p class="text-muted text-center">Loading list...</p>
+                </div>
+            </div>
+        </div> <!-- End Dashboard -->
+    </div>
+
+    <!-- Socket.IO Client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="admin.js"></script>
+</body>
+
+</html>

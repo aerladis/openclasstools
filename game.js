@@ -2,6 +2,36 @@
    WHO AM I? – Game Logic
    ============================================ */
 
+const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+const socket = typeof io !== 'undefined' ? io() : null;
+
+if (socket) {
+  socket.emit('hostJoin', gameId);
+
+  socket.on('hostSendState', () => {
+    emitGameState();
+    socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
+  });
+
+  socket.on('hostWordListUpdate', (data) => {
+    if (data.characters) {
+      CHARACTERS = data.characters;
+      bag = []; // Reset bag to include new characters
+    }
+  });
+}
+
+function emitGameState() {
+  if (!socket) return;
+  const isShowingChar = document.getElementById('screen-character').classList.contains('active');
+  socket.emit('hostUpdate', {
+    gameId: gameId,
+    game: 'Who Am I',
+    character: isShowingChar ? characterName.textContent : null,
+    active: isShowingChar
+  });
+}
+
 // ---- Characters (loaded dynamically from list.txt) ----
 let CHARACTERS = [];
 
@@ -15,7 +45,9 @@ async function loadCharacters() {
 }
 
 // Load on startup
-loadCharacters();
+loadCharacters().then(() => {
+  if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
+});
 
 // ---- DOM refs ----
 const screenStart = document.getElementById('screen-start');
@@ -33,6 +65,7 @@ const RING_CIRC = 339.292; // 2πr where r = 54
 function showScreen(target) {
   [screenStart, screenCountdown, screenCharacter].forEach(s => s.classList.remove('active'));
   target.classList.add('active');
+  emitGameState();
 }
 
 // ---- Random character (no repeat until all used) ----
@@ -74,6 +107,7 @@ function startCountdown() {
 function revealCharacter() {
   characterName.textContent = pickCharacter();
   showScreen(screenCharacter);
+  emitGameState();
 }
 
 // ---- Events ----
@@ -115,6 +149,7 @@ btnGenerate.addEventListener('click', async () => {
     // Reload the character list from new list.txt
     await loadCharacters();
     bag = []; // reset shuffle bag
+    if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
   } catch (err) {
     generateStatus.textContent = `✗ ${err.message}`;
     generateStatus.className = 'generate-status error';
@@ -122,6 +157,16 @@ btnGenerate.addEventListener('click', async () => {
     btnGenerate.disabled = false;
     btnGenerate.classList.remove('loading');
   }
+});
+
+// ============================================
+// Add Game ID UI
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+  const idDisplay = document.createElement('div');
+  idDisplay.className = 'game-id-badge';
+  idDisplay.textContent = `Game ID: ${gameId}`;
+  document.body.appendChild(idDisplay);
 });
 
 // ============================================

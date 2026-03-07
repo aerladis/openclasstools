@@ -2,6 +2,38 @@
    TABOO – Game Logic
    ============================================ */
 
+const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+const socket = typeof io !== 'undefined' ? io() : null;
+
+if (socket) {
+    socket.emit('hostJoin', gameId);
+
+    socket.on('hostSendState', () => {
+        emitGameState();
+        socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
+    });
+
+    socket.on('hostWordListUpdate', (data) => {
+        if (data.cards) {
+            cards = data.cards;
+            shuffleDeck();
+        }
+    });
+}
+
+function emitGameState() {
+    if (!socket || !state.currentCard) return;
+    socket.emit('hostUpdate', {
+        gameId: gameId,
+        game: 'Taboo',
+        word: state.currentCard.word,
+        forbidden: state.currentCard.forbidden,
+        team: state.teams[state.currentTeam],
+        timeLeft: state.timeLeft,
+        active: state.timerInterval !== null
+    });
+}
+
 // ---- Default cards (~100 Taboo cards) ----
 const DEFAULT_CARDS = [
     { word: "Pizza", forbidden: ["Cheese", "Italian", "Slice", "Dough", "Oven"] },
@@ -185,6 +217,7 @@ function nextCard() {
     if (state.deck.length === 0) shuffleDeck();
     state.currentCard = state.deck.pop();
     renderCard();
+    emitGameState();
 }
 
 function renderCard() {
@@ -256,12 +289,17 @@ function startTurn() {
 
         if (state.timeLeft <= 0) {
             endTurn();
+        } else if (state.timeLeft % 5 === 0) {
+            // Periodically sync time to admin
+            emitGameState();
         }
     }, 1000);
 }
 
 function endTurn() {
     clearInterval(state.timerInterval);
+    state.timerInterval = null;
+    emitGameState(); // Sync that turn ended
     state.scores[state.currentTeam] += state.turnPoints;
     state.turnsPlayed++;
 
@@ -352,6 +390,11 @@ els.btnGenerate.addEventListener('click', async () => {
             shuffleDeck();
             els.generateStatus.textContent = `✓ Generated ${data.cards.length} cards!`;
             els.generateStatus.className = 'generate-status success';
+
+            // Sync new list to admin
+            if (socket) {
+                socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
+            }
         } else {
             throw new Error('No cards returned');
         }
@@ -362,6 +405,18 @@ els.btnGenerate.addEventListener('click', async () => {
         els.btnGenerate.disabled = false;
         els.btnGenerate.classList.remove('loading');
     }
+});
+
+// ============================================
+// Add Game ID UI
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    const idDisplay = document.createElement('div');
+    idDisplay.className = 'game-id-badge';
+    idDisplay.textContent = `Game ID: ${gameId}`;
+    document.body.appendChild(idDisplay);
+
+    if (socket) socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
 });
 
 // ============================================

@@ -2,6 +2,47 @@
    HANGMAN – Game Logic
    ============================================ */
 
+const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+const socket = typeof io !== 'undefined' ? io() : null;
+
+if (socket) {
+    socket.emit('hostJoin', gameId);
+
+    socket.on('hostSendState', () => {
+        // Admin joined, send current state and full word list
+        emitGameState(gameActive ? 'playing' : (gameOverEl.style.display !== 'none' ? 'gameOver' : 'waiting'));
+        socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
+    });
+
+    socket.on('hostWordListUpdate', (data) => {
+        if (data.words) {
+            wordList = data.words;
+            // Optionally clear used words if list changed significantly
+        }
+    });
+}
+
+function emitGameState(status = 'playing', won = false) {
+    if (!socket) return;
+
+    // Format revealed word
+    const stateStr = [...currentWord].map(ch => {
+        if (ch === ' ') return '  '; // Double space for visual separation
+        return guessedLetters.has(ch) ? ch : '_';
+    }).join(' ');
+
+    socket.emit('hostUpdate', {
+        gameId: gameId,
+        game: 'Hangman',
+        status: status,
+        won: won,
+        word: currentWord,
+        category: currentCat,
+        wrongCount: wrongCount,
+        currentState: stateStr
+    });
+}
+
 // ---- Default word list with categories ----
 const DEFAULT_WORDS = [
     { word: "ELEPHANT", cat: "Animals" },
@@ -172,12 +213,20 @@ function handleGuess(letter, btn) {
         // Check win
         const wordLetters = new Set(currentWord.replace(/ /g, '').split(''));
         const allGuessed = [...wordLetters].every(l => guessedLetters.has(l));
-        if (allGuessed) endGame(true);
+        if (allGuessed) {
+            endGame(true);
+        } else {
+            emitGameState('playing');
+        }
     } else {
         btn.classList.add('wrong');
         document.getElementById(BODY_PARTS[wrongCount]).classList.add('visible');
         wrongCount++;
-        if (wrongCount >= MAX_WRONG) endGame(false);
+        if (wrongCount >= MAX_WRONG) {
+            endGame(false);
+        } else {
+            emitGameState('playing');
+        }
     }
 }
 
@@ -206,6 +255,7 @@ function startGame() {
     categoryHint.textContent = currentCat ? `Category: ${currentCat}` : '';
     gameOverEl.style.display = 'none';
     showScreen(screenGame);
+    emitGameState('playing');
 }
 
 // ---- End game ----
@@ -218,6 +268,8 @@ function endGame(won) {
 
     // Disable all keys
     keyboard.querySelectorAll('.key-btn').forEach(b => b.disabled = true);
+
+    emitGameState('gameOver', won);
 
     setTimeout(() => {
         gameOverIcon.textContent = won ? '🎉' : '💀';
@@ -264,6 +316,11 @@ btnGenerate.addEventListener('click', async () => {
             usedWords = [];
             generateStatus.textContent = `✓ Generated ${data.words.length} words!`;
             generateStatus.className = 'generate-status success';
+
+            // Sync new list to admin
+            if (socket) {
+                socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
+            }
         } else {
             throw new Error('No words returned');
         }
@@ -274,6 +331,17 @@ btnGenerate.addEventListener('click', async () => {
         btnGenerate.disabled = false;
         btnGenerate.classList.remove('loading');
     }
+});
+
+// ---- Game ID UI ----
+document.addEventListener('DOMContentLoaded', () => {
+    const idDisplay = document.createElement('div');
+    idDisplay.className = 'game-id-badge';
+    idDisplay.textContent = `Game ID: ${gameId}`;
+    document.body.appendChild(idDisplay);
+
+    // Sync initial word list to admin if already connected
+    if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
 });
 
 // ---- Particle background ----
