@@ -1,0 +1,122 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    /* Prevent text selection and default touch actions */
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+body {
+    background-color: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    max-width: 480px; /* Mobile width constraint */
+    height: 100%;
+    max-height: 800px;
+    background-color: #71c5cf; /* Sky color */
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+/* Background elements or styling if needed */
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Let clicks pass through except on specific buttons */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#score-display {
+    position: absolute;
+    top: 10%;
+    font-size: 3rem;
+    color: white;
+    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+    z-index: 10;
+    display: none; /* Hidden by default, shown during play */
+}
+
+.screen {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    pointer-events: auto; /* Re-enable pointer events for screens */
+    display: none;
+    flex-direction: column;
+    gap: 15px;
+    border: 3px solid #543847;
+}
+
+.screen.active {
+    display: flex;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+h1 {
+    color: #4CAF50;
+    font-size: 2.2rem;
+    text-shadow: 1px 1px 0 #000;
+}
+
+h2 {
+    color: #e74c3c;
+    font-size: 2rem;
+}
+
+p {
+    color: #555;
+    font-size: 1.2rem;
+}
+
+.btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #388E3C;
+    transition: transform 0.1s, box-shadow 0.1s;
+    font-family: inherit;
+    margin-top: 10px;
+}
+
+.btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #388E3C;
+}
+
+.btn:hover {
+    background: #45a049;
+}
