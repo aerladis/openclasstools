@@ -237,10 +237,12 @@ btnPlayAgain.addEventListener('click', () => {
 // ---- AI Generation ----
 const btnGenerate = document.getElementById('btn-generate');
 const wordTheme = document.getElementById('word-theme');
+const wordCount = document.getElementById('word-count');
 const generateStatus = document.getElementById('generate-status');
 
 btnGenerate.addEventListener('click', async () => {
     const theme = wordTheme.value.trim();
+    const count = parseInt(wordCount.value, 10) || 20;
     if (!theme) return;
 
     btnGenerate.disabled = true;
@@ -252,7 +254,7 @@ btnGenerate.addEventListener('click', async () => {
         const res = await fetch('/api/generate-hangman', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme })
+            body: JSON.stringify({ theme, count })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');

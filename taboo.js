@@ -148,6 +148,7 @@ const els = {
     btnNewGame: document.getElementById('btn-new-game'),
     btnGenerate: document.getElementById('btn-generate'),
     cardTheme: document.getElementById('card-theme'),
+    cardCount: document.getElementById('card-count'),
     generateStatus: document.getElementById('generate-status'),
 };
 
@@ -329,6 +330,7 @@ els.btnNewGame.addEventListener('click', () => {
 // ---- AI Generation ----
 els.btnGenerate.addEventListener('click', async () => {
     const theme = els.cardTheme.value.trim();
+    const count = parseInt(els.cardCount.value, 10) || 30;
     if (!theme) return;
 
     els.btnGenerate.disabled = true;
@@ -340,7 +342,7 @@ els.btnGenerate.addEventListener('click', async () => {
         const res = await fetch('/api/generate-taboo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme })
+            body: JSON.stringify({ theme, count })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');

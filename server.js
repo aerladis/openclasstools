@@ -56,7 +56,7 @@ async function callGemini(prompt) {
 app.post('/api/generate', async (req, res) => {
     const { theme = 'iconic Turkish TV series characters', count = 50 } = req.body;
 
-    const prompt = `Generate a list of ${count} well-known ${theme}. 
+    const prompt = `Generate a list of EXACTLY ${count} well-known ${theme}. 
 Return ONLY the character names, one per line, no numbering, no extra text, no explanations.`;
 
     try {
@@ -79,9 +79,9 @@ Return ONLY the character names, one per line, no numbering, no extra text, no e
 
 // ---- POST /api/generate-taboo (Taboo cards) ----
 app.post('/api/generate-taboo', async (req, res) => {
-    const { theme = 'general knowledge and pop culture' } = req.body;
+    const { theme = 'general knowledge and pop culture', count = 30 } = req.body;
 
-    const prompt = `Generate 30 Taboo game cards about "${theme}".
+    const prompt = `Generate EXACTLY ${count} Taboo game cards about "${theme}".
 For each card, provide a main word and exactly 5 forbidden words.
 Return ONLY valid JSON — an array of objects with "word" and "forbidden" keys.
 Example format:
@@ -114,9 +114,9 @@ No markdown, no code fences, no explanation — just the JSON array.`;
 
 // ---- POST /api/generate-hangman (Hangman words) ----
 app.post('/api/generate-hangman', async (req, res) => {
-    const { theme = 'common English words' } = req.body;
+    const { theme = 'common English words', count = 20 } = req.body;
 
-    const prompt = `Generate a list of 20 words for a Hangman game about "${theme}".
+    const prompt = `Generate a list of EXACTLY ${count} words for a Hangman game about "${theme}".
 Each word should be between 4 and 10 letters long.
 Return ONLY the words, one per line, no numbering, no extra text, no explanations.`;
 
