@@ -1,5 +1,5 @@
 /* ============================================
-   ADMIN PANEL LOGIC
+   ADMIN PANEL LOGIC - Compact & Modern
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,212 +8,230 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGameType = null;
     let currentGameId = null;
 
-    // DOM Elements - Login
+    // DOM Elements
     const loginCard = document.getElementById('login-card');
     const gameIdInput = document.getElementById('game-id-input');
     const btnConnect = document.getElementById('btn-connect');
     const connectError = document.getElementById('connect-error');
-
-    // DOM Elements - Dashboard
     const dashboardSetup = document.getElementById('dashboard-setup');
+    const btnDisconnect = document.getElementById('btn-disconnect');
+
+    // Connection bar elements
     const connectionStatus = document.getElementById('connection-status');
+    const connectionText = document.getElementById('connection-text');
     const connectedGameIdEl = document.getElementById('connected-game-id');
     const gameNameEl = document.getElementById('game-name');
-    const waitingMessageEl = document.getElementById('waiting-message');
 
-    // Game specific sections
+    // Game data sections
     const hangmanDataEl = document.getElementById('hangman-data');
     const tabooDataEl = document.getElementById('taboo-data');
     const whoamiDataEl = document.getElementById('whoami-data');
-
-
-    // DOM Elements - Hangman
-    const hangmanWordEl = document.getElementById('hangman-word');
-    const hangmanCategoryEl = document.getElementById('hangman-category');
-    const hangmanWrongEl = document.getElementById('hangman-wrong');
-    const hangmanStateEl = document.getElementById('hangman-state');
-
-    // DOM Elements - Taboo
-    const tabooWordEl = document.getElementById('taboo-word');
-    const tabooTeamEl = document.getElementById('taboo-team');
-    const tabooTimeEl = document.getElementById('taboo-time');
-    const tabooForbiddenEl = document.getElementById('taboo-forbidden');
-
-    // DOM Elements - Who Am I
-    const whoamiCharacterEl = document.getElementById('whoami-character');
-
-    // DOM Elements - Kelime Oyunu
     const kelimeDataEl = document.getElementById('kelime-data');
-    const kelimeQuestionEl = document.getElementById('kelime-question');
-    const kelimeAnswerEl = document.getElementById('kelime-answer');
-    const kelimeStatusEl = document.getElementById('kelime-status');
-    const kelimePotentialEl = document.getElementById('kelime-potential');
-    const kelimeCounterEl = document.getElementById('kelime-counter');
-    const btnKelimeReveal = document.getElementById('btn-kelime-reveal');
-    const btnKelimeTimer = document.getElementById('btn-kelime-timer');
-    const btnKelimeCorrect = document.getElementById('btn-kelime-correct');
-    const btnKelimePass = document.getElementById('btn-kelime-pass');
-    const btnKelimeNext = document.getElementById('btn-kelime-next');
-    const btnKelimePrev = document.getElementById('btn-kelime-prev');
-
-    // DOM Elements - Word Manager
+    const millionaireDataEl = document.getElementById('millionaire-data');
+    const waitingMessageEl = document.getElementById('waiting-message');
     const wordManagerCard = document.getElementById('word-manager-card');
     const wordListContainer = document.getElementById('word-list-container');
-    const btnAddWord = document.getElementById('btn-add-word');
-    const btnSaveWords = document.getElementById('btn-save-words');
 
-    // Connection Logic
-    btnConnect.addEventListener('click', () => {
+    // Connect button
+    btnConnect.addEventListener('click', connectToGame);
+    gameIdInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') connectToGame();
+    });
+
+    function connectToGame() {
         const id = gameIdInput.value.trim().toUpperCase();
         if (id.length !== 4) {
-            connectError.textContent = "Game ID must be 4 characters.";
-            connectError.style.display = 'block';
+            showError('Game ID must be 4 characters');
             return;
         }
 
         socket.emit('adminJoin', id, (response) => {
-            if (response.success) {
+            if (response && response.success) {
                 currentGameId = id;
                 loginCard.classList.add('hidden');
                 dashboardSetup.classList.remove('hidden');
-                connectedGameIdEl.textContent = `ID: ${id}`;
+                connectedGameIdEl.textContent = id;
+                updateConnectionStatus(true);
                 socket.emit('requestState', id);
             } else {
-                connectError.textContent = response?.error || 'Failed to connect to game';
-                connectError.style.display = 'block';
+                showError(response?.error || 'Failed to connect');
             }
         });
-    });
+    }
 
-    // Connection Events
+    // Disconnect button
+    if (btnDisconnect) {
+        btnDisconnect.addEventListener('click', () => {
+            currentGameId = null;
+            loginCard.classList.remove('hidden');
+            dashboardSetup.classList.add('hidden');
+            resetUI();
+        });
+    }
+
+    function showError(msg) {
+        connectError.textContent = msg;
+        connectError.style.display = 'block';
+        setTimeout(() => {
+            connectError.style.display = 'none';
+        }, 3000);
+    }
+
+    function updateConnectionStatus(connected) {
+        if (connected) {
+            connectionStatus.className = 'status-dot connected';
+            connectionText.textContent = 'Connected';
+        } else {
+            connectionStatus.className = 'status-dot disconnected';
+            connectionText.textContent = 'Disconnected';
+            connectedGameIdEl.textContent = '';
+        }
+    }
+
+    // Socket events
     socket.on('connect', () => {
-        connectionStatus.textContent = 'Connected';
-        connectionStatus.className = 'status-indicator connected';
+        if (currentGameId) {
+            socket.emit('adminJoin', currentGameId);
+        }
     });
 
     socket.on('disconnect', () => {
-        connectionStatus.textContent = 'Disconnected';
-        connectionStatus.className = 'status-indicator disconnected';
-        resetUI();
+        updateConnectionStatus(false);
     });
 
-    // Handle Game Updates
+    // Handle game updates
     socket.on('adminUpdate', (data) => {
-        if (!data || !data.game || data.gameId !== currentGameId) return;
-
-        gameNameEl.textContent = data.game;
-        waitingMessageEl.classList.add('hidden');
-
-        // Hide all game data initially
-        hangmanDataEl.classList.add('hidden');
-        tabooDataEl.classList.add('hidden');
-        whoamiDataEl.classList.add('hidden');
-        if (kelimeDataEl) kelimeDataEl.classList.add('hidden');
-
-        if (data.game === 'Hangman') {
-            hangmanDataEl.classList.remove('hidden');
-
-            if (data.status === 'gameOver') {
-                hangmanWordEl.textContent = data.word + (data.won ? ' (Won!)' : ' (Lost)');
-            } else {
-                hangmanWordEl.textContent = data.word;
-            }
-
-            hangmanCategoryEl.textContent = data.category || 'None';
-            hangmanWrongEl.textContent = data.wrongCount || 0;
-            hangmanStateEl.textContent = data.currentState || '';
-
-        } else if (data.game === 'Taboo') {
-            tabooDataEl.classList.remove('hidden');
-
-            tabooWordEl.textContent = data.word || '---';
-            tabooTeamEl.textContent = data.team || '---';
-            tabooTimeEl.textContent = data.timeLeft || 0;
-
-            if (data.forbidden && Array.isArray(data.forbidden)) {
-                tabooForbiddenEl.innerHTML = data.forbidden
-                    .map(w => `<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: bold;">${w}</span>`)
-                    .join('');
-            } else {
-                tabooForbiddenEl.innerHTML = '';
-            }
-
-        } else if (data.game === 'Who Am I') {
-            whoamiDataEl.classList.remove('hidden');
-            whoamiCharacterEl.textContent = data.active && data.character ? data.character : '(Hidden / Choosing)';
-        } else if (data.game === 'Kelime Oyunu') {
-            if (kelimeDataEl) {
-                kelimeDataEl.classList.remove('hidden');
-                kelimeQuestionEl.textContent = data.question || '---';
-                kelimeAnswerEl.textContent = data.currentWord || '---';
-                kelimePotentialEl.textContent = data.potentialScore || 0;
-                
-                // Update counter
-                if (kelimeCounterEl) {
-                    const current = (data.currentIndex || 0) + 1;
-                    const total = data.totalQuestions || 0;
-                    kelimeCounterEl.textContent = `${current} / ${total}`;
-                }
-
-                let timeStr = `${Math.floor(data.timeRemaining / 60)}:${(data.timeRemaining % 60).toString().padStart(2, '0')}`;
-
-                if (data.timeRemaining <= 0) {
-                    kelimeStatusEl.textContent = 'Time Up!';
-                } else if (data.isTimerRunning) {
-                    kelimeStatusEl.textContent = `Running (${timeStr})`;
-                } else {
-                    kelimeStatusEl.textContent = `Paused (${timeStr})`;
-                }
-            }
-        }
-    });
-
-    function resetUI() {
-        gameNameEl.textContent = 'None';
-        hangmanDataEl.classList.add('hidden');
-        tabooDataEl.classList.add('hidden');
-        whoamiDataEl.classList.add('hidden');
-        if (kelimeDataEl) kelimeDataEl.classList.add('hidden');
-        wordManagerCard.classList.add('hidden');
-        waitingMessageEl.classList.remove('hidden');
-        waitingMessageEl.textContent = 'Waiting for a game to start on the smartboard...';
-    }
-
-    // Kelime Oyunu Admin Controls
-    if (btnKelimeReveal) {
-        btnKelimeReveal.addEventListener('click', () => {
-            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'REVEAL_LETTER' });
-        });
-        btnKelimeTimer.addEventListener('click', () => {
-            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'TOGGLE_TIMER' });
-        });
-        btnKelimeCorrect.addEventListener('click', () => {
-            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'CORRECT_ANSWER' });
-        });
-        btnKelimePass.addEventListener('click', () => {
-            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PASS_QUESTION' });
-        });
-        
-        // Navigation controls
-        if (btnKelimeNext) {
-            btnKelimeNext.addEventListener('click', () => {
-                if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'NEXT_QUESTION' });
-            });
-        }
-        if (btnKelimePrev) {
-            btnKelimePrev.addEventListener('click', () => {
-                if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PREV_QUESTION' });
-            });
-        }
-    }
-
-    // ============================================
-    // Word Management Logic
-    // ============================================
-
-    socket.on('adminWordListSync', (data) => {
         if (!data || data.gameId !== currentGameId) return;
 
+        gameNameEl.textContent = data.game || 'Unknown';
+        waitingMessageEl.classList.add('hidden');
+
+        // Hide all game sections
+        hangmanDataEl?.classList.add('hidden');
+        tabooDataEl?.classList.add('hidden');
+        whoamiDataEl?.classList.add('hidden');
+        kelimeDataEl?.classList.add('hidden');
+        millionaireDataEl?.classList.add('hidden');
+
+        // Show appropriate game section
+        if (data.game === 'Hangman') updateHangman(data);
+        else if (data.game === 'Taboo') updateTaboo(data);
+        else if (data.game === 'Who Am I') updateWhoAmI(data);
+        else if (data.game === 'Kelime Oyunu') updateKelime(data);
+        else if (data.game === 'Who Wants to Be a Millionaire') updateMillionaire(data);
+    });
+
+    function updateHangman(data) {
+        hangmanDataEl.classList.remove('hidden');
+        document.getElementById('hangman-word').textContent = data.word || '---';
+        document.getElementById('hangman-category').textContent = data.category || '-';
+        document.getElementById('hangman-wrong').textContent = data.wrongCount || 0;
+        
+        const stateEl = document.getElementById('hangman-state');
+        if (data.currentState) {
+            stateEl.textContent = data.currentState;
+        }
+    }
+
+    function updateTaboo(data) {
+        tabooDataEl.classList.remove('hidden');
+        document.getElementById('taboo-word').textContent = data.word || '---';
+        document.getElementById('taboo-team').textContent = data.team || '-';
+        document.getElementById('taboo-time').textContent = data.timeLeft || 0;
+        
+        const forbiddenEl = document.getElementById('taboo-forbidden');
+        if (data.forbidden && Array.isArray(data.forbidden)) {
+            forbiddenEl.innerHTML = data.forbidden
+                .map(w => `<span class="forbidden-tag">${w}</span>`)
+                .join('');
+        } else {
+            forbiddenEl.innerHTML = '';
+        }
+    }
+
+    function updateWhoAmI(data) {
+        whoamiDataEl.classList.remove('hidden');
+        const char = data.active && data.character ? data.character : '---';
+        document.getElementById('whoami-character').textContent = char;
+    }
+
+    function updateKelime(data) {
+        kelimeDataEl.classList.remove('hidden');
+        document.getElementById('kelime-question').textContent = data.question || '---';
+        document.getElementById('kelime-answer').textContent = data.currentWord || '---';
+        document.getElementById('kelime-potential').textContent = data.potentialScore || 0;
+        
+        const current = (data.currentIndex || 0) + 1;
+        const total = data.totalQuestions || 0;
+        document.getElementById('kelime-counter').textContent = `${current} / ${total}`;
+        
+        let statusText = 'Waiting';
+        if (data.timeRemaining <= 0) statusText = 'Time Up!';
+        else if (data.isTimerRunning) statusText = `Running (${data.timeRemaining}s)`;
+        else if (data.timeRemaining < 240) statusText = `Paused (${data.timeRemaining}s)`;
+        document.getElementById('kelime-status').textContent = statusText;
+    }
+
+    function updateMillionaire(data) {
+        millionaireDataEl.classList.remove('hidden');
+        document.getElementById('millionaire-level').textContent = data.level || '-';
+        document.getElementById('millionaire-prize').textContent = data.prize ? `$${data.prize.toLocaleString()}` : '-';
+        document.getElementById('millionaire-question').textContent = data.question || '---';
+        document.getElementById('millionaire-timer').textContent = `${data.timeRemaining || 0}s`;
+        
+        // Update options
+        const optionsEl = document.getElementById('millionaire-options');
+        if (data.options && Array.isArray(data.options)) {
+            optionsEl.innerHTML = data.options
+                .map((opt, i) => `<div class="option-item">${String.fromCharCode(65+i)}: ${opt}</div>`)
+                .join('');
+        }
+        
+        // Update lifeline button states
+        if (data.lifelines) {
+            document.getElementById('btn-5050').disabled = data.lifelines.fiftyFifty?.used;
+            document.getElementById('btn-phone').disabled = data.lifelines.phoneFriend?.used;
+            document.getElementById('btn-audience').disabled = data.lifelines.askAudience?.used;
+        }
+    }
+
+    // Kelime Oyunu controls
+    document.getElementById('btn-kelime-reveal')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'REVEAL_LETTER' });
+    });
+    document.getElementById('btn-kelime-timer')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'TOGGLE_TIMER' });
+    });
+    document.getElementById('btn-kelime-correct')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'CORRECT_ANSWER' });
+    });
+    document.getElementById('btn-kelime-pass')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PASS_QUESTION' });
+    });
+    document.getElementById('btn-kelime-next')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'NEXT_QUESTION' });
+    });
+    document.getElementById('btn-kelime-prev')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PREV_QUESTION' });
+    });
+
+    // Millionaire controls
+    document.getElementById('btn-5050')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'USE_LIFELINE', lifeline: 'fiftyFifty' });
+    });
+    document.getElementById('btn-phone')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'USE_LIFELINE', lifeline: 'phoneFriend' });
+    });
+    document.getElementById('btn-audience')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'USE_LIFELINE', lifeline: 'askAudience' });
+    });
+    document.getElementById('btn-timer-toggle')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'TOGGLE_TIMER' });
+    });
+
+    // Word Management
+    socket.on('adminWordListSync', (data) => {
+        if (!data || data.gameId !== currentGameId) return;
         wordManagerCard.classList.remove('hidden');
         currentGameType = data.type;
 
@@ -225,6 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentWordList = data.characters;
         } else if (data.type === 'kelime' && data.questions) {
             currentWordList = data.questions;
+        } else if (data.type === 'millionaire' && data.questions) {
+            currentWordList = data.questions;
         }
 
         renderWordList();
@@ -233,64 +253,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderWordList() {
         wordListContainer.innerHTML = '';
         if (currentWordList.length === 0) {
-            wordListContainer.innerHTML = '<p class="text-muted text-center">No words available.</p>';
+            wordListContainer.innerHTML = '<p class="empty">No items</p>';
             return;
         }
 
         currentWordList.forEach((item, index) => {
             const el = document.createElement('div');
             el.className = 'word-item';
-            el.style.cssText = 'background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);';
-
-            let contentHTML = '';
 
             if (currentGameType === 'hangman') {
-                // Hangman: item = { word: string, cat: string } or string
                 const w = typeof item === 'string' ? item : item.word;
                 const c = item.cat || '';
-                contentHTML = `
-                    <input type="text" class="edit-input" data-index="${index}" data-field="word" value="${w}" style="font-weight: bold; width: 100%; margin-bottom: 0.5rem;" />
-                    <input type="text" class="edit-input" data-index="${index}" data-field="cat" value="${c}" placeholder="Category" style="width: 100%; font-size: 0.8rem;" />
+                el.innerHTML = `
+                    <input type="text" value="${w}" data-index="${index}" data-field="word" placeholder="Word">
+                    <input type="text" value="${c}" data-index="${index}" data-field="cat" placeholder="Category">
                 `;
             } else if (currentGameType === 'taboo') {
-                // Taboo: item = { word: string, forbidden: string[] }
-                const fb = item.forbidden.join(', ');
-                contentHTML = `
-                    <input type="text" class="edit-input" data-index="${index}" data-field="word" value="${item.word}" style="font-weight: bold; width: 100%; margin-bottom: 0.5rem; color: var(--primary);" />
-                    <input type="text" class="edit-input" data-index="${index}" data-field="forbidden" value="${fb}" placeholder="Forbidden (comma separated)" style="width: 100%; font-size: 0.8rem; color: #ef4444;" />
+                const fb = item.forbidden?.join(', ') || '';
+                el.innerHTML = `
+                    <input type="text" value="${item.word}" data-index="${index}" data-field="word" placeholder="Word">
+                    <input type="text" value="${fb}" data-index="${index}" data-field="forbidden" placeholder="Forbidden words (comma separated)">
                 `;
             } else if (currentGameType === 'whoami') {
-                // Who Am I: item = string
-                contentHTML = `
-                    <input type="text" class="edit-input" data-index="${index}" data-field="word" value="${item}" style="font-weight: bold; width: 100%;" />
-                `;
-            } else if (currentGameType === 'kelime') {
-                // Kelime: {"question": "...", "answer": "..."}
-                contentHTML = `
-                    <input type="text" class="edit-input" data-index="${index}" data-field="answer" value="${item.answer}" style="font-weight: bold; width: 100%; margin-bottom: 0.5rem; color: var(--accent-1); text-transform: uppercase;" placeholder="Cevap (Örn: ANKARA)" />
-                    <input type="text" class="edit-input" data-index="${index}" data-field="question" value="${item.question}" placeholder="Soru Metni" style="width: 100%; font-size: 0.8rem;" />
+                el.innerHTML = `<input type="text" value="${item}" data-index="${index}" data-field="word">`;
+            } else if (currentGameType === 'kelime' || currentGameType === 'millionaire') {
+                el.innerHTML = `
+                    <input type="text" value="${item.question || ''}" data-index="${index}" data-field="question" placeholder="Question">
+                    <input type="text" value="${item.answer || ''}" data-index="${index}" data-field="answer" placeholder="Answer">
                 `;
             }
 
-            el.innerHTML = `
-                <div style="display: flex; gap: 0.5rem;">
-                    <div style="flex: 1;">${contentHTML}</div>
-                    <button class="btn-remove text-muted" data-index="${index}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 0.5rem; align-self: flex-start;">×</button>
-                </div>
-            `;
             wordListContainer.appendChild(el);
         });
 
-        // Attach listeners to new elements
-        document.querySelectorAll('.edit-input').forEach(input => {
-            input.addEventListener('change', handleEdit);
-        });
-        document.querySelectorAll('.btn-remove').forEach(btn => {
-            btn.addEventListener('click', handleRemove);
+        // Attach edit listeners
+        wordListContainer.querySelectorAll('input').forEach(input => {
+            input.addEventListener('change', handleWordEdit);
         });
     }
 
-    function handleEdit(e) {
+    function handleWordEdit(e) {
         const index = parseInt(e.target.dataset.index);
         const field = e.target.dataset.field;
         const val = e.target.value;
@@ -306,54 +308,51 @@ document.addEventListener('DOMContentLoaded', () => {
             if (field === 'forbidden') currentWordList[index].forbidden = val.split(',').map(s => s.trim()).filter(Boolean);
         } else if (currentGameType === 'whoami') {
             currentWordList[index] = val;
-        } else if (currentGameType === 'kelime') {
-            if (field === 'answer') currentWordList[index].answer = val.toUpperCase().trim();
+        } else if (currentGameType === 'kelime' || currentGameType === 'millionaire') {
             if (field === 'question') currentWordList[index].question = val;
+            if (field === 'answer') currentWordList[index].answer = val.toUpperCase();
         }
     }
 
-    function handleRemove(e) {
-        const index = parseInt(e.currentTarget.dataset.index);
-        currentWordList.splice(index, 1);
-        renderWordList();
-    }
-
-    btnAddWord.addEventListener('click', () => {
+    document.getElementById('btn-add-word')?.addEventListener('click', () => {
         if (currentGameType === 'hangman') {
-            currentWordList.unshift({ word: 'NEW_WORD', cat: 'Category' });
+            currentWordList.unshift({ word: 'NEW', cat: '' });
         } else if (currentGameType === 'taboo') {
-            currentWordList.unshift({ word: 'New Card', forbidden: ['Word 1', 'Word 2', 'Word 3'] });
+            currentWordList.unshift({ word: 'New', forbidden: ['word1', 'word2'] });
         } else if (currentGameType === 'whoami') {
             currentWordList.unshift('New Character');
-        } else if (currentGameType === 'kelime') {
-            currentWordList.unshift({ answer: 'CEVAP', question: 'Yeni Soru' });
+        } else if (currentGameType === 'kelime' || currentGameType === 'millionaire') {
+            currentWordList.unshift({ question: 'New Question?', answer: 'ANSWER' });
         }
         renderWordList();
-
-        // Scroll to top to see newly added word
-        wordListContainer.scrollTop = 0;
     });
 
-    btnSaveWords.addEventListener('click', () => {
-        const btn = btnSaveWords;
-        const originalText = btn.textContent;
-        btn.textContent = "Syncing...";
-        btn.disabled = true;
-
+    document.getElementById('btn-save-words')?.addEventListener('click', () => {
+        const btn = document.getElementById('btn-save-words');
+        btn.textContent = 'Saved!';
+        
         const payload = { gameId: currentGameId, type: currentGameType };
         if (currentGameType === 'hangman') payload.words = currentWordList;
         if (currentGameType === 'taboo') payload.cards = currentWordList;
         if (currentGameType === 'whoami') payload.characters = currentWordList;
         if (currentGameType === 'kelime') payload.questions = currentWordList;
+        if (currentGameType === 'millionaire') payload.questions = currentWordList;
 
         socket.emit('updateWordListAdmin', payload);
-
+        
         setTimeout(() => {
-            btn.textContent = "Saved!";
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }, 1000);
-        }, 500);
+            btn.textContent = 'Save';
+        }, 1000);
     });
+
+    function resetUI() {
+        gameNameEl.textContent = 'None';
+        hangmanDataEl?.classList.add('hidden');
+        tabooDataEl?.classList.add('hidden');
+        whoamiDataEl?.classList.add('hidden');
+        kelimeDataEl?.classList.add('hidden');
+        millionaireDataEl?.classList.add('hidden');
+        wordManagerCard?.classList.add('hidden');
+        waitingMessageEl.classList.remove('hidden');
+    }
 });

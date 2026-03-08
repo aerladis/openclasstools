@@ -959,6 +959,11 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Redirect /admin to /admin.html for convenience
+app.get('/admin', (req, res) => {
+    res.redirect('/admin.html');
+});
+
 // ---- Serve static files (after API routes) ----
 app.use(express.static(__dirname));
 

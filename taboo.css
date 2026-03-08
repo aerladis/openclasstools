@@ -42,12 +42,9 @@ body {
     background: var(--bg-dark);
     color: var(--text-primary);
     min-height: 100dvh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    position: fixed;
-    inset: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
 }
 
 /* ---- Game ID Badge ---- */
@@ -90,7 +87,7 @@ body {
 
 /* ---- Screens ---- */
 .screen {
-    position: absolute;
+    position: fixed;
     inset: 0;
     display: flex;
     align-items: center;
@@ -98,6 +95,8 @@ body {
     z-index: 1;
     opacity: 0;
     visibility: hidden;
+    overflow-y: auto;
+    padding: 1rem;
     transition: opacity .4s ease, visibility .4s ease;
 }
 
@@ -113,13 +112,14 @@ body {
     border-radius: 2rem;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    padding: 2.5rem 2.5rem;
+    padding: 2.5rem;
     text-align: center;
-    max-width: 440px;
+    max-width: 600px;
     width: 92%;
     box-shadow: 0 8px 32px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .08);
     position: relative;
     overflow: hidden;
+    margin: auto;
 }
 
 .glass-card::before {
