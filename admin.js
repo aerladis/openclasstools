@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.game === 'Hangman') updateHangman(data);
         else if (data.game === 'Taboo') updateTaboo(data);
         else if (data.game === 'Who Am I') updateWhoAmI(data);
-        else if (data.game === 'Kelime Oyunu') updateKelime(data);
+        else if (data.game === 'Word Game') updateKelime(data);
         else if (data.game === 'Who Wants to Be a Millionaire') updateMillionaire(data);
     });
 
@@ -195,38 +195,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Kelime Oyunu controls
+    // Word Game controls
+    document.getElementById('btn-kelime-start')?.addEventListener('click', () => {
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'START_GAME' });
+    });
     document.getElementById('btn-kelime-reveal')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'REVEAL_LETTER' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'REVEAL_LETTER' });
     });
     document.getElementById('btn-kelime-timer')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'TOGGLE_TIMER' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'TOGGLE_TIMER' });
     });
     document.getElementById('btn-kelime-correct')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'CORRECT_ANSWER' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'CORRECT_ANSWER' });
     });
     document.getElementById('btn-kelime-pass')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PASS_QUESTION' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'PASS_QUESTION' });
     });
     document.getElementById('btn-kelime-next')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'NEXT_QUESTION' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'NEXT_QUESTION' });
     });
     document.getElementById('btn-kelime-prev')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PREV_QUESTION' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Word Game', action: 'PREV_QUESTION' });
     });
 
     // Millionaire controls
     document.getElementById('btn-5050')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'USE_LIFELINE', lifeline: 'fiftyFifty' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Who Wants to Be a Millionaire', action: 'USE_LIFELINE', lifeline: 'fiftyFifty' });
     });
     document.getElementById('btn-phone')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'USE_LIFELINE', lifeline: 'phoneFriend' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Who Wants to Be a Millionaire', action: 'USE_LIFELINE', lifeline: 'phoneFriend' });
     });
     document.getElementById('btn-audience')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'USE_LIFELINE', lifeline: 'askAudience' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Who Wants to Be a Millionaire', action: 'USE_LIFELINE', lifeline: 'askAudience' });
     });
     document.getElementById('btn-timer-toggle')?.addEventListener('click', () => {
-        socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'TOGGLE_TIMER' });
+        socket.emit('adminUpdateHost', { gameId: currentGameId, game: 'Who Wants to Be a Millionaire', action: 'TOGGLE_TIMER' });
     });
 
     // Word Management

@@ -13,7 +13,7 @@
     <div class="admin-container">
         <!-- Compact Header -->
         <header class="admin-header">
-            <h1>⚙️ Admin Panel</h1>
+            <h1>Admin Panel</h1>
             <div id="connection-bar" class="connection-bar">
                 <span id="connection-status" class="status-dot disconnected"></span>
                 <span id="connection-text">Disconnected</span>
@@ -52,15 +52,9 @@
                         <div id="millionaire-options" class="options-list"></div>
                     </div>
                     <div class="lifeline-controls">
-                        <button id="btn-5050" class="lifeline-btn">
-                            <span class="lifeline-icon">50:50</span>
-                        </button>
-                        <button id="btn-phone" class="lifeline-btn">
-                            <span class="lifeline-icon">📞</span>
-                        </button>
-                        <button id="btn-audience" class="lifeline-btn">
-                            <span class="lifeline-icon">👥</span>
-                        </button>
+                        <button id="btn-5050" class="lifeline-btn">50:50</button>
+                        <button id="btn-phone" class="lifeline-btn">Phone</button>
+                        <button id="btn-audience" class="lifeline-btn">Audience</button>
                     </div>
                     <div class="timer-row">
                         <span id="millionaire-timer">30s</span>
@@ -68,26 +62,29 @@
                     </div>
                 </div>
 
-                <!-- Kelime Oyunu Controls -->
+                <!-- Word Game Controls -->
                 <div id="kelime-data" class="game-data hidden">
+                    <div class="control-grid" style="margin-bottom: 10px;">
+                        <button id="btn-kelime-start" class="btn-success">Start Game</button>
+                    </div>
                     <div class="nav-row">
-                        <button id="btn-kelime-prev" class="btn-icon">◀</button>
+                        <button id="btn-kelime-prev" class="btn-icon">Prev</button>
                         <span id="kelime-counter" class="counter">0 / 0</span>
-                        <button id="btn-kelime-next" class="btn-icon">▶</button>
+                        <button id="btn-kelime-next" class="btn-icon">Next</button>
                     </div>
                     <div class="question-box">
                         <p id="kelime-question" class="question-text">-</p>
                         <p id="kelime-answer" class="answer-text">-</p>
                     </div>
                     <div class="control-grid">
-                        <button id="btn-kelime-reveal" class="btn-accent">📍 Harf Ver</button>
-                        <button id="btn-kelime-timer" class="btn-secondary">⏱️ Süre</button>
-                        <button id="btn-kelime-correct" class="btn-success">✅ Doğru</button>
-                        <button id="btn-kelime-pass" class="btn-danger">⏭️ Pas</button>
+                        <button id="btn-kelime-reveal" class="btn-accent">Reveal Letter</button>
+                        <button id="btn-kelime-timer" class="btn-secondary">Timer</button>
+                        <button id="btn-kelime-correct" class="btn-success">Correct</button>
+                        <button id="btn-kelime-pass" class="btn-danger">Pass</button>
                     </div>
                     <div class="status-row">
                         <span id="kelime-status">Waiting</span>
-                        <span>Puan: <strong id="kelime-potential">0</strong></span>
+                        <span>Score: <strong id="kelime-potential">0</strong></span>
                     </div>
                 </div>
 

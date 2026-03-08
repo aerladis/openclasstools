@@ -115,10 +115,34 @@ if (socket) {
         emitGameState();
     });
 
-    // Admin sends lifeline action
-    socket.on('hostLifelineAction', (data) => {
-        if (data.gameId === gameId && data.action === 'useLifeline') {
-            useLifeline(data.lifeline);
+    // Admin sends commands (unified handler)
+    socket.on('adminUpdate', (data) => {
+        if (data.game !== 'Who Wants to Be a Millionaire') return;
+        
+        switch (data.action) {
+            case 'USE_LIFELINE':
+                if (data.lifeline) {
+                    useLifeline(data.lifeline);
+                }
+                break;
+            case 'TOGGLE_TIMER':
+                toggleTimer();
+                break;
+            case 'START_GAME':
+                if (data.questions && data.questions.length > 0) {
+                    startGame(data.questions);
+                } else {
+                    startGame();
+                }
+                break;
+            case 'NEXT_QUESTION':
+                // For millionaire, next question is handled by answer selection
+                // But admin can force next level
+                if (gameState.gameActive && gameState.currentLevel < 14) {
+                    gameState.currentLevel++;
+                    loadQuestion();
+                }
+                break;
         }
     });
 

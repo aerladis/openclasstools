@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (socket) {
         socket.emit('hostJoin', gameId, (response) => {
             if (response && response.success) {
-                console.log('✅ Kelime Oyunu host connected:', response.gameId);
+                console.log('✅ Word Game host connected:', response.gameId);
             } else {
                 console.error('❌ Failed to join:', response?.error);
             }
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Handle admin actions
         socket.on('adminUpdate', (data) => {
-            if (data.game !== 'Kelime Oyunu') return;
+            if (data.game !== 'Word Game') return;
             handleAdminAction(data);
         });
     }
@@ -136,10 +136,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnGenerateAI) {
         btnGenerateAI.addEventListener('click', async () => {
             const theme = themeInput ? themeInput.value.trim() : '';
+            
+            // Visual feedback
+            btnGenerateAI.disabled = true;
+            btnGenerateAI.innerHTML = '<span class="spinner"></span> Generating...';
+            
             const success = await generateWithAI(theme, 20);
+            
+            btnGenerateAI.disabled = false;
+            btnGenerateAI.innerHTML = '<span class="btn-icon">✨</span> Generate with AI';
+            
             if (success && waitingMsg) {
-                waitingMsg.textContent = '✅ Sorular oluşturuldu! Admin panelinden oyunu başlatın.';
+                waitingMsg.textContent = '✅ Questions generated! Start the game from Admin panel.';
                 waitingMsg.style.color = '#22c55e';
+            } else if (waitingMsg) {
+                waitingMsg.textContent = '❌ Failed to generate. Please try again.';
+                waitingMsg.style.color = '#ef4444';
             }
         });
     }
@@ -149,9 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
             gameState.questions = [...DEFAULT_QUESTIONS];
             gameState.currentIndex = -1;
             if (waitingMsg) {
-                waitingMsg.textContent = '✅ Varsayılan sorular yüklendi! Admin panelinden oyunu başlatın.';
+                waitingMsg.textContent = '✅ Default questions loaded! Start the game from Admin panel.';
                 waitingMsg.style.color = '#22c55e';
             }
+            broadcastState();
             broadcastState();
         });
     }
@@ -164,6 +177,14 @@ function handleAdminAction(data) {
     if (waitingMsg) waitingMsg.style.display = 'none';
 
     switch (data.action) {
+        case 'START_GAME':
+            if (data.questions && data.questions.length > 0) {
+                gameState.questions = data.questions;
+            }
+            if (gameState.questions.length > 0) {
+                loadQuestion(0);
+            }
+            break;
         case 'NEW_QUESTION':
             loadQuestion(data.index || 0);
             break;
@@ -204,7 +225,7 @@ function handleAdminAction(data) {
 // ============================================
 function loadQuestion(index) {
     if (gameState.questions.length === 0) {
-        if (questionText) questionText.textContent = "Soru listesi boş! Admin panelinden soru ekleyin.";
+        if (questionText) questionText.textContent = "Question list is empty! Add questions from Admin panel.";
         return;
     }
 
@@ -372,7 +393,7 @@ function broadcastState() {
 
     socket.emit('hostUpdate', {
         gameId: gameId,
-        game: 'Kelime Oyunu',
+        game: 'Word Game',
         type: 'kelime',
         currentIndex: gameState.currentIndex,
         totalQuestions: gameState.questions.length,
@@ -410,7 +431,7 @@ function initBookUpload() {
 }
 
 async function generateFromBook(data) {
-    console.log('Generating Kelime Oyunu questions from book:', data.topicData.title);
+    console.log('Generating Word Game questions from book:', data.topicData.title);
 
     try {
         const response = await fetch('/api/generate-from-book', {
@@ -431,9 +452,10 @@ async function generateFromBook(data) {
             gameState.currentIndex = -1;
             
             if (waitingMsg) {
-                waitingMsg.textContent = `${result.questions.length} soru yüklendi! Admin panelinden başlatın.`;
+                waitingMsg.textContent = `${result.questions.length} questions loaded! Start the game from Admin panel.`;
                 waitingMsg.style.display = 'block';
             }
+            broadcastState();
 
             broadcastState();
         }
@@ -464,9 +486,10 @@ async function generateWithAI(theme, count = 20) {
             gameState.currentIndex = -1;
             
             if (waitingMsg) {
-                waitingMsg.textContent = `${result.questions.length} soru yüklendi! Admin panelinden başlatın.`;
+                waitingMsg.textContent = `${result.questions.length} questions loaded! Start the game from Admin panel.`;
                 waitingMsg.style.display = 'block';
             }
+            broadcastState();
 
             broadcastState();
             return true;
@@ -481,16 +504,16 @@ async function generateWithAI(theme, count = 20) {
 // Default Questions (Fallback)
 // ============================================
 const DEFAULT_QUESTIONS = [
-    { question: "Türkiye'nin başkenti neresidir?", answer: "ANKARA" },
-    { question: "Dünyanın en büyük okyanusu hangisidir?", answer: "PASIFIK" },
-    { question: "2 + 2 kaç eder?", answer: "DORT" },
-    { question: "Güneş sisteminizdeki en büyük gezegen hangisidir?", answer: "JUPITER" },
-    { question: "Su formülü nedir?", answer: "H2O" },
-    { question: "Dünya üzerindeki en yüksek dağ hangisidir?", answer: "EVEREST" },
-    { question: "Türkiye'nin en kalabalık şehri hangisidir?", answer: "ISTANBUL" },
-    { question: "Yüzde 50'nin kesir gösterimi nedir?", answer: "1/2" },
-    { question: "İnsan vücudundaki en büyük organ hangisidir?", answer: "DERI" },
-    { question: "Türkiye'nin en uzun nehri hangisidir?", answer: "KIZILIRMAK" }
+    { question: "What is the capital of Turkey?", answer: "ANKARA" },
+    { question: "What is the largest ocean on Earth?", answer: "PACIFIC" },
+    { question: "What is 2 + 2?", answer: "FOUR" },
+    { question: "What is the largest planet in our solar system?", answer: "JUPITER" },
+    { question: "What is the chemical formula for water?", answer: "H2O" },
+    { question: "What is the highest mountain on Earth?", answer: "EVEREST" },
+    { question: "What is the most populous city in Turkey?", answer: "ISTANBUL" },
+    { question: "What is the fraction for 50%?", answer: "HALF" },
+    { question: "What is the largest organ in the human body?", answer: "SKIN" },
+    { question: "What is the longest river in Turkey?", answer: "KIZILIRMAK" }
 ];
 
 // Load defaults on startup
