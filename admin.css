@@ -448,6 +448,10 @@ body {
     color: var(--text-secondary, rgba(241,245,249,0.6));
 }
 
+.compact-section-header {
+    margin-bottom: 0.75rem;
+}
+
 .button-group {
     display: flex;
     gap: 0.5rem;
@@ -471,6 +475,45 @@ body {
     text-align: center;
     color: var(--text-secondary, rgba(241,245,249,0.4));
     padding: 2rem;
+}
+
+.upcoming-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.upcoming-item {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.upcoming-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary, rgba(241,245,249,0.6));
+}
+
+.upcoming-number {
+    color: #ffd700;
+    font-weight: 700;
+}
+
+.upcoming-prize {
+    color: #4ade80;
+    font-weight: 700;
+}
+
+.upcoming-text {
+    margin: 0;
+    line-height: 1.45;
+    color: var(--text-primary, #f1f5f9);
+    font-size: 0.92rem;
 }
 
 .word-item {

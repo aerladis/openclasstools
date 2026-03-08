@@ -8,22 +8,22 @@
 // ============================================
 
 let bookUploadComponent = null;
+let notificationTimeout = null;
 
 function initBookUpload() {
     const container = document.getElementById('book-upload-container');
     if (!container) return;
-    
+
     bookUploadComponent = new BookUploadComponent('book-upload-container', {
         gameType: 'millionaire',
         onExtract: (data) => {
-            // Use extracted topic for game generation
             generateFromBook(data);
         },
         onError: (error) => {
             showNotification(error, 'error');
         },
-        onLoading: (isLoading) => {
-            // Handle loading state if needed
+        onLoading: () => {
+            // Reserved for future loading hooks.
         }
     });
 }
@@ -49,7 +49,7 @@ async function generateFromBook(data) {
         }
 
         const result = await response.json();
-        
+
         if (result.success && result.questions && result.questions.length >= 10) {
             startGame(result.questions.slice(0, 15));
         } else {
@@ -57,7 +57,7 @@ async function generateFromBook(data) {
         }
     } catch (err) {
         console.error('Book generation error:', err);
-        alert('Failed to generate from book. Using default questions.');
+        showNotification('Failed to generate from book. Using default questions.', 'error');
         startGame(DEFAULT_QUESTIONS);
     }
 }
@@ -72,8 +72,54 @@ const PRIZE_LADDER = [
     64000, 125000, 250000, 500000, 1000000
 ];
 
-const SAFE_HAVEN_INDICES = [0, 5, 10]; // $100, $1000, $32000
-const QUESTION_TIME = 30; // seconds
+const SAFE_HAVEN_INDICES = [0, 5, 10];
+const QUESTION_TIME = 30;
+
+const DEFAULT_QUESTIONS = [
+    { question: 'What is the capital of France?', options: ['London', 'Berlin', 'Paris', 'Madrid'], correct: 2 },
+    { question: 'How many continents are there on Earth?', options: ['5', '6', '7', '8'], correct: 2 },
+    { question: 'What is the largest planet in our solar system?', options: ['Earth', 'Mars', 'Jupiter', 'Saturn'], correct: 2 },
+    { question: 'In which year did World War II end?', options: ['1943', '1944', '1945', '1946'], correct: 2 },
+    { question: 'What is the chemical symbol for gold?', options: ['Go', 'Gd', 'Au', 'Ag'], correct: 2 },
+    { question: 'Who painted the Mona Lisa?', options: ['Van Gogh', 'Picasso', 'Da Vinci', 'Michelangelo'], correct: 2 },
+    { question: 'What is the smallest country in the world?', options: ['Monaco', 'Vatican City', 'San Marino', 'Liechtenstein'], correct: 1 },
+    { question: 'How many bones are in the adult human body?', options: ['186', '206', '226', '246'], correct: 1 },
+    { question: 'What is the longest river in the world?', options: ['Amazon', 'Nile', 'Yangtze', 'Mississippi'], correct: 1 },
+    { question: 'Who wrote Romeo and Juliet?', options: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'], correct: 1 },
+    { question: 'What is the speed of light?', options: ['299,792 km/s', '199,792 km/s', '399,792 km/s', '499,792 km/s'], correct: 0 },
+    { question: 'What element has the atomic number 1?', options: ['Oxygen', 'Carbon', 'Hydrogen', 'Helium'], correct: 2 },
+    { question: 'Who was the first person to step on the moon?', options: ['Buzz Aldrin', 'Yuri Gagarin', 'Neil Armstrong', 'Michael Collins'], correct: 2 },
+    { question: 'What is the largest ocean on Earth?', options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], correct: 3 },
+    { question: 'In what year was the first iPhone released?', options: ['2005', '2006', '2007', '2008'], correct: 2 }
+];
+
+function cloneQuestion(question) {
+    return {
+        question: question.question,
+        options: [...question.options],
+        correct: question.correct
+    };
+}
+
+function normalizeQuestion(question = {}, fallbackIndex = 0) {
+    const fallbackOptions = ['Option A', 'Option B', 'Option C', 'Option D'];
+    const rawOptions = Array.isArray(question.options) ? question.options : [];
+    const parsedCorrect = Number.parseInt(question.correct, 10);
+
+    return {
+        question: String(question.question ?? '').trim() || `Question ${fallbackIndex + 1}`,
+        options: Array.from(
+            { length: 4 },
+            (_, index) => String(rawOptions[index] ?? fallbackOptions[index]).trim() || fallbackOptions[index]
+        ),
+        correct: Number.isInteger(parsedCorrect) && parsedCorrect >= 0 && parsedCorrect <= 3 ? parsedCorrect : 0
+    };
+}
+
+function normalizeQuestions(questions) {
+    const source = Array.isArray(questions) && questions.length > 0 ? questions : DEFAULT_QUESTIONS;
+    return source.map((question, index) => normalizeQuestion(question, index));
+}
 
 // ============================================
 // Game State
@@ -81,7 +127,7 @@ const QUESTION_TIME = 30; // seconds
 
 let gameState = {
     questions: [],
-    currentLevel: 0, // 0-14
+    currentLevel: 0,
     lifelines: {
         fiftyFifty: { used: false },
         phoneFriend: { used: false },
@@ -100,25 +146,39 @@ let gameState = {
 
 const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
 const socket = typeof io !== 'undefined' ? io() : null;
+let emitTimeout = null;
+
+function syncQuestionList() {
+    if (!socket) return;
+
+    socket.emit('syncWordList', {
+        gameId,
+        type: 'millionaire',
+        questions: gameState.questions.map(cloneQuestion)
+    });
+}
 
 if (socket) {
     socket.emit('hostJoin', gameId, (response) => {
-        if (response && response.success) {
-            console.log('✅ Millionaire host connected:', response.gameId);
+        if (response?.success) {
+            console.log('Millionaire host connected:', response.gameId);
         } else {
-            console.error('❌ Failed to join:', response?.error);
+            console.error('Failed to join:', response?.error);
         }
     });
 
-    // Admin requests current state
     socket.on('hostSendState', () => {
         emitGameState();
+        syncQuestionList();
     });
 
-    // Admin sends commands (unified handler)
     socket.on('adminUpdate', (data) => {
-        if (data.game !== 'Who Wants to Be a Millionaire') return;
-        
+        console.log('Received adminUpdate:', data);
+        if (data.game !== 'Who Wants to Be a Millionaire') {
+            console.log('Ignored - wrong game:', data.game);
+            return;
+        }
+
         switch (data.action) {
             case 'USE_LIFELINE':
                 if (data.lifeline) {
@@ -129,15 +189,9 @@ if (socket) {
                 toggleTimer();
                 break;
             case 'START_GAME':
-                if (data.questions && data.questions.length > 0) {
-                    startGame(data.questions);
-                } else {
-                    startGame();
-                }
+                startGame(data.questions && data.questions.length > 0 ? data.questions : gameState.questions);
                 break;
             case 'NEXT_QUESTION':
-                // For millionaire, next question is handled by answer selection
-                // But admin can force next level
                 if (gameState.gameActive && gameState.currentLevel < 14) {
                     gameState.currentLevel++;
                     loadQuestion();
@@ -146,26 +200,42 @@ if (socket) {
         }
     });
 
+    socket.on('hostWordListUpdate', (data) => {
+        if (!data || data.type !== 'millionaire' || !Array.isArray(data.questions)) {
+            return;
+        }
+
+        gameState.questions = normalizeQuestions(data.questions);
+
+        if (gameState.currentLevel >= gameState.questions.length) {
+            gameState.currentLevel = 0;
+        }
+
+        syncQuestionList();
+
+        if (gameState.gameActive) {
+            loadQuestion();
+        }
+
+        showNotification('Questions updated from admin.', 'success');
+    });
+
     socket.on('disconnect', () => {
-        console.log('🔌 Disconnected from server');
+        console.log('Disconnected from server');
     });
 }
 
-// Debounced emit function to reduce Socket.IO traffic
-let emitTimeout = null;
 function emitGameState() {
     if (!socket || !gameState.gameActive) return;
-    
-    // Clear pending emit
+
     clearTimeout(emitTimeout);
-    
-    // Debounce by 100ms to batch rapid updates
+
     emitTimeout = setTimeout(() => {
         const currentQuestion = gameState.questions[gameState.currentLevel];
         const currentPrize = gameState.currentLevel > 0 ? PRIZE_LADDER[gameState.currentLevel - 1] : 0;
 
         socket.emit('hostUpdate', {
-            gameId: gameId,
+            gameId,
             type: 'millionaire',
             game: 'Who Wants to Be a Millionaire',
             level: gameState.currentLevel + 1,
@@ -175,32 +245,10 @@ function emitGameState() {
             options: currentQuestion?.options,
             lifelines: gameState.lifelines,
             timeRemaining: gameState.timeRemaining,
-            state: gameState.isProcessing ? 'processing' : 'playing'
+            state: gameState.isProcessing ? 'processing' : gameState.timer ? 'playing' : 'paused'
         });
     }, 100);
 }
-
-// ============================================
-// Default Questions (Fallback)
-// ============================================
-
-const DEFAULT_QUESTIONS = [
-    { question: "What is the capital of France?", options: ["London", "Berlin", "Paris", "Madrid"], correct: 2 },
-    { question: "How many continents are there on Earth?", options: ["5", "6", "7", "8"], correct: 2 },
-    { question: "What is the largest planet in our solar system?", options: ["Earth", "Mars", "Jupiter", "Saturn"], correct: 2 },
-    { question: "In which year did World War II end?", options: ["1943", "1944", "1945", "1946"], correct: 2 },
-    { question: "What is the chemical symbol for gold?", options: ["Go", "Gd", "Au", "Ag"], correct: 2 },
-    { question: "Who painted the Mona Lisa?", options: ["Van Gogh", "Picasso", "Da Vinci", "Michelangelo"], correct: 2 },
-    { question: "What is the smallest country in the world?", options: ["Monaco", "Vatican City", "San Marino", "Liechtenstein"], correct: 1 },
-    { question: "How many bones are in the adult human body?", options: ["186", "206", "226", "246"], correct: 1 },
-    { question: "What is the longest river in the world?", options: ["Amazon", "Nile", "Yangtze", "Mississippi"], correct: 1 },
-    { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], correct: 1 },
-    { question: "What is the speed of light?", options: ["299,792 km/s", "199,792 km/s", "399,792 km/s", "499,792 km/s"], correct: 0 },
-    { question: "What element has the atomic number 1?", options: ["Oxygen", "Carbon", "Hydrogen", "Helium"], correct: 2 },
-    { question: "Who was the first person to step on the moon?", options: ["Buzz Aldrin", "Yuri Gagarin", "Neil Armstrong", "Michael Collins"], correct: 2 },
-    { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
-    { question: "In what year was the first iPhone released?", options: ["2005", "2006", "2007", "2008"], correct: 2 }
-];
 
 // ============================================
 // DOM Elements
@@ -253,7 +301,7 @@ const elements = {
 };
 
 // ============================================
-// Screen Management (Optimized)
+// Screen Management
 // ============================================
 
 let currentScreen = null;
@@ -261,16 +309,45 @@ let currentScreen = null;
 function showScreen(screenName) {
     if (currentScreen === screenName) return;
     currentScreen = screenName;
-    
-    // Use requestAnimationFrame for smoother transitions
+
     requestAnimationFrame(() => {
-        // Batch DOM operations
-        const screenList = Object.values(screens);
-        for (const s of screenList) {
-            s.classList.remove('active');
+        for (const screen of Object.values(screens)) {
+            screen.classList.remove('active');
         }
         screens[screenName].classList.add('active');
     });
+}
+
+function showNotification(message, type = 'info') {
+    let notification = document.getElementById('millionaire-notification');
+
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'millionaire-notification';
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.left = '50%';
+        notification.style.transform = 'translateX(-50%)';
+        notification.style.padding = '12px 18px';
+        notification.style.borderRadius = '999px';
+        notification.style.background = 'rgba(15, 23, 42, 0.92)';
+        notification.style.color = '#fff';
+        notification.style.fontWeight = '600';
+        notification.style.zIndex = '9999';
+        notification.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.25)';
+        document.body.appendChild(notification);
+    }
+
+    notification.textContent = message;
+    notification.style.display = 'block';
+    notification.style.border = type === 'error'
+        ? '1px solid rgba(248, 113, 113, 0.8)'
+        : '1px solid rgba(74, 222, 128, 0.8)';
+
+    clearTimeout(notificationTimeout);
+    notificationTimeout = setTimeout(() => {
+        notification.style.display = 'none';
+    }, 2500);
 }
 
 // ============================================
@@ -315,12 +392,10 @@ document.getElementById('btn-confirm').addEventListener('click', () => {
     walkAway();
 });
 
-// Lifeline buttons
 elements.lifelineBtns.fiftyFifty.addEventListener('click', () => useLifeline('fiftyFifty'));
 elements.lifelineBtns.phone.addEventListener('click', () => useLifeline('phoneFriend'));
 elements.lifelineBtns.audience.addEventListener('click', () => useLifeline('askAudience'));
 
-// Answer buttons
 elements.answerBtns.forEach((btn, index) => {
     btn.addEventListener('click', () => selectAnswer(index));
 });
@@ -331,8 +406,8 @@ elements.answerBtns.forEach((btn, index) => {
 
 async function generateQuestions(theme) {
     showScreen('loading');
-    elements.loadingText.textContent = theme 
-        ? `Generating questions about "${theme}"...` 
+    elements.loadingText.textContent = theme
+        ? `Generating questions about "${theme}"...`
         : 'Generating questions...';
 
     try {
@@ -347,7 +422,7 @@ async function generateQuestions(theme) {
         }
 
         const data = await response.json();
-        
+
         if (data.success && data.questions && data.questions.length >= 10) {
             startGame(data.questions.slice(0, 15));
         } else {
@@ -355,44 +430,45 @@ async function generateQuestions(theme) {
         }
     } catch (err) {
         console.error('Generation error:', err);
-        alert('Failed to generate questions. Using default questions instead.');
+        showNotification('Failed to generate questions. Using default questions.', 'error');
         startGame(DEFAULT_QUESTIONS);
     }
 }
 
-function startGame(questions) {
-    gameState.questions = questions;
+function startGame(questions = DEFAULT_QUESTIONS) {
+    gameState.questions = normalizeQuestions(questions);
     gameState.currentLevel = 0;
     gameState.lifelines = {
         fiftyFifty: { used: false },
         phoneFriend: { used: false },
         askAudience: { used: false }
     };
+    gameState.timer = null;
+    gameState.timeRemaining = QUESTION_TIME;
     gameState.gameActive = true;
+    gameState.selectedAnswer = null;
     gameState.isProcessing = false;
 
     createPrizeLadder();
     updateLifelineButtons();
+    syncQuestionList();
     loadQuestion();
     showScreen('game');
-    emitGameState();
 }
 
 function createPrizeLadder() {
     elements.prizeList.innerHTML = '';
-    
-    // Reverse order for display (highest at top)
+
     for (let i = PRIZE_LADDER.length - 1; i >= 0; i--) {
-        const prize = PRIZE_LADDER[i];
         const item = document.createElement('div');
         item.className = 'prize-item';
-        item.textContent = `$${prize.toLocaleString()}`;
+        item.textContent = `$${PRIZE_LADDER[i].toLocaleString()}`;
         item.dataset.index = i;
-        
+
         if (SAFE_HAVEN_INDICES.includes(i)) {
             item.classList.add('safe-haven');
         }
-        
+
         elements.prizeList.appendChild(item);
     }
 }
@@ -400,23 +476,20 @@ function createPrizeLadder() {
 function updatePrizeLadder() {
     const items = elements.prizeList.querySelectorAll('.prize-item');
     const currentLevel = gameState.currentLevel;
-    
-    // Batch class updates for better performance
+
     requestAnimationFrame(() => {
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            const index = parseInt(item.dataset.index);
+        for (const item of items) {
+            const index = Number.parseInt(item.dataset.index, 10);
             const isCurrent = index === currentLevel;
             const isCompleted = index < currentLevel;
-            
-            // Only update if classes need to change
-            if (isCurrent && !item.classList.contains('current')) {
+
+            if (isCurrent) {
                 item.classList.remove('completed');
                 item.classList.add('current');
-            } else if (isCompleted && !item.classList.contains('completed')) {
+            } else if (isCompleted) {
                 item.classList.remove('current');
                 item.classList.add('completed');
-            } else if (!isCurrent && !isCompleted) {
+            } else {
                 item.classList.remove('current', 'completed');
             }
         }
@@ -430,79 +503,93 @@ function loadQuestion() {
         return;
     }
 
-    // Batch DOM updates in a single frame
     requestAnimationFrame(() => {
-        // Reset UI
         elements.questionNumber.textContent = `Question ${gameState.currentLevel + 1} of 15`;
         elements.questionText.textContent = question.question;
-        
-        // Batch answer button updates
+
         for (let i = 0; i < 4; i++) {
             const btn = elements.answerBtns[i];
             btn.className = 'answer-btn';
             btn.disabled = false;
             btn.style.display = 'flex';
-            elements.answerTexts[i].textContent = question.options[i] || '-';
+            elements.answerTexts[i].textContent = question.options[i];
         }
 
-        // Update walk away amount
         const walkAwayAmount = gameState.currentLevel > 0 ? PRIZE_LADDER[gameState.currentLevel - 1] : 0;
         elements.walkAwayAmount.textContent = walkAwayAmount.toLocaleString();
 
         updatePrizeLadder();
     });
 
-    startTimer();
     gameState.selectedAnswer = null;
     gameState.isProcessing = false;
+    startTimer(true);
     emitGameState();
 }
 
-function startTimer() {
+function startTimer(resetTime = false) {
     clearInterval(gameState.timer);
-    gameState.timeRemaining = QUESTION_TIME;
+
+    if (resetTime || !Number.isFinite(gameState.timeRemaining) || gameState.timeRemaining <= 0) {
+        gameState.timeRemaining = QUESTION_TIME;
+    }
+
     updateTimerDisplay();
 
     let lastUpdate = Date.now();
-    
+
     gameState.timer = setInterval(() => {
         const now = Date.now();
-        // Skip if less than 1 second passed (handles tab throttling)
         if (now - lastUpdate < 900) return;
         lastUpdate = now;
-        
+
         gameState.timeRemaining--;
         updateTimerDisplay();
 
         if (gameState.timeRemaining <= 0) {
             clearInterval(gameState.timer);
+            gameState.timer = null;
             timeUp();
         }
     }, 1000);
 }
 
+function toggleTimer() {
+    if (!gameState.gameActive || gameState.isProcessing) {
+        return;
+    }
+
+    if (gameState.timer) {
+        clearInterval(gameState.timer);
+        gameState.timer = null;
+    } else {
+        startTimer(false);
+    }
+
+    emitGameState();
+}
+
 function updateTimerDisplay() {
-    // Only update text content (cheap operation)
     elements.timerDisplay.textContent = gameState.timeRemaining;
-    
-    // Use CSS custom property instead of direct style manipulation for better performance
+
     const progress = gameState.timeRemaining / QUESTION_TIME;
     elements.timerCircle.style.setProperty('--timer-progress', progress);
 
-    // Batch class changes
     const circle = elements.timerCircle;
     const shouldBeDanger = gameState.timeRemaining <= 10;
     const shouldBeWarning = gameState.timeRemaining <= 20 && !shouldBeDanger;
-    
-    if (shouldBeDanger && !circle.classList.contains('danger')) {
+
+    if (shouldBeDanger) {
         circle.classList.remove('warning');
         circle.classList.add('danger');
-    } else if (shouldBeWarning && !circle.classList.contains('warning')) {
+    } else if (shouldBeWarning) {
         circle.classList.remove('danger');
         circle.classList.add('warning');
-    } else if (!shouldBeDanger && !shouldBeWarning) {
+    } else {
         circle.classList.remove('warning', 'danger');
     }
+
+    emitGameState();
 }
 
 function timeUp() {
@@ -512,15 +599,13 @@ function timeUp() {
 
 function selectAnswer(index) {
     if (gameState.isProcessing || !gameState.gameActive) return;
-    
+
     gameState.isProcessing = true;
     clearInterval(gameState.timer);
+    gameState.timer = null;
     gameState.selectedAnswer = index;
-
-    // Highlight selected
     elements.answerBtns[index].classList.add('selected');
 
-    // Simulate suspense
     setTimeout(() => {
         const question = gameState.questions[gameState.currentLevel];
         const isCorrect = index === question.correct;
@@ -528,7 +613,7 @@ function selectAnswer(index) {
         if (isCorrect) {
             elements.answerBtns[index].classList.remove('selected');
             elements.answerBtns[index].classList.add('correct');
-            
+
             setTimeout(() => {
                 gameState.currentLevel++;
                 if (gameState.currentLevel >= 15) {
@@ -541,7 +626,7 @@ function selectAnswer(index) {
             elements.answerBtns[index].classList.remove('selected');
             elements.answerBtns[index].classList.add('wrong');
             elements.answerBtns[question.correct].classList.add('correct');
-            
+
             setTimeout(() => {
                 endGame(false);
             }, 2000);
@@ -554,7 +639,9 @@ function selectAnswer(index) {
 // ============================================
 
 function useLifeline(lifeline) {
-    if (gameState.lifelines[lifeline].used || gameState.isProcessing) return;
+    if (gameState.lifelines[lifeline].used || gameState.isProcessing) {
+        return;
+    }
 
     gameState.lifelines[lifeline].used = true;
     updateLifelineButtons();
@@ -575,21 +662,26 @@ function useLifeline(lifeline) {
 
 function updateLifelineButtons() {
     Object.entries(gameState.lifelines).forEach(([name, data]) => {
-        const btn = elements.lifelineBtns[name === 'fiftyFifty' ? 'fiftyFifty' : name === 'phoneFriend' ? 'phone' : 'audience'];
+        const btn = elements.lifelineBtns[
+            name === 'fiftyFifty' ? 'fiftyFifty' : name === 'phoneFriend' ? 'phone' : 'audience'
+        ];
+
         if (data.used) {
             btn.disabled = true;
             btn.classList.add('used');
+        } else {
+            btn.disabled = false;
+            btn.classList.remove('used');
         }
     });
 }
 
 function useFiftyFifty() {
     const question = gameState.questions[gameState.currentLevel];
-    const correct = question.correct;
-    const wrongAnswers = [0, 1, 2, 3].filter(i => i !== correct);
+    const wrongAnswers = [0, 1, 2, 3].filter((index) => index !== question.correct);
     const toRemove = wrongAnswers.sort(() => Math.random() - 0.5).slice(0, 2);
 
-    toRemove.forEach(index => {
+    toRemove.forEach((index) => {
         elements.answerBtns[index].classList.add('hidden');
     });
 }
@@ -600,23 +692,20 @@ function usePhoneFriend() {
     elements.lifelineTitle.textContent = 'Phone a Friend';
 
     const question = gameState.questions[gameState.currentLevel];
-    const correct = question.correct;
-
-    // Simulate calling
     elements.lifelineContent.innerHTML = '<p>Calling...</p>';
 
     setTimeout(() => {
         const confidence = Math.random();
         let hint;
-        
+
         if (confidence > 0.7) {
-            hint = `I'm pretty sure it's ${question.options[correct]}!`;
+            hint = `I'm pretty sure it's ${question.options[question.correct]}!`;
         } else if (confidence > 0.4) {
-            const wrongOptions = [0, 1, 2, 3].filter(i => i !== correct);
+            const wrongOptions = [0, 1, 2, 3].filter((index) => index !== question.correct);
             const guess = wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
             hint = `I think it might be ${question.options[guess]}, but I'm not sure...`;
         } else {
-            hint = "I have no idea, sorry!";
+            hint = 'I have no idea, sorry!';
         }
 
         elements.lifelineContent.innerHTML = `<p class="phone-hint">"${hint}"</p>`;
@@ -629,18 +718,15 @@ function useAskAudience() {
     elements.lifelineTitle.textContent = 'Ask the Audience';
 
     const question = gameState.questions[gameState.currentLevel];
-    const correct = question.correct;
-
-    // Generate realistic poll results (correct answer usually higher)
-    let percentages = [0, 0, 0, 0];
-    const correctPercent = 40 + Math.floor(Math.random() * 35); // 40-75%
-    percentages[correct] = correctPercent;
+    const percentages = [0, 0, 0, 0];
+    const correctPercent = 40 + Math.floor(Math.random() * 35);
+    percentages[question.correct] = correctPercent;
 
     let remaining = 100 - correctPercent;
-    const wrongIndices = [0, 1, 2, 3].filter(i => i !== correct);
-    
-    wrongIndices.forEach((index, i) => {
-        if (i === wrongIndices.length - 1) {
+    const wrongIndices = [0, 1, 2, 3].filter((index) => index !== question.correct);
+
+    wrongIndices.forEach((index, listIndex) => {
+        if (listIndex === wrongIndices.length - 1) {
             percentages[index] = remaining;
         } else {
             const share = Math.floor(Math.random() * remaining * 0.6);
@@ -649,21 +735,20 @@ function useAskAudience() {
         }
     });
 
-    // Create bar chart
     const labels = ['A', 'B', 'C', 'D'];
-    let chartHTML = '<div class="audience-chart">';
-    
-    percentages.forEach((pct, i) => {
-        chartHTML += `
+    let chartHtml = '<div class="audience-chart">';
+
+    percentages.forEach((pct, index) => {
+        chartHtml += `
             <div class="audience-bar">
                 <div class="bar-fill" style="height: ${pct * 1.2}px">${pct}%</div>
-                <div class="bar-label">${labels[i]}</div>
+                <div class="bar-label">${labels[index]}</div>
             </div>
         `;
     });
-    
-    chartHTML += '</div>';
-    elements.lifelineContent.innerHTML = chartHTML;
+
+    chartHtml += '</div>';
+    elements.lifelineContent.innerHTML = chartHtml;
 }
 
 // ============================================
@@ -672,16 +757,17 @@ function useAskAudience() {
 
 function showWalkAwayConfirm() {
     const currentPrize = gameState.currentLevel > 0 ? PRIZE_LADDER[gameState.currentLevel - 1] : 0;
-    
+
     document.getElementById('confirm-title').textContent = 'Walk Away?';
-    document.getElementById('confirm-message').textContent = 
+    document.getElementById('confirm-message').textContent =
         `You'll take home $${currentPrize.toLocaleString()}. Are you sure?`;
-    
+
     showScreen('confirm');
 }
 
 function walkAway() {
     clearInterval(gameState.timer);
+    gameState.timer = null;
     const currentPrize = gameState.currentLevel > 0 ? PRIZE_LADDER[gameState.currentLevel - 1] : 0;
     endGame(false, 'walkAway', currentPrize);
 }
@@ -689,8 +775,13 @@ function walkAway() {
 function endGame(won, reason = '', walkAwayAmount = null) {
     gameState.gameActive = false;
     clearInterval(gameState.timer);
+    gameState.timer = null;
 
-    let amount, title, message, icon, details;
+    let amount;
+    let title;
+    let message;
+    let icon;
+    let details;
 
     if (won) {
         amount = 1000000;
@@ -705,18 +796,18 @@ function endGame(won, reason = '', walkAwayAmount = null) {
         icon = '🏃';
         details = `Smart move! You secured $${amount.toLocaleString()}.`;
     } else {
-        // Calculate safe haven
         let safeHaven = 0;
         for (const index of SAFE_HAVEN_INDICES) {
             if (gameState.currentLevel > index) {
                 safeHaven = PRIZE_LADDER[index];
             }
         }
+
         amount = safeHaven;
         title = '❌ Game Over';
         message = reason || 'Wrong answer!';
         icon = '❌';
-        details = safeHaven > 0 
+        details = safeHaven > 0
             ? `But you kept $${safeHaven.toLocaleString()} from your safe haven!`
             : 'Better luck next time!';
     }
@@ -731,19 +822,19 @@ function endGame(won, reason = '', walkAwayAmount = null) {
 
     if (socket) {
         socket.emit('hostUpdate', {
-            gameId: gameId,
+            gameId,
             type: 'millionaire',
             game: 'Who Wants to Be a Millionaire',
             state: 'finished',
             finalAmount: amount,
-            won: won
+            won
         });
     }
 }
 
 function resetGame() {
     gameState = {
-        questions: [],
+        questions: gameState.questions.map(cloneQuestion),
         currentLevel: 0,
         lifelines: {
             fiftyFifty: { used: false },
@@ -757,7 +848,7 @@ function resetGame() {
         isProcessing: false
     };
 
-    Object.values(elements.lifelineBtns).forEach(btn => {
+    Object.values(elements.lifelineBtns).forEach((btn) => {
         btn.disabled = false;
         btn.classList.remove('used');
     });
@@ -770,13 +861,14 @@ function resetGame() {
 (function initParticles() {
     const canvas = document.getElementById('particles');
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
-    let w, h, particles;
+    let w;
+    let h;
+    let particles;
     let animationId;
     let isVisible = true;
 
-    // Throttled resize handler
     let resizeTimeout;
     function resize() {
         clearTimeout(resizeTimeout);
@@ -789,18 +881,16 @@ function resetGame() {
     window.addEventListener('resize', resize, { passive: true });
     resize();
 
-    // Reduced particle count for better performance (30 instead of 60)
-    const C = ['rgba(168,85,247,.35)', 'rgba(99,102,241,.3)', 'rgba(236,72,153,.25)'];
+    const colors = ['rgba(168,85,247,.35)', 'rgba(99,102,241,.3)', 'rgba(236,72,153,.25)'];
     particles = Array.from({ length: 30 }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         r: Math.random() * 2 + 1,
-        dx: (Math.random() - .5) * .3,
-        dy: (Math.random() - .5) * .3,
-        c: C[Math.floor(Math.random() * C.length)]
+        dx: (Math.random() - 0.5) * 0.3,
+        dy: (Math.random() - 0.5) * 0.3,
+        c: colors[Math.floor(Math.random() * colors.length)]
     }));
 
-    // Use visibility API to pause when tab is hidden
     document.addEventListener('visibilitychange', () => {
         isVisible = document.visibilityState === 'visible';
         if (isVisible && !animationId) {
@@ -815,7 +905,6 @@ function resetGame() {
             return;
         }
 
-        // Render every 2nd frame for 30fps (smoother than 60fps but less CPU)
         frameCount++;
         if (frameCount % 2 !== 0) {
             animationId = requestAnimationFrame(draw);
@@ -823,26 +912,26 @@ function resetGame() {
         }
 
         ctx.clearRect(0, 0, w, h);
-        
-        // Batch draw operations
         ctx.save();
-        for (const p of particles) {
-            p.x += p.dx;
-            p.y += p.dy;
-            if (p.x < 0) p.x = w;
-            if (p.x > w) p.x = 0;
-            if (p.y < 0) p.y = h;
-            if (p.y > h) p.y = 0;
+
+        for (const particle of particles) {
+            particle.x += particle.dx;
+            particle.y += particle.dy;
+            if (particle.x < 0) particle.x = w;
+            if (particle.x > w) particle.x = 0;
+            if (particle.y < 0) particle.y = h;
+            if (particle.y > h) particle.y = 0;
 
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = p.c;
+            ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
+            ctx.fillStyle = particle.c;
             ctx.fill();
         }
+
         ctx.restore();
-        
         animationId = requestAnimationFrame(draw);
     }
+
     draw();
 })();
 
@@ -855,7 +944,5 @@ document.addEventListener('DOMContentLoaded', () => {
     idDisplay.className = 'game-id-badge';
     idDisplay.textContent = `Game ID: ${gameId}`;
     document.body.appendChild(idDisplay);
-    
-    // Initialize book upload component
     initBookUpload();
 });

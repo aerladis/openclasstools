@@ -4,9 +4,16 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const socket = io();
+    const MILLIONAIRE_PRIZES = [
+        100, 200, 300, 500, 1000,
+        2000, 4000, 8000, 16000, 32000,
+        64000, 125000, 250000, 500000, 1000000
+    ];
+
     let currentWordList = [];
     let currentGameType = null;
     let currentGameId = null;
+    let currentMillionaireLevel = 0;
 
     // DOM Elements
     const loginCard = document.getElementById('login-card');
@@ -28,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const whoamiDataEl = document.getElementById('whoami-data');
     const kelimeDataEl = document.getElementById('kelime-data');
     const millionaireDataEl = document.getElementById('millionaire-data');
+    const millionaireUpcomingEl = document.getElementById('millionaire-upcoming');
     const waitingMessageEl = document.getElementById('waiting-message');
     const wordManagerCard = document.getElementById('word-manager-card');
     const wordListContainer = document.getElementById('word-list-container');
@@ -86,6 +94,57 @@ document.addEventListener('DOMContentLoaded', () => {
             connectionText.textContent = 'Disconnected';
             connectedGameIdEl.textContent = '';
         }
+    }
+
+    function escapeInputValue(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    function normalizeMillionaireQuestion(item = {}) {
+        const rawOptions = Array.isArray(item.options) ? item.options : [];
+        const options = Array.from({ length: 4 }, (_, index) => String(rawOptions[index] ?? '').trim());
+        const parsedCorrect = Number.parseInt(item.correct, 10);
+
+        return {
+            question: String(item.question ?? '').trim(),
+            options,
+            correct: Number.isInteger(parsedCorrect) && parsedCorrect >= 0 && parsedCorrect <= 3 ? parsedCorrect : 0
+        };
+    }
+
+    function renderMillionaireUpcoming() {
+        if (!millionaireUpcomingEl) return;
+
+        if (currentGameType !== 'millionaire' || currentWordList.length === 0) {
+            millionaireUpcomingEl.innerHTML = '<p class="empty">Waiting for synced questions...</p>';
+            return;
+        }
+
+        const startIndex = Math.max(0, currentMillionaireLevel + 1);
+        const upcomingQuestions = currentWordList.slice(startIndex, startIndex + 5);
+
+        if (upcomingQuestions.length === 0) {
+            millionaireUpcomingEl.innerHTML = '<p class="empty">No more upcoming questions.</p>';
+            return;
+        }
+
+        millionaireUpcomingEl.innerHTML = upcomingQuestions.map((question, offset) => {
+            const levelIndex = startIndex + offset;
+            const prize = MILLIONAIRE_PRIZES[levelIndex];
+            return `
+                <div class="upcoming-item">
+                    <div class="upcoming-meta">
+                        <span class="upcoming-number">Q${levelIndex + 1}</span>
+                        <span class="upcoming-prize">$${prize.toLocaleString()}</span>
+                    </div>
+                    <p class="upcoming-text">${escapeInputValue(question.question)}</p>
+                </div>
+            `;
+        }).join('');
     }
 
     // Socket events
@@ -174,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMillionaire(data) {
         millionaireDataEl.classList.remove('hidden');
+        currentMillionaireLevel = Math.max(0, (data.level || 1) - 1);
         document.getElementById('millionaire-level').textContent = data.level || '-';
         document.getElementById('millionaire-prize').textContent = data.prize ? `$${data.prize.toLocaleString()}` : '-';
         document.getElementById('millionaire-question').textContent = data.question || '---';
@@ -193,6 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-phone').disabled = data.lifelines.phoneFriend?.used;
             document.getElementById('btn-audience').disabled = data.lifelines.askAudience?.used;
         }
+
+        renderMillionaireUpcoming();
     }
 
     // Word Game controls
@@ -247,7 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (data.type === 'kelime' && data.questions) {
             currentWordList = data.questions;
         } else if (data.type === 'millionaire' && data.questions) {
-            currentWordList = data.questions;
+            currentWordList = data.questions.map(normalizeMillionaireQuestion);
+            renderMillionaireUpcoming();
         }
 
         renderWordList();
@@ -279,10 +342,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             } else if (currentGameType === 'whoami') {
                 el.innerHTML = `<input type="text" value="${item}" data-index="${index}" data-field="word">`;
-            } else if (currentGameType === 'kelime' || currentGameType === 'millionaire') {
+            } else if (currentGameType === 'kelime') {
                 el.innerHTML = `
-                    <input type="text" value="${item.question || ''}" data-index="${index}" data-field="question" placeholder="Question">
-                    <input type="text" value="${item.answer || ''}" data-index="${index}" data-field="answer" placeholder="Answer">
+                    <input type="text" value="${escapeInputValue(item.question || '')}" data-index="${index}" data-field="question" placeholder="Question">
+                    <input type="text" value="${escapeInputValue(item.answer || '')}" data-index="${index}" data-field="answer" placeholder="Answer">
+                `;
+            } else if (currentGameType === 'millionaire') {
+                const question = normalizeMillionaireQuestion(item);
+                el.innerHTML = `
+                    <input type="text" value="${escapeInputValue(question.question)}" data-index="${index}" data-field="question" placeholder="Question">
+                    <input type="text" value="${escapeInputValue(question.options.join(' | '))}" data-index="${index}" data-field="options" placeholder="Option A | Option B | Option C | Option D">
+                    <input type="number" value="${question.correct}" data-index="${index}" data-field="correct" min="0" max="3" placeholder="Correct (0-3)">
                 `;
             }
 
@@ -311,9 +381,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (field === 'forbidden') currentWordList[index].forbidden = val.split(',').map(s => s.trim()).filter(Boolean);
         } else if (currentGameType === 'whoami') {
             currentWordList[index] = val;
-        } else if (currentGameType === 'kelime' || currentGameType === 'millionaire') {
+        } else if (currentGameType === 'kelime') {
             if (field === 'question') currentWordList[index].question = val;
             if (field === 'answer') currentWordList[index].answer = val.toUpperCase();
+        } else if (currentGameType === 'millionaire') {
+            const currentQuestion = normalizeMillionaireQuestion(currentWordList[index]);
+            if (field === 'question') currentQuestion.question = val;
+            if (field === 'options') {
+                const parsedOptions = val.split('|').map(option => option.trim());
+                currentQuestion.options = Array.from({ length: 4 }, (_, optionIndex) => parsedOptions[optionIndex] ?? '');
+            }
+            if (field === 'correct') {
+                const parsedCorrect = Number.parseInt(val, 10);
+                currentQuestion.correct = Number.isInteger(parsedCorrect) && parsedCorrect >= 0 && parsedCorrect <= 3
+                    ? parsedCorrect
+                    : 0;
+            }
+            currentWordList[index] = currentQuestion;
         }
     }
 
@@ -324,8 +408,14 @@ document.addEventListener('DOMContentLoaded', () => {
             currentWordList.unshift({ word: 'New', forbidden: ['word1', 'word2'] });
         } else if (currentGameType === 'whoami') {
             currentWordList.unshift('New Character');
-        } else if (currentGameType === 'kelime' || currentGameType === 'millionaire') {
+        } else if (currentGameType === 'kelime') {
             currentWordList.unshift({ question: 'New Question?', answer: 'ANSWER' });
+        } else if (currentGameType === 'millionaire') {
+            currentWordList.unshift({
+                question: 'New Question?',
+                options: ['Option A', 'Option B', 'Option C', 'Option D'],
+                correct: 0
+            });
         }
         renderWordList();
     });
@@ -339,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentGameType === 'taboo') payload.cards = currentWordList;
         if (currentGameType === 'whoami') payload.characters = currentWordList;
         if (currentGameType === 'kelime') payload.questions = currentWordList;
-        if (currentGameType === 'millionaire') payload.questions = currentWordList;
+        if (currentGameType === 'millionaire') payload.questions = currentWordList.map(normalizeMillionaireQuestion);
 
         socket.emit('updateWordListAdmin', payload);
         
@@ -350,6 +440,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetUI() {
         gameNameEl.textContent = 'None';
+        currentGameType = null;
+        currentWordList = [];
+        currentMillionaireLevel = 0;
         hangmanDataEl?.classList.add('hidden');
         tabooDataEl?.classList.add('hidden');
         whoamiDataEl?.classList.add('hidden');
@@ -357,5 +450,6 @@ document.addEventListener('DOMContentLoaded', () => {
         millionaireDataEl?.classList.add('hidden');
         wordManagerCard?.classList.add('hidden');
         waitingMessageEl.classList.remove('hidden');
+        renderMillionaireUpcoming();
     }
 });

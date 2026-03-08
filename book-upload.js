@@ -10,10 +10,11 @@ class BookUploadComponent {
         this.onExtract = options.onExtract || (() => {});
         this.onError = options.onError || (() => {});
         this.onLoading = options.onLoading || (() => {});
-        
+
+        this.selectedFiles = [];
         this.extractedContent = null;
         this.topicData = null;
-        
+
         this.render();
         this.attachEvents();
     }
@@ -26,25 +27,25 @@ class BookUploadComponent {
                     <h4>Upload Book Pages</h4>
                     <p class="upload-hint">Take photos of textbook pages or upload screenshots</p>
                 </div>
-                
+
                 <div class="upload-dropzone" id="dropzone-${this.gameType}">
-                    <input type="file" id="file-input-${this.gameType}" 
-                           accept="image/*" multiple 
+                    <input type="file" id="file-input-${this.gameType}"
+                           accept="image/*,application/pdf" multiple
                            style="display: none;">
                     <div class="dropzone-content">
                         <span class="dropzone-icon">📷</span>
-                        <p>Drag & drop images here or <span class="browse-link">browse</span></p>
-                        <span class="file-types">Supports: JPG, PNG, WEBP (max 10MB)</span>
+                        <p>Drag & drop files here or <span class="browse-link">browse</span></p>
+                        <span class="file-types">Supports: JPG, PNG, WEBP, PDF (max 10MB)</span>
                     </div>
                 </div>
-                
+
                 <div class="upload-preview" id="preview-${this.gameType}"></div>
-                
+
                 <button class="btn-upload-extract" id="btn-extract-${this.gameType}" disabled>
                     <span class="btn-icon">✨</span>
                     Extract Topics with AI
                 </button>
-                
+
                 <div class="extracted-topics" id="topics-${this.gameType}" style="display: none;">
                     <h5>📖 Extracted Topics</h5>
                     <div class="topic-card">
@@ -68,20 +69,17 @@ class BookUploadComponent {
         const extractBtn = this.container.querySelector(`#btn-extract-${this.gameType}`);
         const useTopicBtn = this.container.querySelector(`#btn-use-topic-${this.gameType}`);
 
-        // Click to browse
         browseLink.addEventListener('click', () => fileInput.click());
-        dropzone.addEventListener('click', (e) => {
-            if (e.target === dropzone || e.target.closest('.dropzone-content')) {
+        dropzone.addEventListener('click', (event) => {
+            if (event.target === dropzone || event.target.closest('.dropzone-content')) {
                 fileInput.click();
             }
         });
 
-        // File selection
-        fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+        fileInput.addEventListener('change', (event) => this.handleFiles(event.target.files));
 
-        // Drag & drop (passive where possible for better performance)
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
+        dropzone.addEventListener('dragover', (event) => {
+            event.preventDefault();
             dropzone.classList.add('dragover');
         }, { passive: false });
 
@@ -89,16 +87,14 @@ class BookUploadComponent {
             dropzone.classList.remove('dragover');
         }, { passive: true });
 
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
+        dropzone.addEventListener('drop', (event) => {
+            event.preventDefault();
             dropzone.classList.remove('dragover');
-            this.handleFiles(e.dataTransfer.files);
+            this.handleFiles(event.dataTransfer.files);
         }, { passive: false });
 
-        // Extract button
         extractBtn.addEventListener('click', () => this.extractTopics());
 
-        // Use topic button
         useTopicBtn.addEventListener('click', () => {
             if (this.topicData) {
                 this.onExtract({
@@ -110,34 +106,46 @@ class BookUploadComponent {
     }
 
     handleFiles(files) {
-        const validFiles = Array.from(files).filter(f => 
-            ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(f.type)
+        const validFiles = Array.from(files).filter((file) =>
+            ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'application/pdf'].includes(file.type)
         );
 
         if (validFiles.length === 0) {
-            this.onError('Please select valid image files (JPG, PNG, WEBP)');
+            this.onError('Please select valid files (JPG, PNG, WEBP, PDF)');
             return;
         }
 
-        this.selectedFiles = validFiles.slice(0, 5); // Max 5 files
+        this.selectedFiles = validFiles.slice(0, 5);
         this.showPreview();
+    }
+
+    renderPreviewContent(file, index) {
+        if (file.type === 'application/pdf') {
+            return `
+                <div class="preview-pdf" aria-label="PDF preview ${index + 1}">
+                    <strong>PDF</strong>
+                    <span>${file.name}</span>
+                </div>
+            `;
+        }
+
+        return `<img src="${URL.createObjectURL(file)}" alt="Preview ${index + 1}">`;
     }
 
     showPreview() {
         const preview = this.container.querySelector(`#preview-${this.gameType}`);
         const extractBtn = this.container.querySelector(`#btn-extract-${this.gameType}`);
-        
-        preview.innerHTML = this.selectedFiles.map((file, i) => `
+
+        preview.innerHTML = this.selectedFiles.map((file, index) => `
             <div class="preview-item">
-                <img src="${URL.createObjectURL(file)}" alt="Preview ${i + 1}">
-                <button class="remove-file" data-index="${i}">×</button>
+                ${this.renderPreviewContent(file, index)}
+                <button class="remove-file" data-index="${index}">x</button>
             </div>
         `).join('');
 
-        // Remove file handlers
-        preview.querySelectorAll('.remove-file').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
+        preview.querySelectorAll('.remove-file').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                const index = Number.parseInt(event.target.dataset.index, 10);
                 this.selectedFiles.splice(index, 1);
                 this.showPreview();
             });
@@ -147,7 +155,7 @@ class BookUploadComponent {
     }
 
     async extractTopics() {
-        if (!this.selectedFiles || this.selectedFiles.length === 0) return;
+        if (this.selectedFiles.length === 0) return;
 
         this.onLoading(true);
         const extractBtn = this.container.querySelector(`#btn-extract-${this.gameType}`);
@@ -156,7 +164,7 @@ class BookUploadComponent {
 
         try {
             const formData = new FormData();
-            this.selectedFiles.forEach(file => {
+            this.selectedFiles.forEach((file) => {
                 formData.append('images', file);
             });
             formData.append('gameType', this.gameType);
@@ -167,8 +175,16 @@ class BookUploadComponent {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to extract topics');
+                let errorMessage = 'Failed to extract topics';
+
+                try {
+                    const error = await response.json();
+                    errorMessage = error.error || errorMessage;
+                } catch {
+                    // Keep the fallback error message.
+                }
+
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -187,20 +203,20 @@ class BookUploadComponent {
 
     showExtractedTopics() {
         const topicsSection = this.container.querySelector(`#topics-${this.gameType}`);
-        
+
         this.container.querySelector(`#topic-title-${this.gameType}`).textContent = this.topicData.title;
         this.container.querySelector(`#topic-desc-${this.gameType}`).textContent = this.topicData.description;
-        
-        const themesHtml = this.topicData.themes.map(theme => 
-            `<span class="theme-tag">${theme}</span>`
-        ).join('');
-        this.container.querySelector(`#topic-themes-${this.gameType}`).innerHTML = 
+
+        const themesHtml = this.topicData.themes
+            .map((theme) => `<span class="theme-tag">${theme}</span>`)
+            .join('');
+        this.container.querySelector(`#topic-themes-${this.gameType}`).innerHTML =
             '<strong>Themes:</strong> ' + themesHtml;
-        
-        const termsHtml = this.topicData.keyTerms.map(term => 
-            `<span class="term-tag">${term}</span>`
-        ).join('');
-        this.container.querySelector(`#topic-terms-${this.gameType}`).innerHTML = 
+
+        const termsHtml = this.topicData.keyTerms
+            .map((term) => `<span class="term-tag">${term}</span>`)
+            .join('');
+        this.container.querySelector(`#topic-terms-${this.gameType}`).innerHTML =
             '<strong>Key Terms:</strong> ' + termsHtml;
 
         topicsSection.style.display = 'block';
@@ -211,7 +227,7 @@ class BookUploadComponent {
         this.selectedFiles = [];
         this.extractedContent = null;
         this.topicData = null;
-        
+
         this.container.querySelector(`#preview-${this.gameType}`).innerHTML = '';
         this.container.querySelector(`#topics-${this.gameType}`).style.display = 'none';
         this.container.querySelector(`#btn-extract-${this.gameType}`).disabled = true;
@@ -225,7 +241,6 @@ class BookUploadComponent {
     }
 }
 
-// Export for use in games
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = BookUploadComponent;
 }
