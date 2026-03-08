@@ -65,6 +65,44 @@
                     <p>The host is currently showing a character on the screen.</p>
                 </div>
 
+                <div id="kelime-data" class="game-data hidden">
+                    <!-- Question Navigation -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <button id="btn-kelime-prev" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">◀ Önceki</button>
+                        <span id="kelime-counter" style="font-weight: bold; color: var(--text);">0 / 0</span>
+                        <button id="btn-kelime-next" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Sonraki ▶</button>
+                    </div>
+
+                    <h3>Question: <span id="kelime-question" class="highlight"
+                            style="font-size: 1.1rem; line-height: 1.4;">---</span></h3>
+                    <p style="margin-top: 0.5rem;">Answer: <span id="kelime-answer"
+                            style="font-family: monospace; font-size: 1.2rem; font-weight: bold; color: var(--accent-1); letter-spacing: 2px;">---</span>
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
+                        <button id="btn-kelime-reveal" class="btn-accent" style="padding: 0.5rem; font-size: 0.9rem;">📍
+                            Harf Ver</button>
+                        <button id="btn-kelime-timer" class="btn-primary"
+                            style="padding: 0.5rem; font-size: 0.9rem; background: var(--bg-card); color: var(--text); border: 1px solid var(--border);">Süre
+                            B/D</button>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                        <button id="btn-kelime-correct" class="btn-primary"
+                            style="flex: 1; padding: 0.8rem; background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid #4ade80;">✅
+                            Doğru</button>
+                        <button id="btn-kelime-pass" class="btn-primary"
+                            style="flex: 1; padding: 0.8rem; background: rgba(248, 113, 113, 0.2); color: #f87171; border: 1px solid #f87171;">⏭️
+                            Pas / Yanlış</button>
+                    </div>
+
+                    <div
+                        style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted);">
+                        <span>Status: <strong id="kelime-status" style="color: var(--text);">Waiting...</strong></span>
+                        <span>Potential: <strong id="kelime-potential" style="color: #4ade80;">0</strong></span>
+                    </div>
+                </div>
+
                 <div id="waiting-message" class="game-data">
                     <p>Waiting for a game to start on the smartboard...</p>
                 </div>

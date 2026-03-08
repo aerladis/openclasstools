@@ -1,0 +1,814 @@
+/* ============================================
+   WHO WANTS TO BE A MILLIONAIRE
+   Premium quiz show UI with glassmorphism
+   ============================================ */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
+}
+
+:root {
+    --bg-dark: #0a0a1a;
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    
+    /* Millionaire Colors */
+    --millionaire-purple: #2d1b4e;
+    --millionaire-gold: #ffd700;
+    --millionaire-gold-dark: #b8860b;
+    --millionaire-blue: #00008b;
+    
+    /* Answer States */
+    --answer-default: linear-gradient(135deg, #00008b 0%, #00004d 100%);
+    --answer-hover: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    --answer-selected: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --answer-correct: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    --answer-wrong: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    
+    --accent-1: #a855f7;
+    --accent-2: #6366f1;
+    --accent-3: #ec4899;
+    --text-primary: #f1f5f9;
+    --text-secondary: rgba(241, 245, 249, 0.6);
+    --font: 'Outfit', system-ui, sans-serif;
+}
+
+body {
+    font-family: var(--font);
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* ---- Particle canvas ---- */
+#particles {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ---- Game ID Badge ---- */
+.game-id-badge {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.6rem 1rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.05em;
+    animation: fadeInSlide 0.5s ease-out;
+}
+
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Screens ---- */
+.screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    opacity: 0;
+    visibility: hidden;
+    overflow-y: auto;
+    /* Use transform for better performance than opacity alone */
+    transform: translateZ(0);
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    /* GPU acceleration */
+    will-change: opacity, visibility;
+    /* Prevent layout shifts */
+    pointer-events: none;
+}
+
+.screen.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* ---- Glass Card ---- */
+.glass-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 2rem;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 3rem;
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    position: relative;
+    z-index: 2;
+}
+
+/* ---- Start Screen ---- */
+.game-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 4px 8px rgba(255, 215, 0, 0.3));
+}
+
+h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--millionaire-gold) 0%, #fff 50%, var(--millionaire-gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.theme-section {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.theme-section label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.theme-input {
+    width: 100%;
+    padding: 1rem 1.2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem;
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.theme-input:focus {
+    outline: none;
+    border-color: var(--millionaire-gold);
+    background: rgba(255, 215, 0, 0.05);
+}
+
+.mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+/* ---- Buttons ---- */
+.btn-primary,
+.btn-secondary,
+.btn-accent,
+.btn-text {
+    padding: 1rem 2rem;
+    border-radius: 1rem;
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 100%);
+    color: white;
+    box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(168, 85, 247, 0.4);
+}
+
+.btn-secondary {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-accent {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.btn-text {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.btn-text:hover {
+    color: var(--text-primary);
+}
+
+.back-link {
+    margin-top: 1.5rem;
+}
+
+.back-link a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+
+.back-link a:hover {
+    color: var(--millionaire-gold);
+}
+
+/* ---- Help Screen ---- */
+.help-card {
+    max-width: 600px;
+    text-align: left;
+}
+
+.help-card h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--millionaire-gold);
+}
+
+.help-list {
+    list-style: none;
+    margin-bottom: 2rem;
+}
+
+.help-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--glass-border);
+    line-height: 1.6;
+}
+
+.help-list li:last-child {
+    border-bottom: none;
+}
+
+.help-list ul {
+    margin-top: 0.5rem;
+    margin-left: 2rem;
+}
+
+.help-list ul li {
+    padding: 0.25rem 0;
+    border-bottom: none;
+}
+
+/* ---- Loading Screen ---- */
+.loading-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 215, 0, 0.2);
+    border-top-color: var(--millionaire-gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---- Game Screen ---- */
+#game-screen {
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 1rem;
+    padding-bottom: 2rem;
+    min-height: 100dvh;
+    overflow-y: auto;
+    /* CSS containment for better performance */
+    contain: layout style;
+}
+
+/* Top Bar */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 1rem;
+    z-index: 10;
+}
+
+.lifelines {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.lifeline-btn {
+    width: 60px;
+    height: 50px;
+    background: linear-gradient(135deg, #00008b 0%, #00004d 100%);
+    border: 2px solid var(--millionaire-gold);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.lifeline-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.lifeline-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: #666;
+}
+
+.lifeline-btn.used {
+    opacity: 0.2;
+    border-color: #666;
+}
+
+.lifeline-text {
+    font-size: 0.75rem;
+}
+
+.lifeline-icon {
+    font-size: 1.2rem;
+}
+
+/* Timer */
+.timer-container {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+}
+
+.timer-svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    will-change: transform;
+}
+
+.timer-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 4;
+}
+
+.timer-progress {
+    fill: none;
+    stroke: var(--millionaire-gold);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 163.36;
+    /* Use CSS variable for performant updates */
+    stroke-dashoffset: calc(163.36 * (1 - var(--timer-progress, 1)));
+    transition: stroke 0.3s ease;
+    /* GPU acceleration */
+    transform: translateZ(0);
+}
+
+.timer-progress.warning {
+    stroke: #f59e0b;
+}
+
+.timer-progress.danger {
+    stroke: #ef4444;
+}
+
+.timer-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    z-index: 1;
+}
+
+/* Prize Ladder */
+.prize-ladder {
+    position: fixed;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+}
+
+.prize-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.prize-item {
+    padding: 0.5rem 1rem;
+    background: rgba(0, 0, 139, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: right;
+    min-width: 120px;
+    /* Optimize for frequent class changes */
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    transform: translateZ(0);
+    will-change: background-color, color;
+}
+
+.prize-item.current {
+    background: var(--millionaire-gold);
+    color: #000;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.prize-item.safe-haven {
+    border-color: var(--millionaire-gold);
+    color: var(--millionaire-gold);
+}
+
+.prize-item.safe-haven.current {
+    color: #000;
+}
+
+.prize-item.completed {
+    opacity: 0.5;
+    color: #22c55e;
+}
+
+/* Question Area */
+.question-area {
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.question-number {
+    font-size: 0.9rem;
+    color: var(--millionaire-gold);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.question-text {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 1.5rem;
+    background: rgba(0, 0, 139, 0.2);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 1rem;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Answers Grid */
+.answers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.answer-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--answer-default);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+    text-align: left;
+    color: white;
+    /* GPU acceleration for transforms */
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.answer-btn:hover:not(:disabled) {
+    background: var(--answer-hover);
+    transform: translateY(-2px) translateZ(0);
+    box-shadow: 0 4px 16px rgba(30, 58, 138, 0.4);
+}
+
+.answer-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.answer-btn.hidden {
+    display: none;
+}
+
+.answer-btn.selected {
+    background: var(--answer-selected);
+    border-color: #f59e0b;
+}
+
+.answer-btn.correct {
+    background: var(--answer-correct);
+    border-color: #22c55e;
+    animation: correctPulse 0.4s ease-out;
+}
+
+.answer-btn.wrong {
+    background: var(--answer-wrong);
+    border-color: #ef4444;
+}
+
+@keyframes correctPulse {
+    0%, 100% { transform: scale(1) translateZ(0); }
+    50% { transform: scale(1.03) translateZ(0); }
+}
+
+.answer-letter {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.answer-text {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* Walk Away Button */
+.btn-walk-away {
+    margin-top: 1.5rem;
+    padding: 0.875rem 2rem;
+    background: rgba(239, 68, 68, 0.2);
+    border: 2px solid rgba(239, 68, 68, 0.5);
+    border-radius: 1rem;
+    color: #ef4444;
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-walk-away:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: translateY(-2px);
+}
+
+/* ---- Lifeline Screen ---- */
+.lifeline-card {
+    max-width: 500px;
+}
+
+.lifeline-animation {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.lifeline-content {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 1rem;
+}
+
+.audience-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1rem;
+    height: 150px;
+    padding: 1rem;
+}
+
+.audience-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bar-fill {
+    width: 50px;
+    background: linear-gradient(to top, var(--accent-1), var(--accent-2));
+    border-radius: 0.5rem 0.5rem 0 0;
+    transition: height 1s ease;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 0.25rem;
+    font-weight: 700;
+    color: white;
+}
+
+.bar-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.phone-hint {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    font-style: italic;
+}
+
+/* ---- Result Screen ---- */
+.result-card {
+    max-width: 500px;
+}
+
+.result-icon {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+}
+
+.result-card h2 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.result-message {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.result-amount {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--millionaire-gold);
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+}
+
+.result-details {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+}
+
+/* ---- Confirmation Screen ---- */
+.confirm-card {
+    max-width: 400px;
+}
+
+.confirm-card h3 {
+    margin-bottom: 0.5rem;
+}
+
+.confirm-card p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+    .prize-ladder {
+        position: static;
+        transform: none;
+        order: -1;
+        margin-bottom: 1rem;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .prize-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .prize-item {
+        min-width: auto;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    #game-screen {
+        padding-top: 0.5rem;
+        justify-content: flex-start;
+        padding-bottom: 4rem;
+    }
+    
+    .question-text {
+        font-size: 1.1rem;
+        padding: 1rem;
+        min-height: 80px;
+    }
+    
+    .answers-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .answer-btn {
+        padding: 1rem;
+    }
+    
+    .answer-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .glass-card {
+        padding: 2rem 1.5rem;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .lifeline-btn {
+        width: 50px;
+        height: 42px;
+    }
+    
+    .timer-container {
+        width: 55px;
+        height: 55px;
+    }
+    
+    .timer-text {
+        font-size: 1.2rem;
+    }
+    
+    .result-amount {
+        font-size: 2rem;
+    }
+}

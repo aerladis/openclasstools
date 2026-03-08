@@ -42,6 +42,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements - Who Am I
     const whoamiCharacterEl = document.getElementById('whoami-character');
 
+    // DOM Elements - Kelime Oyunu
+    const kelimeDataEl = document.getElementById('kelime-data');
+    const kelimeQuestionEl = document.getElementById('kelime-question');
+    const kelimeAnswerEl = document.getElementById('kelime-answer');
+    const kelimeStatusEl = document.getElementById('kelime-status');
+    const kelimePotentialEl = document.getElementById('kelime-potential');
+    const kelimeCounterEl = document.getElementById('kelime-counter');
+    const btnKelimeReveal = document.getElementById('btn-kelime-reveal');
+    const btnKelimeTimer = document.getElementById('btn-kelime-timer');
+    const btnKelimeCorrect = document.getElementById('btn-kelime-correct');
+    const btnKelimePass = document.getElementById('btn-kelime-pass');
+    const btnKelimeNext = document.getElementById('btn-kelime-next');
+    const btnKelimePrev = document.getElementById('btn-kelime-prev');
+
     // DOM Elements - Word Manager
     const wordManagerCard = document.getElementById('word-manager-card');
     const wordListContainer = document.getElementById('word-list-container');
@@ -64,6 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 dashboardSetup.classList.remove('hidden');
                 connectedGameIdEl.textContent = `ID: ${id}`;
                 socket.emit('requestState', id);
+            } else {
+                connectError.textContent = response?.error || 'Failed to connect to game';
+                connectError.style.display = 'block';
             }
         });
     });
@@ -91,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hangmanDataEl.classList.add('hidden');
         tabooDataEl.classList.add('hidden');
         whoamiDataEl.classList.add('hidden');
+        if (kelimeDataEl) kelimeDataEl.classList.add('hidden');
 
         if (data.game === 'Hangman') {
             hangmanDataEl.classList.remove('hidden');
@@ -123,6 +141,30 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (data.game === 'Who Am I') {
             whoamiDataEl.classList.remove('hidden');
             whoamiCharacterEl.textContent = data.active && data.character ? data.character : '(Hidden / Choosing)';
+        } else if (data.game === 'Kelime Oyunu') {
+            if (kelimeDataEl) {
+                kelimeDataEl.classList.remove('hidden');
+                kelimeQuestionEl.textContent = data.question || '---';
+                kelimeAnswerEl.textContent = data.currentWord || '---';
+                kelimePotentialEl.textContent = data.potentialScore || 0;
+                
+                // Update counter
+                if (kelimeCounterEl) {
+                    const current = (data.currentIndex || 0) + 1;
+                    const total = data.totalQuestions || 0;
+                    kelimeCounterEl.textContent = `${current} / ${total}`;
+                }
+
+                let timeStr = `${Math.floor(data.timeRemaining / 60)}:${(data.timeRemaining % 60).toString().padStart(2, '0')}`;
+
+                if (data.timeRemaining <= 0) {
+                    kelimeStatusEl.textContent = 'Time Up!';
+                } else if (data.isTimerRunning) {
+                    kelimeStatusEl.textContent = `Running (${timeStr})`;
+                } else {
+                    kelimeStatusEl.textContent = `Paused (${timeStr})`;
+                }
+            }
         }
     });
 
@@ -131,9 +173,38 @@ document.addEventListener('DOMContentLoaded', () => {
         hangmanDataEl.classList.add('hidden');
         tabooDataEl.classList.add('hidden');
         whoamiDataEl.classList.add('hidden');
+        if (kelimeDataEl) kelimeDataEl.classList.add('hidden');
         wordManagerCard.classList.add('hidden');
         waitingMessageEl.classList.remove('hidden');
         waitingMessageEl.textContent = 'Waiting for a game to start on the smartboard...';
+    }
+
+    // Kelime Oyunu Admin Controls
+    if (btnKelimeReveal) {
+        btnKelimeReveal.addEventListener('click', () => {
+            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'REVEAL_LETTER' });
+        });
+        btnKelimeTimer.addEventListener('click', () => {
+            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'TOGGLE_TIMER' });
+        });
+        btnKelimeCorrect.addEventListener('click', () => {
+            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'CORRECT_ANSWER' });
+        });
+        btnKelimePass.addEventListener('click', () => {
+            if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PASS_QUESTION' });
+        });
+        
+        // Navigation controls
+        if (btnKelimeNext) {
+            btnKelimeNext.addEventListener('click', () => {
+                if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'NEXT_QUESTION' });
+            });
+        }
+        if (btnKelimePrev) {
+            btnKelimePrev.addEventListener('click', () => {
+                if (currentGameId) socket.emit('adminUpdateHost', { gameId: currentGameId, action: 'PREV_QUESTION' });
+            });
+        }
     }
 
     // ============================================
@@ -152,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentWordList = data.cards;
         } else if (data.type === 'whoami' && data.characters) {
             currentWordList = data.characters;
+        } else if (data.type === 'kelime' && data.questions) {
+            currentWordList = data.questions;
         }
 
         renderWordList();
@@ -191,6 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentHTML = `
                     <input type="text" class="edit-input" data-index="${index}" data-field="word" value="${item}" style="font-weight: bold; width: 100%;" />
                 `;
+            } else if (currentGameType === 'kelime') {
+                // Kelime: {"question": "...", "answer": "..."}
+                contentHTML = `
+                    <input type="text" class="edit-input" data-index="${index}" data-field="answer" value="${item.answer}" style="font-weight: bold; width: 100%; margin-bottom: 0.5rem; color: var(--accent-1); text-transform: uppercase;" placeholder="Cevap (Örn: ANKARA)" />
+                    <input type="text" class="edit-input" data-index="${index}" data-field="question" value="${item.question}" placeholder="Soru Metni" style="width: 100%; font-size: 0.8rem;" />
+                `;
             }
 
             el.innerHTML = `
@@ -227,6 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (field === 'forbidden') currentWordList[index].forbidden = val.split(',').map(s => s.trim()).filter(Boolean);
         } else if (currentGameType === 'whoami') {
             currentWordList[index] = val;
+        } else if (currentGameType === 'kelime') {
+            if (field === 'answer') currentWordList[index].answer = val.toUpperCase().trim();
+            if (field === 'question') currentWordList[index].question = val;
         }
     }
 
@@ -243,6 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentWordList.unshift({ word: 'New Card', forbidden: ['Word 1', 'Word 2', 'Word 3'] });
         } else if (currentGameType === 'whoami') {
             currentWordList.unshift('New Character');
+        } else if (currentGameType === 'kelime') {
+            currentWordList.unshift({ answer: 'CEVAP', question: 'Yeni Soru' });
         }
         renderWordList();
 
@@ -260,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentGameType === 'hangman') payload.words = currentWordList;
         if (currentGameType === 'taboo') payload.cards = currentWordList;
         if (currentGameType === 'whoami') payload.characters = currentWordList;
+        if (currentGameType === 'kelime') payload.questions = currentWordList;
 
         socket.emit('updateWordListAdmin', payload);
 

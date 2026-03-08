@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="taboo.css" />
+    <link rel="stylesheet" href="book-upload.css" />
 </head>
 
 <body>
@@ -68,6 +69,9 @@
                 </button>
                 <p id="generate-status" class="generate-status"></p>
             </div>
+
+            <!-- Book Upload Section -->
+            <div id="book-upload-container"></div>
 
             <div class="divider"><span>or play</span></div>
             <a href="index.html" class="btn-secondary" style="text-decoration:none;">🏠 Main Menu</a>
@@ -175,6 +179,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="book-upload.js"></script>
     <script src="taboo.js"></script>
 </body>
 

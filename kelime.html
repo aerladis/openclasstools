@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelime Oyunu - Smartboard View</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="kelime.css">
+    <link rel="stylesheet" href="book-upload.css">
+</head>
+
+<body>
+    <!-- Particle Canvas Background -->
+    <canvas id="particles"></canvas>
+
+    <div class="kelime-container">
+        <!-- Header Section -->
+        <header class="game-header">
+            <a href="index.html" class="btn-back">← Hub</a>
+            <h1>🎯 Kelime Oyunu</h1>
+            <div style="width: 80px;"></div> <!-- Spacer for balance -->
+        </header>
+
+        <!-- Main Game Area -->
+        <div class="game-board">
+
+            <!-- Question Display -->
+            <div class="question-container">
+                <p id="question-text" class="question-text">Kelime Oyunu Başlıyor!</p>
+            </div>
+
+            <!-- Letters Area -->
+            <div id="letters-container" class="letters-container">
+                <!-- Letter blocks will be generated here -->
+            </div>
+
+            <!-- Timer and Score Info -->
+            <div class="game-stats">
+                <div class="stat-box">
+                    <span class="stat-label">Süre</span>
+                    <span id="timer-display" class="stat-value timer">04:00</span>
+                </div>
+
+                <div class="stat-box">
+                    <span class="stat-label">Puan</span>
+                    <span id="score-display" class="stat-value score">0</span>
+                </div>
+            </div>
+
+            <p id="waiting-msg" class="waiting-message">Waiting for Admin to connect and load questions...</p>
+
+            <!-- AI Generation Panel -->
+            <div class="generation-panel">
+                <h3>🎮 Hızlı Başlat</h3>
+                <div class="generate-section">
+                    <input id="theme-input" class="theme-input" type="text" placeholder="Konu (örn: Tarih, Bilim, Coğrafya...)" />
+                    <button id="btn-generate-ai" class="btn-accent">
+                        <span class="btn-icon">✨</span> AI ile Soru Oluştur
+                    </button>
+                </div>
+                
+                <!-- Book Upload Section -->
+                <div id="book-upload-container"></div>
+                
+                <button id="btn-use-default" class="btn-secondary">
+                    Varsayılan Soruları Kullan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO & Game Logic -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="book-upload.js"></script>
+    <script src="kelime.js"></script>
+</body>
+
+</html>

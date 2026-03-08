@@ -2,11 +2,83 @@
    HANGMAN – Game Logic
    ============================================ */
 
+// ---- Book Upload Component ----
+let bookUploadComponent = null;
+
+function initBookUpload() {
+    const container = document.getElementById('book-upload-container');
+    if (!container) return;
+    
+    bookUploadComponent = new BookUploadComponent('book-upload-container', {
+        gameType: 'hangman',
+        onExtract: (data) => {
+            generateFromBook(data);
+        },
+        onError: (error) => {
+            const statusEl = document.getElementById('generate-status');
+            statusEl.textContent = error;
+            statusEl.style.color = '#ef4444';
+        },
+        onLoading: (isLoading) => {
+            // Handle loading state
+        }
+    });
+}
+
+async function generateFromBook(data) {
+    const statusEl = document.getElementById('generate-status');
+    const countInput = document.getElementById('word-count');
+    const count = parseInt(countInput.value) || 20;
+    
+    statusEl.textContent = `Generating words about "${data.topicData.title}"...`;
+    statusEl.style.color = 'var(--accent-1)';
+
+    try {
+        const response = await fetch('/api/generate-from-book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: data.content,
+                gameType: 'hangman',
+                count: count
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate from book');
+        }
+
+        const result = await response.json();
+        
+        if (result.success && result.words && result.words.length > 0) {
+            wordList = result.words;
+            statusEl.textContent = `✅ Generated ${result.words.length} words! Ready to play.`;
+            statusEl.style.color = '#22c55e';
+            
+            if (socket) {
+                socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
+            }
+        } else {
+            throw new Error('Invalid word data');
+        }
+    } catch (err) {
+        console.error('Book generation error:', err);
+        statusEl.textContent = '❌ Failed. Try text-based generation instead.';
+        statusEl.style.color = '#ef4444';
+    }
+}
+
 const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
 const socket = typeof io !== 'undefined' ? io() : null;
 
 if (socket) {
-    socket.emit('hostJoin', gameId);
+    socket.emit('hostJoin', gameId, (response) => {
+        if (response && response.success) {
+            console.log('✅ Connected to game:', response.gameId);
+        } else {
+            console.error('❌ Failed to join game:', response?.error || 'Unknown error');
+        }
+    });
 
     socket.on('hostSendState', () => {
         // Admin joined, send current state and full word list
@@ -342,6 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sync initial word list to admin if already connected
     if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
+    
+    // Initialize book upload component
+    initBookUpload();
 });
 
 // ---- Particle background ----
