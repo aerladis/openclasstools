@@ -7,6 +7,8 @@ const COLORS = [
 let players = [];
 let spinning = false;
 let currentRotation = 0;
+const MIN_BOTTLE_SPIN_TURNS = 6.5;
+const MAX_BOTTLE_EXTRA_TURNS = 2.5;
 
 // DOM
 const screenSetup = document.getElementById('screen-setup');
@@ -134,13 +136,20 @@ btnSpin.addEventListener('click', () => {
     //   Top of bottle → segment at angle θ - 90° (in circle coordinate)
     //   Bottom of bottle → segment at angle θ + 90° (opposite)
 
-    // Random spin amount
-    const spins = 5 + Math.floor(Math.random() * 4);
-    const extraDeg = Math.random() * 360;
-    const totalDeg = spins * 360 + extraDeg;
+    const currentNormalized = ((currentRotation % 360) + 360) % 360;
+    const targetSegmentIndex = Math.floor(Math.random() * n);
+    const segmentCenterDeg = targetSegmentIndex * (360 / n) + (180 / n);
+    let landingDelta = segmentCenterDeg - currentNormalized;
+
+    if (landingDelta < 0) {
+        landingDelta += 360;
+    }
+
+    const spinTurns = MIN_BOTTLE_SPIN_TURNS + Math.random() * MAX_BOTTLE_EXTRA_TURNS;
+    const totalDeg = landingDelta + spinTurns * 360;
     currentRotation += totalDeg;
 
-    bottleSvg.style.transition = 'transform 3.5s cubic-bezier(.15,.85,.25,1)';
+    bottleSvg.style.transition = 'transform 4.2s cubic-bezier(.15,.85,.25,1)';
     bottleSvg.style.transform = `rotate(${currentRotation}deg)`;
 
     setTimeout(() => {

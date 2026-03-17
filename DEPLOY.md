@@ -13,8 +13,6 @@
 
 ### New Features
 - AI-powered question generation for all games
-- Book screenshot upload with OCR (Gemini Vision)
-- File upload system (images to game content)
 - Admin panel with wordlist management
 - Improved security (rate limiting, CORS)
 - Session management for multiple games
@@ -26,13 +24,10 @@
 - `POST /api/generate-hangman` - Hangman words
 - `POST /api/generate-millionaire` - Millionaire questions
 - `POST /api/generate-kelime` - Kelime Oyunu questions
-- `POST /api/upload-book` - Image OCR & topic extraction
-- `POST /api/generate-from-book` - Generate from extracted text
 - `GET /api/health` - Health check
 
 ### Files Added
 - `millionaire.html/css/js` - New game
-- `book-upload.js/css` - Shared upload component
 - `MILLIONAIRE_PLAN.md` - Design documentation
 - `TEST_INSTRUCTIONS.md` - Testing guide
 - `deploy.sh` - Deployment script
@@ -43,7 +38,6 @@
 - CORS configuration
 - Security headers
 - Input sanitization
-- File upload restrictions (10MB, images only)
 
 ### Performance Optimizations
 - Debounced Socket.IO emits

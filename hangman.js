@@ -2,72 +2,6 @@
    HANGMAN – Game Logic
    ============================================ */
 
-// ---- Book Upload Component ----
-let bookUploadComponent = null;
-
-function initBookUpload() {
-    const container = document.getElementById('book-upload-container');
-    if (!container) return;
-    
-    bookUploadComponent = new BookUploadComponent('book-upload-container', {
-        gameType: 'hangman',
-        onExtract: (data) => {
-            generateFromBook(data);
-        },
-        onError: (error) => {
-            const statusEl = document.getElementById('generate-status');
-            statusEl.textContent = error;
-            statusEl.style.color = '#ef4444';
-        },
-        onLoading: (isLoading) => {
-            // Handle loading state
-        }
-    });
-}
-
-async function generateFromBook(data) {
-    const statusEl = document.getElementById('generate-status');
-    const countInput = document.getElementById('word-count');
-    const count = parseInt(countInput.value) || 20;
-    
-    statusEl.textContent = `Generating words about "${data.topicData.title}"...`;
-    statusEl.style.color = 'var(--accent-1)';
-
-    try {
-        const response = await fetch('/api/generate-from-book', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: data.content,
-                gameType: 'hangman',
-                count: count
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to generate from book');
-        }
-
-        const result = await response.json();
-        
-        if (result.success && result.words && result.words.length > 0) {
-            wordList = result.words;
-            statusEl.textContent = `✅ Generated ${result.words.length} words! Ready to play.`;
-            statusEl.style.color = '#22c55e';
-            
-            if (socket) {
-                socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
-            }
-        } else {
-            throw new Error('Invalid word data');
-        }
-    } catch (err) {
-        console.error('Book generation error:', err);
-        statusEl.textContent = '❌ Failed. Try text-based generation instead.';
-        statusEl.style.color = '#ef4444';
-    }
-}
-
 const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
 const socket = typeof io !== 'undefined' ? io() : null;
 
@@ -88,7 +22,8 @@ if (socket) {
 
     socket.on('hostWordListUpdate', (data) => {
         if (data.words) {
-            wordList = data.words;
+            wordList = normalizeWordList(data.words, 'Synced');
+            usedWords = [];
             // Optionally clear used words if list changed significantly
         }
     });
@@ -226,6 +161,30 @@ let gameActive = false;
 let usedWords = [];
 
 // ---- Helpers ----
+function normalizeWordList(words, fallbackCategory = 'Generated') {
+    return (Array.isArray(words) ? words : [])
+        .map((entry) => {
+            if (typeof entry === 'string') {
+                return { word: entry.trim().toUpperCase(), cat: fallbackCategory };
+            }
+
+            if (!entry || typeof entry !== 'object') {
+                return null;
+            }
+
+            const normalizedWord = String(entry.word || '').trim().toUpperCase();
+            if (!normalizedWord) {
+                return null;
+            }
+
+            return {
+                word: normalizedWord,
+                cat: entry.cat || fallbackCategory
+            };
+        })
+        .filter((entry) => entry && entry.word);
+}
+
 function showScreen(el) {
     [screenStart, screenGame].forEach(s => s.classList.remove('active'));
     el.classList.add('active');
@@ -314,6 +273,12 @@ document.addEventListener('keydown', (e) => {
 
 // ---- Start game ----
 function startGame() {
+    if (!wordList.length) {
+        generateStatus.textContent = 'No playable words available. Generate a new list first.';
+        generateStatus.className = 'generate-status error';
+        return;
+    }
+
     const pick = pickWord();
     currentWord = pick.word;
     currentCat = pick.cat;
@@ -363,6 +328,43 @@ const btnGenerate = document.getElementById('btn-generate');
 const wordTheme = document.getElementById('word-theme');
 const wordCount = document.getElementById('word-count');
 const generateStatus = document.getElementById('generate-status');
+const btnReuseGenerated = document.getElementById('btn-reuse-generated');
+const HANGMAN_STORAGE_KEY = 'hangman';
+
+function saveGeneratedWords(words, meta = {}) {
+    window.generatedContentStore?.save(HANGMAN_STORAGE_KEY, { words, meta });
+    updateReuseButton();
+}
+
+function updateReuseButton() {
+    if (!btnReuseGenerated) return;
+
+    const stored = window.generatedContentStore?.load(HANGMAN_STORAGE_KEY);
+    btnReuseGenerated.hidden = !stored?.words?.length;
+
+    if (stored?.words?.length) {
+        const savedAt = window.generatedContentStore?.formatTimestamp(stored.savedAt);
+        btnReuseGenerated.textContent = savedAt
+            ? `Reuse Saved Pack (${savedAt})`
+            : 'Reuse Saved Pack';
+    }
+}
+
+function restoreGeneratedWords() {
+    const stored = window.generatedContentStore?.load(HANGMAN_STORAGE_KEY);
+    if (!stored?.words?.length) return;
+
+    wordList = normalizeWordList(stored.words, stored.meta?.theme || stored.meta?.title || 'Restored');
+    usedWords = [];
+    if (stored.meta?.theme) wordTheme.value = stored.meta.theme;
+    if (stored.meta?.count) wordCount.value = stored.meta.count;
+    generateStatus.textContent = `Restored ${wordList.length} words from saved content.`;
+    generateStatus.className = 'generate-status success';
+
+    if (socket) {
+        socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
+    }
+}
 
 btnGenerate.addEventListener('click', async () => {
     const theme = wordTheme.value.trim();
@@ -384,8 +386,9 @@ btnGenerate.addEventListener('click', async () => {
         if (!res.ok) throw new Error(data.error || 'Request failed');
 
         if (data.words && data.words.length > 0) {
-            wordList = data.words.map(w => typeof w === 'string' ? { word: w, cat: theme } : w);
+            wordList = normalizeWordList(data.words, theme);
             usedWords = [];
+            saveGeneratedWords(wordList, { source: 'ai', theme, count: wordList.length });
             generateStatus.textContent = `✓ Generated ${data.words.length} words!`;
             generateStatus.className = 'generate-status success';
 
@@ -412,11 +415,11 @@ document.addEventListener('DOMContentLoaded', () => {
     idDisplay.textContent = `Game ID: ${gameId}`;
     document.body.appendChild(idDisplay);
 
+    btnReuseGenerated?.addEventListener('click', restoreGeneratedWords);
+    updateReuseButton();
+
     // Sync initial word list to admin if already connected
     if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
-    
-    // Initialize book upload component
-    initBookUpload();
 });
 
 // ---- Particle background ----

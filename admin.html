@@ -10,10 +10,17 @@
 </head>
 
 <body>
+    <div class="admin-background" aria-hidden="true">
+        <div class="orb orb-one"></div>
+        <div class="orb orb-two"></div>
+    </div>
+
     <div class="admin-container">
-        <!-- Compact Header -->
         <header class="admin-header">
-            <h1>Admin Panel</h1>
+            <div>
+                <p class="eyebrow">Remote Control</p>
+                <h1>Admin Panel</h1>
+            </div>
             <div id="connection-bar" class="connection-bar">
                 <span id="connection-status" class="status-dot disconnected"></span>
                 <span id="connection-text">Disconnected</span>
@@ -21,8 +28,7 @@
             </div>
         </header>
 
-        <!-- Login Screen -->
-        <div id="login-card" class="card">
+        <div id="login-card" class="card card-login">
             <h2>Connect to Game</h2>
             <p class="hint">Enter the 4-digit Game ID from the smartboard</p>
             <div class="input-row">
@@ -32,17 +38,33 @@
             <p id="connect-error" class="error-msg"></p>
         </div>
 
-        <!-- Dashboard -->
-        <div id="dashboard-setup" class="hidden">
-            <!-- Game Info Card -->
-            <div id="game-card" class="card">
+        <div id="dashboard-setup" class="dashboard hidden">
+            <section id="game-card" class="card card-main">
                 <div class="game-header-row">
-                    <h2 id="game-name">None</h2>
+                    <div>
+                        <p class="section-kicker">Live Game</p>
+                        <h2 id="game-name">None</h2>
+                    </div>
                     <button id="btn-disconnect" class="btn-text">Disconnect</button>
                 </div>
 
-                <!-- Millionaire Admin Controls -->
                 <div id="millionaire-data" class="game-data hidden">
+                    <div class="question-box setup-card" id="millionaire-setup-card">
+                        <div class="section-header compact-section-header">
+                            <h3>AI Setup</h3>
+                            <button id="btn-millionaire-setup-toggle" class="btn-text btn-panel-toggle" type="button">Hide</button>
+                        </div>
+                        <div id="millionaire-setup-body" class="setup-body">
+                            <div class="admin-generate-section">
+                                <label class="admin-field-label" for="millionaire-theme-input">Theme</label>
+                                <input type="text" id="millionaire-theme-input" placeholder="Science, history, films..." />
+                                <button id="btn-millionaire-generate" class="btn-accent">Generate with AI</button>
+                                <button id="btn-millionaire-default" class="btn-secondary">Load Default Questions</button>
+                                <button id="btn-millionaire-start" class="btn-success">Start Game</button>
+                                <p id="millionaire-generate-status" class="generate-status">Generate or sync a question pack before starting.</p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="info-row">
                         <span>Level: <strong id="millionaire-level">-</strong></span>
                         <span>Prize: <strong id="millionaire-prize">-</strong></span>
@@ -70,10 +92,32 @@
                     </div>
                 </div>
 
-                <!-- Word Game Controls -->
                 <div id="kelime-data" class="game-data hidden">
-                    <div class="control-grid" style="margin-bottom: 10px;">
-                        <button id="btn-kelime-start" class="btn-success">Start Game</button>
+                    <div class="question-box setup-card" id="kelime-setup-card">
+                        <div class="section-header compact-section-header">
+                            <h3>AI Setup</h3>
+                            <button id="btn-kelime-setup-toggle" class="btn-text btn-panel-toggle" type="button">Hide</button>
+                        </div>
+                        <div id="kelime-setup-body" class="setup-body">
+                            <div class="admin-generate-section">
+                                <label class="admin-field-label" for="kelime-theme-input">Theme</label>
+                                <input type="text" id="kelime-theme-input" placeholder="History, science, geography..." />
+                                <label class="admin-field-label" for="kelime-cefr-level">CEFR Level</label>
+                                <select id="kelime-cefr-level">
+                                    <option value="">Any Level</option>
+                                    <option value="A1">A1</option>
+                                    <option value="A2">A2</option>
+                                    <option value="B1">B1</option>
+                                    <option value="B1+">B1+</option>
+                                    <option value="B2">B2</option>
+                                    <option value="C1">C1</option>
+                                </select>
+                                <button id="btn-kelime-generate" class="btn-accent">Generate with AI</button>
+                                <button id="btn-kelime-default" class="btn-secondary">Load Default Questions</button>
+                                <button id="btn-kelime-start" class="btn-success">Start Game</button>
+                                <p id="kelime-generate-status" class="generate-status">Questions are managed from here.</p>
+                            </div>
+                        </div>
                     </div>
                     <div class="nav-row">
                         <button id="btn-kelime-prev" class="btn-icon">Prev</button>
@@ -96,7 +140,6 @@
                     </div>
                 </div>
 
-                <!-- Hangman Controls -->
                 <div id="hangman-data" class="game-data hidden">
                     <div class="word-display">
                         <span id="hangman-word" class="highlight">---</span>
@@ -108,7 +151,6 @@
                     <div id="hangman-state"></div>
                 </div>
 
-                <!-- Taboo Controls -->
                 <div id="taboo-data" class="game-data hidden">
                     <div class="word-box">
                         <h3 id="taboo-word" class="main-word">-</h3>
@@ -120,7 +162,6 @@
                     </div>
                 </div>
 
-                <!-- Who Am I Controls -->
                 <div id="whoami-data" class="game-data hidden">
                     <div class="character-display">
                         <span id="whoami-character" class="highlight">---</span>
@@ -131,21 +172,31 @@
                 <div id="waiting-message" class="waiting">
                     <p>Waiting for game to start...</p>
                 </div>
-            </div>
+            </section>
 
-            <!-- Word Management -->
-            <div id="word-manager-card" class="card hidden">
+            <section id="word-manager-card" class="card card-editor hidden">
                 <div class="section-header">
-                    <h3>Word Management</h3>
-                    <div class="button-group">
+                    <div>
+                        <p class="section-kicker">Content Editor</p>
+                        <h3>Question Manager</h3>
+                    </div>
+                    <div class="button-group button-group-compact">
                         <button id="btn-add-word" class="btn-primary">+ Add</button>
                         <button id="btn-save-words" class="btn-success">Save</button>
                     </div>
                 </div>
-                <div id="word-list-container" class="word-list">
+                <div class="editor-toolbar">
+                    <div class="editor-nav">
+                        <button id="btn-prev-item" class="btn-icon">Prev</button>
+                        <span id="word-editor-position" class="counter">0 / 0</span>
+                        <button id="btn-next-item" class="btn-icon">Next</button>
+                    </div>
+                    <p id="word-editor-meta" class="editor-meta">No synced items yet.</p>
+                </div>
+                <div id="word-list-container" class="word-editor">
                     <p class="empty">Loading...</p>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 

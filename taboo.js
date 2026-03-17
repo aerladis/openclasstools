@@ -2,73 +2,6 @@
    TABOO – Game Logic
    ============================================ */
 
-// ---- Book Upload Component ----
-let bookUploadComponent = null;
-
-function initBookUpload() {
-    const container = document.getElementById('book-upload-container');
-    if (!container) return;
-    
-    bookUploadComponent = new BookUploadComponent('book-upload-container', {
-        gameType: 'taboo',
-        onExtract: (data) => {
-            generateFromBook(data);
-        },
-        onError: (error) => {
-            const statusEl = document.getElementById('generate-status');
-            statusEl.textContent = error;
-            statusEl.style.color = '#ef4444';
-        },
-        onLoading: (isLoading) => {
-            // Handle loading state
-        }
-    });
-}
-
-async function generateFromBook(data) {
-    const statusEl = document.getElementById('generate-status');
-    const countInput = document.getElementById('card-count');
-    const count = parseInt(countInput.value) || 30;
-    
-    statusEl.textContent = `Generating Taboo cards about "${data.topicData.title}"...`;
-    statusEl.style.color = 'var(--accent-1)';
-
-    try {
-        const response = await fetch('/api/generate-from-book', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: data.content,
-                gameType: 'taboo',
-                count: count
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to generate from book');
-        }
-
-        const result = await response.json();
-        
-        if (result.success && result.cards && result.cards.length > 0) {
-            cards = result.cards;
-            shuffleDeck();
-            statusEl.textContent = `✅ Generated ${result.cards.length} cards! Ready to play.`;
-            statusEl.style.color = '#22c55e';
-            
-            if (socket) {
-                socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
-            }
-        } else {
-            throw new Error('Invalid card data');
-        }
-    } catch (err) {
-        console.error('Book generation error:', err);
-        statusEl.textContent = '❌ Failed. Try text-based generation instead.';
-        statusEl.style.color = '#ef4444';
-    }
-}
-
 const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
 const socket = typeof io !== 'undefined' ? io() : null;
 
@@ -88,8 +21,9 @@ if (socket) {
 
     socket.on('hostWordListUpdate', (data) => {
         if (data.cards) {
-            cards = data.cards;
+            cards = data.cards.map(normalizeCard).filter(card => card.word && card.forbidden.length >= 3);
             shuffleDeck();
+            saveGeneratedCards(cards, { source: 'ai', theme: generationContext.theme, count: cards.length });
         }
     });
 }
@@ -212,6 +146,13 @@ const DEFAULT_CARDS = [
 ];
 
 let cards = [...DEFAULT_CARDS];
+const AUTO_CARD_REFILL_THRESHOLD = 8;
+const AUTO_CARD_REFILL_COUNT = 20;
+let generationContext = {
+    theme: 'general knowledge and pop culture',
+};
+let autoRefillPromise = null;
+const TABOO_STORAGE_KEY = 'taboo';
 
 // ---- DOM refs ----
 const screens = {
@@ -252,6 +193,7 @@ const els = {
     finalT2Score: document.getElementById('final-t2-score'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnGenerate: document.getElementById('btn-generate'),
+    btnReuseGenerated: document.getElementById('btn-reuse-generated'),
     cardTheme: document.getElementById('card-theme'),
     cardCount: document.getElementById('card-count'),
     generateStatus: document.getElementById('generate-status'),
@@ -282,15 +224,154 @@ function showScreen(name) {
     screens[name].classList.add('active');
 }
 
+function saveGeneratedCards(cardsToSave, meta = {}) {
+    window.generatedContentStore?.save(TABOO_STORAGE_KEY, { cards: cardsToSave, meta });
+    updateReuseButton();
+}
+
+function updateReuseButton() {
+    if (!els.btnReuseGenerated) return;
+
+    const stored = window.generatedContentStore?.load(TABOO_STORAGE_KEY);
+    els.btnReuseGenerated.hidden = !stored?.cards?.length;
+
+    if (stored?.cards?.length) {
+        const savedAt = window.generatedContentStore?.formatTimestamp(stored.savedAt);
+        els.btnReuseGenerated.textContent = savedAt
+            ? `Reuse Saved Pack (${savedAt})`
+            : 'Reuse Saved Pack';
+    }
+}
+
+function restoreGeneratedCards() {
+    const stored = window.generatedContentStore?.load(TABOO_STORAGE_KEY);
+    if (!stored?.cards?.length) return;
+
+    cards = stored.cards.map(normalizeCard).filter(card => card.word && card.forbidden.length >= 3);
+    if (stored.meta?.theme) els.cardTheme.value = stored.meta.theme;
+    if (stored.meta?.count) els.cardCount.value = stored.meta.count;
+    setGenerationContext({
+        theme: stored.meta?.theme || stored.meta?.title || generationContext.theme,
+    });
+    shuffleDeck();
+    els.generateStatus.textContent = `Restored ${cards.length} cards from saved content.`;
+    els.generateStatus.className = 'generate-status success';
+
+    if (socket) {
+        socket.emit('syncWordList', { gameId, type: 'taboo', cards });
+    }
+}
+
+function setGenerationContext(context) {
+    generationContext = { ...generationContext, ...context };
+}
+
+function normalizeCard(card) {
+    return {
+        word: String(card?.word ?? '').trim(),
+        forbidden: Array.isArray(card?.forbidden)
+            ? card.forbidden.map(word => String(word).trim()).filter(Boolean).slice(0, 5)
+            : [],
+    };
+}
+
+function getCardKey(card) {
+    return normalizeCard(card).word.toLowerCase();
+}
+
+function appendGeneratedCards(newCards) {
+    const existingKeys = new Set(cards.map(getCardKey));
+    const additions = newCards
+        .map(normalizeCard)
+        .filter(card => card.word && card.forbidden.length >= 3)
+        .filter(card => {
+            const key = getCardKey(card);
+            if (!key || existingKeys.has(key)) return false;
+            existingKeys.add(key);
+            return true;
+        });
+
+    if (additions.length === 0) return 0;
+
+    cards.push(...additions);
+    state.deck.push(...additions.sort(() => Math.random() - 0.5));
+
+    if (socket) {
+        socket.emit('syncWordList', { gameId, type: 'taboo', cards });
+    }
+
+    return additions.length;
+}
+
+async function requestGeneratedCards(count = AUTO_CARD_REFILL_COUNT) {
+    const response = await fetch('/api/generate-taboo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            theme: generationContext.theme || els.cardTheme.value.trim() || 'general knowledge and pop culture',
+            count,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to generate more Taboo cards');
+    }
+
+    const result = await response.json();
+    const nextCards = Array.isArray(result.cards) ? result.cards : [];
+    return appendGeneratedCards(nextCards);
+}
+
+async function maybeTopUpDeck(force = false) {
+    if (!force && state.deck.length > AUTO_CARD_REFILL_THRESHOLD) {
+        return 0;
+    }
+
+    if (autoRefillPromise) {
+        return autoRefillPromise;
+    }
+
+    autoRefillPromise = requestGeneratedCards()
+        .then(addedCount => {
+            if (addedCount > 0) {
+                console.info(`Auto-generated ${addedCount} more Taboo cards.`);
+            }
+            return addedCount;
+        })
+        .catch(error => {
+            console.error('Taboo auto-generation error:', error);
+            return 0;
+        })
+        .finally(() => {
+            autoRefillPromise = null;
+        });
+
+    return autoRefillPromise;
+}
+
 function shuffleDeck() {
     state.deck = [...cards].sort(() => Math.random() - 0.5);
 }
 
-function nextCard() {
-    if (state.deck.length === 0) shuffleDeck();
+async function nextCard() {
+    if (state.deck.length <= AUTO_CARD_REFILL_THRESHOLD) {
+        void maybeTopUpDeck();
+    }
+
+    if (state.deck.length === 0) {
+        const addedCount = await maybeTopUpDeck(true);
+        if (addedCount === 0 && state.deck.length === 0) {
+            shuffleDeck();
+        }
+    }
+
     state.currentCard = state.deck.pop();
     renderCard();
     emitGameState();
+
+    if (state.deck.length <= AUTO_CARD_REFILL_THRESHOLD) {
+        void maybeTopUpDeck();
+    }
 }
 
 function renderCard() {
@@ -325,6 +406,9 @@ els.btnStart.addEventListener('click', () => {
     state.scores = [0, 0];
     state.currentTeam = 0;
     state.turnsPlayed = 0;
+    setGenerationContext({
+        theme: els.cardTheme.value.trim() || generationContext.theme,
+    });
     shuffleDeck();
     startTurnIntro();
 });
@@ -336,11 +420,11 @@ function startTurnIntro() {
 }
 
 els.btnGo.addEventListener('click', () => {
-    startTurn();
+    void startTurn();
 });
 
 // ---- Turn ----
-function startTurn() {
+async function startTurn() {
     state.turnPasses = 0;
     state.turnCorrect = 0;
     state.turnTaboo = 0;
@@ -352,7 +436,7 @@ function startTurn() {
     els.timerBar.style.width = '100%';
     updateScoreDisplay();
     updatePassCounter();
-    nextCard();
+    await nextCard();
     showScreen('game');
 
     state.timerInterval = setInterval(() => {
@@ -387,24 +471,24 @@ function endTurn() {
 }
 
 // ---- Actions ----
-els.btnCorrect.addEventListener('click', () => {
+els.btnCorrect.addEventListener('click', async () => {
     state.turnCorrect++;
     state.turnPoints++;
-    nextCard();
+    await nextCard();
 });
 
-els.btnPass.addEventListener('click', () => {
+els.btnPass.addEventListener('click', async () => {
     if (state.turnPasses < state.maxPass) {
         state.turnPasses++;
         updatePassCounter();
-        nextCard();
+        await nextCard();
     }
 });
 
-els.btnTaboo.addEventListener('click', () => {
+els.btnTaboo.addEventListener('click', async () => {
     state.turnTaboo++;
     state.turnPoints--;
-    nextCard();
+    await nextCard();
 });
 
 // ---- Next turn / Scoreboard ----
@@ -443,6 +527,9 @@ els.btnGenerate.addEventListener('click', async () => {
     const theme = els.cardTheme.value.trim();
     const count = parseInt(els.cardCount.value, 10) || 30;
     if (!theme) return;
+    setGenerationContext({
+        theme,
+    });
 
     els.btnGenerate.disabled = true;
     els.btnGenerate.classList.add('loading');
@@ -459,7 +546,7 @@ els.btnGenerate.addEventListener('click', async () => {
         if (!res.ok) throw new Error(data.error || 'Request failed');
 
         if (data.cards && data.cards.length > 0) {
-            cards = data.cards;
+            cards = data.cards.map(normalizeCard).filter(card => card.word && card.forbidden.length >= 3);
             shuffleDeck();
             els.generateStatus.textContent = `✓ Generated ${data.cards.length} cards!`;
             els.generateStatus.className = 'generate-status success';
@@ -490,9 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(idDisplay);
 
     if (socket) socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
-    
-    // Initialize book upload component
-    initBookUpload();
+    els.btnReuseGenerated?.addEventListener('click', restoreGeneratedCards);
+    updateReuseButton();
 });
 
 // ============================================

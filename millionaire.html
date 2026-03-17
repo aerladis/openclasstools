@@ -5,77 +5,69 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128176;</text></svg>" />
     <title>Who Wants to Be a Millionaire?</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="millionaire.css" />
-    <link rel="stylesheet" href="book-upload.css" />
 </head>
 
 <body>
     <canvas id="particles"></canvas>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
 
-    <!-- Start Screen -->
     <div class="screen active" id="start-screen">
-        <div class="glass-card">
-            <span class="game-icon">💰</span>
+        <div class="glass-card start-card">
+            <span class="game-icon">&#128176;</span>
+            <p class="eyebrow">Quiz Show Mode</p>
             <h1>Who Wants to Be a Millionaire?</h1>
-            <p class="subtitle">Answer 15 questions correctly to win $1,000,000!</p>
-            
+            <p class="subtitle">Build a 15-question ladder, play it live, and control it from the admin panel.</p>
+
             <div class="theme-section">
-                <label for="theme-input">Question Theme (optional)</label>
-                <input type="text" id="theme-input" class="theme-input" placeholder="e.g., Science, History, Movies..."
+                <label for="theme-input">Question Theme</label>
+                <input type="text" id="theme-input" class="theme-input" placeholder="Science, history, films..."
                     maxlength="50" />
             </div>
-
-            <!-- Book Upload Section -->
-            <div id="book-upload-container"></div>
+            <button id="btn-reuse-generated" class="btn-secondary" type="button" hidden>Reuse Last Generated</button>
 
             <div class="mode-buttons">
                 <button class="btn-primary" id="btn-start-ai">
-                    <span class="btn-icon">✨</span>
+                    <span class="btn-icon">&#10024;</span>
                     Generate with AI
                 </button>
                 <button class="btn-secondary" id="btn-start-default">
-                    <span class="btn-icon">🎮</span>
+                    <span class="btn-icon">&#9654;</span>
                     Default Questions
                 </button>
             </div>
 
-            <button class="btn-text" id="btn-how-to-play">How to Play?</button>
+            <button class="btn-text" id="btn-how-to-play">How to Play</button>
 
             <div class="back-link">
-                <a href="index.html">🏠 Back to Hub</a>
+                <a href="index.html">Back to Hub</a>
             </div>
         </div>
     </div>
 
-    <!-- How to Play Modal -->
     <div class="screen" id="help-screen">
         <div class="glass-card help-card">
+            <p class="eyebrow">Rules</p>
             <h2>How to Play</h2>
             <ul class="help-list">
-                <li>🎯 Answer <strong>15 questions</strong> correctly to win $1,000,000</li>
-                <li>⏱️ You have <strong>30 seconds</strong> per question</li>
-                <li>🛟 <strong>Safe Havens</strong> at $1,000 and $32,000 guarantee those amounts</li>
-                <li>💡 <strong>3 Lifelines</strong> available:
-                    <ul>
-                        <li><strong>50:50</strong> - Removes 2 wrong answers</li>
-                        <li><strong>Phone a Friend</strong> - Get a hint</li>
-                        <li><strong>Ask the Audience</strong> - See poll results</li>
-                    </ul>
-                </li>
-                <li>🏃 You can <strong>Walk Away</strong> with your current winnings</li>
-                <li>❌ Wrong answer drops you to last safe haven</li>
+                <li>Answer <strong>15 questions</strong> correctly to reach $1,000,000.</li>
+                <li>You have <strong>30 seconds</strong> for each question.</li>
+                <li>Safe havens at <strong>$1,000</strong> and <strong>$32,000</strong> protect those winnings.</li>
+                <li>Use <strong>50:50</strong>, <strong>Phone a Friend</strong>, and <strong>Ask the Audience</strong> when needed.</li>
+                <li>You can <strong>walk away</strong> with your current winnings at any time.</li>
+                <li>A wrong answer drops you back to your last safe haven.</li>
             </ul>
-            <button class="btn-primary" id="btn-close-help">Got it!</button>
+            <button class="btn-primary" id="btn-close-help">Continue</button>
         </div>
     </div>
 
-    <!-- Loading Screen -->
     <div class="screen" id="loading-screen">
         <div class="glass-card loading-card">
             <div class="spinner"></div>
@@ -83,70 +75,66 @@
         </div>
     </div>
 
-    <!-- Game Screen -->
     <div class="screen" id="game-screen">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="lifelines">
-                <button class="lifeline-btn" id="lifeline-5050" title="50:50">
-                    <span class="lifeline-text">50:50</span>
+        <div class="game-shell">
+            <aside class="prize-ladder glass-card">
+                <p class="eyebrow">Prize Ladder</p>
+                <div class="prize-list" id="prize-list"></div>
+            </aside>
+
+            <main class="play-stage">
+                <div class="top-bar glass-strip">
+                    <div class="lifelines">
+                        <button class="lifeline-btn" id="lifeline-5050" title="50:50">
+                            <span class="lifeline-text">50:50</span>
+                        </button>
+                        <button class="lifeline-btn" id="lifeline-phone" title="Phone a Friend">
+                            <span class="lifeline-icon">&#128222;</span>
+                        </button>
+                        <button class="lifeline-btn" id="lifeline-audience" title="Ask the Audience">
+                            <span class="lifeline-icon">&#128101;</span>
+                        </button>
+                    </div>
+                    <div class="timer-container">
+                        <svg class="timer-svg" viewBox="0 0 60 60">
+                            <circle class="timer-bg" cx="30" cy="30" r="26" />
+                            <circle class="timer-progress" id="timer-circle" cx="30" cy="30" r="26" />
+                        </svg>
+                        <span class="timer-text" id="timer-display">30</span>
+                    </div>
+                </div>
+
+                <section class="question-area glass-card">
+                    <div class="question-number" id="question-number">Question 1</div>
+                    <div class="question-text" id="question-text">Loading question...</div>
+                </section>
+
+                <section class="answers-grid">
+                    <button class="answer-btn" data-index="0" id="answer-0">
+                        <span class="answer-letter">A</span>
+                        <span class="answer-text" id="answer-text-0">-</span>
+                    </button>
+                    <button class="answer-btn" data-index="1" id="answer-1">
+                        <span class="answer-letter">B</span>
+                        <span class="answer-text" id="answer-text-1">-</span>
+                    </button>
+                    <button class="answer-btn" data-index="2" id="answer-2">
+                        <span class="answer-letter">C</span>
+                        <span class="answer-text" id="answer-text-2">-</span>
+                    </button>
+                    <button class="answer-btn" data-index="3" id="answer-3">
+                        <span class="answer-letter">D</span>
+                        <span class="answer-text" id="answer-text-3">-</span>
+                    </button>
+                </section>
+
+                <button class="btn-walk-away" id="btn-walk-away">
+                    Walk Away with $<span id="walk-away-amount">0</span>
                 </button>
-                <button class="lifeline-btn" id="lifeline-phone" title="Phone a Friend">
-                    <span class="lifeline-icon">📞</span>
-                </button>
-                <button class="lifeline-btn" id="lifeline-audience" title="Ask the Audience">
-                    <span class="lifeline-icon">👥</span>
-                </button>
-            </div>
-            <div class="timer-container">
-                <svg class="timer-svg" viewBox="0 0 60 60">
-                    <circle class="timer-bg" cx="30" cy="30" r="26" />
-                    <circle class="timer-progress" id="timer-circle" cx="30" cy="30" r="26" />
-                </svg>
-                <span class="timer-text" id="timer-display">30</span>
-            </div>
+            </main>
         </div>
-
-        <!-- Prize Ladder -->
-        <div class="prize-ladder">
-            <div class="prize-list" id="prize-list">
-                <!-- Generated by JS -->
-            </div>
-        </div>
-
-        <!-- Question Area -->
-        <div class="question-area">
-            <div class="question-number" id="question-number">Question 1</div>
-            <div class="question-text" id="question-text">Loading question...</div>
-        </div>
-
-        <!-- Answers Grid -->
-        <div class="answers-grid">
-            <button class="answer-btn" data-index="0" id="answer-0">
-                <span class="answer-letter">A</span>
-                <span class="answer-text" id="answer-text-0">-</span>
-            </button>
-            <button class="answer-btn" data-index="1" id="answer-1">
-                <span class="answer-letter">B</span>
-                <span class="answer-text" id="answer-text-1">-</span>
-            </button>
-            <button class="answer-btn" data-index="2" id="answer-2">
-                <span class="answer-letter">C</span>
-                <span class="answer-text" id="answer-text-2">-</span>
-            </button>
-            <button class="answer-btn" data-index="3" id="answer-3">
-                <span class="answer-letter">D</span>
-                <span class="answer-text" id="answer-text-3">-</span>
-            </button>
-        </div>
-
-        <!-- Walk Away Button -->
-        <button class="btn-walk-away" id="btn-walk-away">
-            🏃 Walk Away with $<span id="walk-away-amount">0</span>
-        </button>
     </div>
 
-    <!-- Lifeline Modal -->
     <div class="screen" id="lifeline-screen">
         <div class="glass-card lifeline-card">
             <div class="lifeline-animation" id="lifeline-animation"></div>
@@ -156,11 +144,10 @@
         </div>
     </div>
 
-    <!-- Result Screen -->
     <div class="screen" id="result-screen">
         <div class="glass-card result-card">
-            <div class="result-icon" id="result-icon">🏆</div>
-            <h2 id="result-title">Congratulations!</h2>
+            <div class="result-icon" id="result-icon">&#127942;</div>
+            <h2 id="result-title">Congratulations</h2>
             <p class="result-message" id="result-message">You won</p>
             <div class="result-amount" id="result-amount">$1,000,000</div>
             <div class="result-details" id="result-details"></div>
@@ -169,7 +156,6 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
     <div class="screen" id="confirm-screen">
         <div class="glass-card confirm-card">
             <h3 id="confirm-title">Are you sure?</h3>
@@ -182,7 +168,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="book-upload.js"></script>
+    <script src="generated-content.js"></script>
     <script src="millionaire.js"></script>
 </body>
 

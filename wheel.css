@@ -130,14 +130,27 @@ body {
 }
 
 .winner-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
     font-size: 2rem;
     font-weight: 900;
     min-height: 2.5rem;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.winner-emoji {
+    color: var(--accent-1);
+    filter: drop-shadow(0 0 12px rgba(168, 85, 247, .45));
+}
+
+.winner-name {
     background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-align: center;
 }
 
 .wheel-actions {

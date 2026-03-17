@@ -1,82 +1,115 @@
-# OpenClassTools: Interactive AI-Powered Party & Learning Games
+# BerkAI Game Hub
 
-OpenClassTools is a modern, lightweight, and engaging hub of interactive web-based games designed for groups, classrooms, and social gatherings. Built with vanilla web technologies and an Express backend, it features a stunning "glassmorphism" UI and seamless AI integration to generate endless, highly customizable content on the fly.
+Interactive browser party games for classrooms, clubs, and group play. The project runs on plain HTML/CSS/JS with an Express + Socket.IO backend and uses Gemini for theme-based AI content generation.
 
-## 🎮 Included Games
+The old screenshot-to-book generation flow has been removed from the app and server. AI generation still works through text themes for the supported games.
 
-1. **Who Am I? (AI Enhanced)**
-   - The classic identity-guessing party game.
-   - **AI Feature:** Instantly generate a custom list of characters based on any prompt (e.g., "Historical figures", "Marvel superheroes", "90s Pop Stars") using Google's Gemini AI.
-2. **Taboo (AI Enhanced)**
-   - Describe the main word without using the 5 forbidden words. Features a built-in timer, score tracking, and team management.
-   - **AI Feature:** Generate endless decks of custom Taboo cards based on any theme you type in.
-3. **Hangman**
-   - A sleek, digital take on the classic word-guessing game with interactive keyboard and progressive character drawing.
-4. **Spin the Bottle**
-   - Input names and let the physics-based SVG bottle randomly select the next person. Features a highly polished, responsive design.
-5. **Wheel of Names**
-   - A highly customizable spinning wheel for random selections. Perfect for teachers calling on students, giveaways, or deciding who goes next.
+## Included Games
 
-## ✨ Key Features
+- **Who Am I?**: countdown-based character reveal game with AI-generated character packs
+- **Taboo**: team word-description game with timers, scoring, and AI-generated card sets
+- **Hangman**: classic word guessing with categories and AI-generated word packs
+- **Spin the Bottle**: local multiplayer bottle spinner
+- **Wheel of Names**: customizable name wheel for random picks
+- **Word Game**: admin-controlled classroom word game with AI-generated question packs
+- **Who Wants to Be a Millionaire?**: 15-question quiz ladder with lifelines and admin sync
+- **Flappy Crocodile**: self-contained arcade mini-game
 
-- **Zero DB Required:** The app uses lightweight local flat-file storage (`list.txt` and `taboo.json`), making it incredibly easy to deploy and host anywhere.
-- **AI-Powered:** Deep integration with the Gemini API to overcome the biggest hurdle of party games—running out of fresh content!
-- **Modern UI/UX:** A consistent, responsive "glassmorphism" design system with fluid animations, custom backgrounds, and mobile-first CSS architecture.
-- **Customizable:** Fully modular. You can easily plug in new HTML/CSS/JS game modules into the main hub.
+## Screenshots
 
-## 🚀 Quick Start (Local Development)
+### Hub
+![Hub](docs/screenshots/hub.png)
+
+### Who Am I?
+![Who Am I](docs/screenshots/who-am-i.png)
+
+### Taboo
+![Taboo](docs/screenshots/taboo.png)
+
+### Hangman
+![Hangman](docs/screenshots/hangman.png)
+
+### Word Game
+![Word Game](docs/screenshots/word-game.png)
+
+### Millionaire
+![Millionaire](docs/screenshots/millionaire.png)
+
+### Admin Panel
+![Admin Panel](docs/screenshots/admin-panel.png)
+
+## Features
+
+- Flat-file setup with no database
+- Real-time host/admin sync through Socket.IO
+- Theme-based AI generation for `Who Am I?`, `Taboo`, `Hangman`, `Word Game`, and `Millionaire`
+- Local reuse of the last generated pack per supported game
+- Mobile-friendly glassmorphism UI
+
+## Local Setup
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16+ recommended)
-- A [Google Gemini API Key](https://aistudio.google.com/app/apikey)
+- Node.js 16+
+- A Gemini API key if you want AI generation
 
-### Installation
+### Install
 
-1. Clone the repository:
+```bash
+npm install
+```
 
-   ```bash
-   git clone https://github.com/aerladis/openclasstools.git
-   cd openclasstools
-   ```
+### Environment
 
-2. Install dependencies:
+Create `.env` in the project root:
 
-   ```bash
-   npm install
-   ```
+```env
+GEMINI_API_KEY=your_actual_api_key_here
+PORT=8090
+ALLOWED_ORIGINS=http://localhost:8090,http://play.berkaybilge.space
+```
 
-3. Set up your environment variables:
-   - Create a file named `.env` in the root directory.
-   - Add your Gemini API key:
+### Run
 
-     ```env
-     GEMINI_API_KEY=your_actual_api_key_here
-     PORT=8090
-     ```
+```bash
+npm start
+```
 
-4. Start the server:
+Open `http://localhost:8090`.
 
-   ```bash
-   node server.js
-   ```
+## Admin Panel
 
-5. Open your browser and navigate to:
+Open `http://localhost:8090/admin.html`, enter the 4-character game ID shown on a host screen, and control supported games remotely.
 
-   ```
-   http://localhost:8090
-   ```
+Current admin-supported game flows:
 
-## 🛠 Tech Stack
+- `Who Am I?`: character sync
+- `Hangman`: word list sync
+- `Taboo`: card sync
+- `Word Game`: full remote round control and question editing
+- `Millionaire`: question sync, editor, and lifeline controls
 
-- **Frontend:** HTML5, CSS3 (Vanilla), JavaScript (ES6+), Canvas API
-- **Backend:** Node.js, Express.js
-- **AI Integration:** Google Gemini (generative-ai)
+## AI Endpoints
 
-## 🤝 Contributing
+- `POST /api/generate`
+- `POST /api/generate-taboo`
+- `POST /api/generate-hangman`
+- `POST /api/generate-kelime`
+- `POST /api/generate-millionaire`
+- `GET /api/health`
 
-We welcome contributions! Whether it's adding a new game, improving the UI, or optimizing the AI prompts, feel free to fork the repository and submit a pull request.
+## Manual Smoke Test
 
-## 📝 License
+The following flows were smoke-tested locally against the current repo state:
 
-This project is open-source and available under the MIT License.
+- Hub page load and navigation
+- `Who Am I?`: start countdown and reveal
+- `Taboo`: setup, start turn, and first card render
+- `Hangman`: start game and keyboard render
+- `Spin the Bottle`: add 3 players, start, and spin
+- `Wheel of Names`: load and spin
+- `Word Game`: host load, admin connect, and round start from admin
+- `Millionaire`: default-question start and question render
+- `Flappy Crocodile`: load and start
+
+Benign note: pages without an explicit favicon may log a `favicon.ico` 404 in the browser console during local testing.

@@ -3,77 +3,54 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Word Game - Smartboard View</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="kelime.css">
-    <link rel="stylesheet" href="book-upload.css">
 </head>
 
 <body>
-    <!-- Particle Canvas Background -->
     <canvas id="particles"></canvas>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
 
-    <div class="kelime-container">
-        <!-- Header Section -->
-        <header class="game-header">
-            <a href="index.html" class="btn-back">← Hub</a>
-            <h1>🎯 Word Game</h1>
-            <div style="width: 80px;"></div> <!-- Spacer for balance -->
-        </header>
-
-        <!-- Main Game Area -->
-        <div class="game-board">
-
-            <!-- Question Display -->
-            <div class="question-container">
-                <p id="question-text" class="question-text">Word Game Starting!</p>
+    <main class="wordgame-stage">
+        <section class="board-surface glass-panel">
+            <div class="question-wrap">
+                <p id="question-text" class="question-text">Word Game is ready.</p>
             </div>
 
-            <!-- Letters Area -->
-            <div id="letters-container" class="letters-container">
-                <!-- Letter blocks will be generated here -->
+            <div class="letters-wrap">
+                <div id="letters-container" class="letters-container"></div>
             </div>
 
-            <!-- Timer and Score Info -->
-            <div class="game-stats">
-                <div class="stat-box">
+            <div class="stats-row">
+                <div class="stat-card glass-panel">
                     <span class="stat-label">Time</span>
                     <span id="timer-display" class="stat-value timer">04:00</span>
                 </div>
-
-                <div class="stat-box">
+                <div class="stat-card glass-panel">
                     <span class="stat-label">Score</span>
                     <span id="score-display" class="stat-value score">0</span>
                 </div>
             </div>
 
-            <p id="waiting-msg" class="waiting-message">Waiting for Admin to connect and load questions...</p>
+            <p id="waiting-msg" class="status-banner glass-panel">Waiting for the admin to connect and load questions...</p>
 
-            <!-- AI Generation Panel -->
-            <div class="generation-panel">
-                <h3>🎮 Quick Start</h3>
-                <div class="generate-section">
-                    <input id="theme-input" class="theme-input" type="text" placeholder="Topic (e.g., History, Science, Geography...)" />
-                    <button id="btn-generate-ai" class="btn-accent">
-                        <span class="btn-icon">✨</span> Generate with AI
-                    </button>
+            <div id="round-result-overlay" class="round-result-overlay" hidden>
+                <div class="round-result-card glass-panel">
+                    <p id="round-result-kicker" class="round-result-kicker">Round Complete</p>
+                    <h2 id="round-result-title" class="round-result-title">Finished</h2>
+                    <p id="round-result-message" class="round-result-message">The round is over.</p>
+                    <p class="round-result-score-label">Final Score</p>
+                    <p id="round-result-score" class="round-result-score">0</p>
                 </div>
-                
-                <!-- Book Upload Section -->
-                <div id="book-upload-container"></div>
-                
-                <button id="btn-use-default" class="btn-secondary">
-                    Use Default Questions
-                </button>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
-    <!-- Socket.IO & Game Logic -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="book-upload.js"></script>
     <script src="kelime.js"></script>
 </body>
 

@@ -3,64 +3,7 @@
    Game Logic with Socket.IO Integration
    ============================================ */
 
-// ============================================
-// Book Upload Component
-// ============================================
-
-let bookUploadComponent = null;
 let notificationTimeout = null;
-
-function initBookUpload() {
-    const container = document.getElementById('book-upload-container');
-    if (!container) return;
-
-    bookUploadComponent = new BookUploadComponent('book-upload-container', {
-        gameType: 'millionaire',
-        onExtract: (data) => {
-            generateFromBook(data);
-        },
-        onError: (error) => {
-            showNotification(error, 'error');
-        },
-        onLoading: () => {
-            // Reserved for future loading hooks.
-        }
-    });
-}
-
-async function generateFromBook(data) {
-    showScreen('loading');
-    elements.loadingText.textContent = `Generating questions about "${data.topicData.title}"...`;
-
-    try {
-        const response = await fetch('/api/generate-from-book', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: data.content,
-                gameType: 'millionaire',
-                theme: data.topicData.title,
-                count: 15
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to generate from book');
-        }
-
-        const result = await response.json();
-
-        if (result.success && result.questions && result.questions.length >= 10) {
-            startGame(result.questions.slice(0, 15));
-        } else {
-            throw new Error('Invalid question data');
-        }
-    } catch (err) {
-        console.error('Book generation error:', err);
-        showNotification('Failed to generate from book. Using default questions.', 'error');
-        startGame(DEFAULT_QUESTIONS);
-    }
-}
 
 // ============================================
 // Game Data & Constants
@@ -74,6 +17,10 @@ const PRIZE_LADDER = [
 
 const SAFE_HAVEN_INDICES = [0, 5, 10];
 const QUESTION_TIME = 30;
+const ANSWER_EVALUATION_DELAY = 180;
+const CORRECT_ANSWER_DELAY = 850;
+const WRONG_ANSWER_DELAY = 1200;
+const MILLIONAIRE_STORAGE_KEY = 'millionaire';
 
 const DEFAULT_QUESTIONS = [
     { question: 'What is the capital of France?', options: ['London', 'Berlin', 'Paris', 'Madrid'], correct: 2 },
@@ -128,6 +75,7 @@ function normalizeQuestions(questions) {
 let gameState = {
     questions: [],
     currentLevel: 0,
+    hiddenAnswers: [],
     lifelines: {
         fiftyFifty: { used: false },
         phoneFriend: { used: false },
@@ -139,6 +87,127 @@ let gameState = {
     selectedAnswer: null,
     isProcessing: false
 };
+
+const soundState = {
+    enabled: true,
+    audioContext: null,
+    masterGain: null,
+    lastTimerCue: null
+};
+
+function ensureAudioContext() {
+    if (!soundState.enabled) return null;
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    if (!soundState.audioContext) {
+        soundState.audioContext = new AudioContextClass();
+        soundState.masterGain = soundState.audioContext.createGain();
+        soundState.masterGain.gain.value = 0.12;
+        soundState.masterGain.connect(soundState.audioContext.destination);
+    }
+
+    if (soundState.audioContext.state === 'suspended') {
+        soundState.audioContext.resume().catch(() => {});
+    }
+
+    return soundState.audioContext;
+}
+
+function playTone(frequency, duration, options = {}) {
+    const audioContext = ensureAudioContext();
+    if (!audioContext || !soundState.masterGain) return;
+
+    const {
+        type = 'sine',
+        volume = 0.3,
+        attack = 0.01,
+        release = 0.08,
+        delay = 0,
+        slideTo = null
+    } = options;
+
+    const startTime = audioContext.currentTime + delay;
+    const endTime = startTime + duration;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, startTime);
+
+    if (slideTo) {
+        oscillator.frequency.exponentialRampToValueAtTime(slideTo, endTime);
+    }
+
+    gainNode.gain.setValueAtTime(0.0001, startTime);
+    gainNode.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), startTime + attack);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, endTime + release);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(soundState.masterGain);
+
+    oscillator.start(startTime);
+    oscillator.stop(endTime + release + 0.02);
+}
+
+function playSound(name) {
+    if (!soundState.enabled) return;
+
+    switch (name) {
+        case 'start':
+            playTone(440, 0.12, { type: 'triangle', volume: 0.18 });
+            playTone(660, 0.12, { type: 'triangle', volume: 0.16, delay: 0.1 });
+            playTone(880, 0.16, { type: 'triangle', volume: 0.14, delay: 0.2 });
+            break;
+        case 'question':
+            playTone(520, 0.09, { type: 'sine', volume: 0.12 });
+            playTone(660, 0.12, { type: 'sine', volume: 0.1, delay: 0.1 });
+            break;
+        case 'select':
+            playTone(360, 0.06, { type: 'square', volume: 0.08 });
+            break;
+        case 'correct':
+            playTone(523.25, 0.12, { type: 'triangle', volume: 0.16 });
+            playTone(659.25, 0.12, { type: 'triangle', volume: 0.15, delay: 0.12 });
+            playTone(783.99, 0.18, { type: 'triangle', volume: 0.14, delay: 0.24 });
+            break;
+        case 'wrong':
+            playTone(320, 0.14, { type: 'sawtooth', volume: 0.12, slideTo: 220 });
+            playTone(180, 0.2, { type: 'sawtooth', volume: 0.08, delay: 0.12, slideTo: 120 });
+            break;
+        case 'lifeline':
+            playTone(700, 0.08, { type: 'square', volume: 0.1 });
+            playTone(980, 0.12, { type: 'square', volume: 0.08, delay: 0.08 });
+            break;
+        case 'walkAway':
+            playTone(493.88, 0.12, { type: 'triangle', volume: 0.12 });
+            playTone(392, 0.18, { type: 'triangle', volume: 0.1, delay: 0.1 });
+            break;
+        case 'win':
+            playTone(523.25, 0.12, { type: 'triangle', volume: 0.17 });
+            playTone(659.25, 0.12, { type: 'triangle', volume: 0.16, delay: 0.1 });
+            playTone(783.99, 0.12, { type: 'triangle', volume: 0.15, delay: 0.2 });
+            playTone(1046.5, 0.26, { type: 'triangle', volume: 0.14, delay: 0.32 });
+            break;
+        case 'loss':
+            playTone(260, 0.14, { type: 'sawtooth', volume: 0.1, slideTo: 180 });
+            playTone(170, 0.22, { type: 'sawtooth', volume: 0.08, delay: 0.14, slideTo: 110 });
+            break;
+        case 'timeout':
+            playTone(880, 0.08, { type: 'square', volume: 0.1 });
+            playTone(660, 0.12, { type: 'square', volume: 0.08, delay: 0.1 });
+            break;
+        case 'tick':
+            playTone(880, 0.04, { type: 'square', volume: 0.05 });
+            break;
+    }
+}
+
+function initSoundControls() {
+    document.addEventListener('pointerdown', ensureAudioContext, { once: true });
+    document.addEventListener('keydown', ensureAudioContext, { once: true });
+}
 
 // ============================================
 // Socket.IO Setup
@@ -197,6 +266,11 @@ if (socket) {
                     loadQuestion();
                 }
                 break;
+            case 'SELECT_ANSWER':
+                if (Number.isInteger(data.answerIndex)) {
+                    selectAnswer(data.answerIndex);
+                }
+                break;
         }
     });
 
@@ -243,8 +317,10 @@ function emitGameState() {
             targetPrize: PRIZE_LADDER[gameState.currentLevel],
             question: currentQuestion?.question,
             options: currentQuestion?.options,
+            hiddenAnswers: [...gameState.hiddenAnswers],
             lifelines: gameState.lifelines,
             timeRemaining: gameState.timeRemaining,
+            selectedAnswer: gameState.selectedAnswer,
             state: gameState.isProcessing ? 'processing' : gameState.timer ? 'playing' : 'paused'
         });
     }, 100);
@@ -266,6 +342,7 @@ const screens = {
 
 const elements = {
     themeInput: document.getElementById('theme-input'),
+    btnReuseGenerated: document.getElementById('btn-reuse-generated'),
     questionNumber: document.getElementById('question-number'),
     questionText: document.getElementById('question-text'),
     answerBtns: [
@@ -330,11 +407,12 @@ function showNotification(message, type = 'info') {
         notification.style.transform = 'translateX(-50%)';
         notification.style.padding = '12px 18px';
         notification.style.borderRadius = '999px';
-        notification.style.background = 'rgba(15, 23, 42, 0.92)';
-        notification.style.color = '#fff';
-        notification.style.fontWeight = '600';
+        notification.style.background = 'rgba(8, 15, 28, 0.88)';
+        notification.style.color = '#eff6ff';
+        notification.style.fontWeight = '700';
         notification.style.zIndex = '9999';
-        notification.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.25)';
+        notification.style.backdropFilter = 'blur(18px)';
+        notification.style.boxShadow = '0 24px 50px rgba(2, 6, 23, 0.3)';
         document.body.appendChild(notification);
     }
 
@@ -350,9 +428,44 @@ function showNotification(message, type = 'info') {
     }, 2500);
 }
 
+function saveGeneratedQuestions(questions, meta = {}) {
+    window.generatedContentStore?.save(MILLIONAIRE_STORAGE_KEY, {
+        questions: normalizeQuestions(questions),
+        meta
+    });
+    updateReuseButton();
+}
+
+function updateReuseButton() {
+    if (!elements.btnReuseGenerated) return;
+
+    const stored = window.generatedContentStore?.load(MILLIONAIRE_STORAGE_KEY);
+    elements.btnReuseGenerated.hidden = !stored?.questions?.length;
+
+    if (stored?.questions?.length) {
+        const savedAt = window.generatedContentStore?.formatTimestamp(stored.savedAt);
+        elements.btnReuseGenerated.textContent = savedAt
+            ? `Reuse Saved Pack (${savedAt})`
+            : 'Reuse Saved Pack';
+    }
+}
+
+function restoreGeneratedQuestions() {
+    const stored = window.generatedContentStore?.load(MILLIONAIRE_STORAGE_KEY);
+    if (!stored?.questions?.length) return;
+
+    if (stored.meta?.theme) {
+        elements.themeInput.value = stored.meta.theme;
+    }
+    showNotification(`Restored ${stored.questions.length} saved questions.`, 'success');
+    startGame(stored.questions);
+}
+
 // ============================================
 // Event Listeners
 // ============================================
+
+elements.btnReuseGenerated?.addEventListener('click', restoreGeneratedQuestions);
 
 document.getElementById('btn-start-default').addEventListener('click', () => {
     startGame(DEFAULT_QUESTIONS);
@@ -424,6 +537,11 @@ async function generateQuestions(theme) {
         const data = await response.json();
 
         if (data.success && data.questions && data.questions.length >= 10) {
+            saveGeneratedQuestions(data.questions.slice(0, 15), {
+                source: 'ai',
+                theme,
+                count: Math.min(data.questions.length, 15)
+            });
             startGame(data.questions.slice(0, 15));
         } else {
             throw new Error('Invalid question data');
@@ -438,6 +556,7 @@ async function generateQuestions(theme) {
 function startGame(questions = DEFAULT_QUESTIONS) {
     gameState.questions = normalizeQuestions(questions);
     gameState.currentLevel = 0;
+    gameState.hiddenAnswers = [];
     gameState.lifelines = {
         fiftyFifty: { used: false },
         phoneFriend: { used: false },
@@ -448,10 +567,12 @@ function startGame(questions = DEFAULT_QUESTIONS) {
     gameState.gameActive = true;
     gameState.selectedAnswer = null;
     gameState.isProcessing = false;
+    soundState.lastTimerCue = null;
 
     createPrizeLadder();
     updateLifelineButtons();
     syncQuestionList();
+    playSound('start');
     loadQuestion();
     showScreen('game');
 }
@@ -511,7 +632,7 @@ function loadQuestion() {
             const btn = elements.answerBtns[i];
             btn.className = 'answer-btn';
             btn.disabled = false;
-            btn.style.display = 'flex';
+            btn.style.display = '';
             elements.answerTexts[i].textContent = question.options[i];
         }
 
@@ -522,7 +643,12 @@ function loadQuestion() {
     });
 
     gameState.selectedAnswer = null;
+    gameState.hiddenAnswers = [];
     gameState.isProcessing = false;
+    soundState.lastTimerCue = null;
+    if (gameState.currentLevel > 0) {
+        playSound('question');
+    }
     startTimer(true);
     emitGameState();
 }
@@ -589,6 +715,12 @@ function updateTimerDisplay() {
         circle.classList.remove('warning', 'danger');
     }
 
+    const shouldCueTimer = gameState.timeRemaining === 10 || (gameState.timeRemaining <= 5 && gameState.timeRemaining > 0);
+    if (shouldCueTimer && soundState.lastTimerCue !== gameState.timeRemaining) {
+        soundState.lastTimerCue = gameState.timeRemaining;
+        playSound('tick');
+    }
+
     emitGameState();
 }
 
@@ -598,19 +730,32 @@ function timeUp() {
 }
 
 function selectAnswer(index) {
-    if (gameState.isProcessing || !gameState.gameActive) return;
+    if (
+        gameState.isProcessing ||
+        !gameState.gameActive ||
+        !Number.isInteger(index) ||
+        index < 0 ||
+        index > 3 ||
+        gameState.hiddenAnswers.includes(index) ||
+        elements.answerBtns[index]?.disabled
+    ) {
+        return;
+    }
 
     gameState.isProcessing = true;
     clearInterval(gameState.timer);
     gameState.timer = null;
     gameState.selectedAnswer = index;
     elements.answerBtns[index].classList.add('selected');
+    playSound('select');
+    emitGameState();
 
     setTimeout(() => {
         const question = gameState.questions[gameState.currentLevel];
         const isCorrect = index === question.correct;
 
         if (isCorrect) {
+            playSound('correct');
             elements.answerBtns[index].classList.remove('selected');
             elements.answerBtns[index].classList.add('correct');
 
@@ -621,17 +766,18 @@ function selectAnswer(index) {
                 } else {
                     loadQuestion();
                 }
-            }, 1500);
+            }, CORRECT_ANSWER_DELAY);
         } else {
+            playSound('wrong');
             elements.answerBtns[index].classList.remove('selected');
             elements.answerBtns[index].classList.add('wrong');
             elements.answerBtns[question.correct].classList.add('correct');
 
             setTimeout(() => {
                 endGame(false);
-            }, 2000);
+            }, WRONG_ANSWER_DELAY);
         }
-    }, 2000);
+    }, ANSWER_EVALUATION_DELAY);
 }
 
 // ============================================
@@ -645,6 +791,7 @@ function useLifeline(lifeline) {
 
     gameState.lifelines[lifeline].used = true;
     updateLifelineButtons();
+    playSound('lifeline');
     emitGameState();
 
     switch (lifeline) {
@@ -680,10 +827,15 @@ function useFiftyFifty() {
     const question = gameState.questions[gameState.currentLevel];
     const wrongAnswers = [0, 1, 2, 3].filter((index) => index !== question.correct);
     const toRemove = wrongAnswers.sort(() => Math.random() - 0.5).slice(0, 2);
+    gameState.hiddenAnswers = [...toRemove];
 
     toRemove.forEach((index) => {
         elements.answerBtns[index].classList.add('hidden');
+        elements.answerBtns[index].disabled = true;
+        elements.answerBtns[index].style.display = 'none';
     });
+
+    emitGameState();
 }
 
 function usePhoneFriend() {
@@ -776,6 +928,7 @@ function endGame(won, reason = '', walkAwayAmount = null) {
     gameState.gameActive = false;
     clearInterval(gameState.timer);
     gameState.timer = null;
+    soundState.lastTimerCue = null;
 
     let amount;
     let title;
@@ -812,6 +965,28 @@ function endGame(won, reason = '', walkAwayAmount = null) {
             : 'Better luck next time!';
     }
 
+    title = new Map([
+        ['ðŸŽ‰ Congratulations!', 'Congratulations!'],
+        ['ðŸƒ You Walked Away', 'You Walked Away'],
+        ['âŒ Game Over', 'Game Over']
+    ]).get(title) || title;
+
+    icon = new Map([
+        ['ðŸ’°', '💰'],
+        ['ðŸƒ', '🏃'],
+        ['âŒ', '✖']
+    ]).get(icon) || icon;
+
+    if (won) {
+        playSound('win');
+    } else if (walkAwayAmount !== null) {
+        playSound('walkAway');
+    } else if (reason === "Time's up!") {
+        playSound('timeout');
+    } else {
+        playSound('loss');
+    }
+
     elements.resultIcon.textContent = icon;
     elements.resultTitle.textContent = title;
     elements.resultMessage.textContent = message;
@@ -836,6 +1011,7 @@ function resetGame() {
     gameState = {
         questions: gameState.questions.map(cloneQuestion),
         currentLevel: 0,
+        hiddenAnswers: [],
         lifelines: {
             fiftyFifty: { used: false },
             phoneFriend: { used: false },
@@ -847,6 +1023,7 @@ function resetGame() {
         selectedAnswer: null,
         isProcessing: false
     };
+    soundState.lastTimerCue = null;
 
     Object.values(elements.lifelineBtns).forEach((btn) => {
         btn.disabled = false;
@@ -944,5 +1121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     idDisplay.className = 'game-id-badge';
     idDisplay.textContent = `Game ID: ${gameId}`;
     document.body.appendChild(idDisplay);
-    initBookUpload();
+    initSoundControls();
+    updateReuseButton();
 });

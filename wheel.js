@@ -9,6 +9,9 @@ let names = [];
 let spinning = false;
 let currentAngle = 0;
 let lastWinnerIndex = -1;
+const FULL_TURN = Math.PI * 2;
+const MIN_WHEEL_SPIN_TURNS = 6.5;
+const MAX_WHEEL_EXTRA_TURNS = 2.5;
 
 // DOM
 const canvas = document.getElementById('wheel-canvas');
@@ -160,12 +163,19 @@ btnSpin.addEventListener('click', () => {
 
     // Pointer at top = -π/2. Segment center at currentAngle + i*arc + arc/2.
     const baseTarget = -Math.PI / 2 - targetIndex * arc - arc / 2;
-    const spins = 5 + Math.floor(Math.random() * 4);
-    const targetAngleFinal = baseTarget - spins * 2 * Math.PI;
     const offset = (Math.random() - 0.5) * arc * 0.6;
 
     const startAngle = currentAngle;
-    const totalDelta = (targetAngleFinal + offset) - startAngle;
+    const currentNormalized = ((startAngle % FULL_TURN) + FULL_TURN) % FULL_TURN;
+    const targetNormalized = (((baseTarget + offset) % FULL_TURN) + FULL_TURN) % FULL_TURN;
+    let landingDelta = targetNormalized - currentNormalized;
+
+    if (landingDelta > 0) {
+        landingDelta -= FULL_TURN;
+    }
+
+    const spinTurns = MIN_WHEEL_SPIN_TURNS + Math.random() * MAX_WHEEL_EXTRA_TURNS;
+    const totalDelta = landingDelta - spinTurns * FULL_TURN;
     const duration = 5000;
     const startTime = performance.now();
 
@@ -183,7 +193,14 @@ btnSpin.addEventListener('click', () => {
             spinning = false;
             btnSpin.disabled = false;
             lastWinnerIndex = targetIndex;
-            winnerDisplay.textContent = '🎉 ' + names[targetIndex];
+            winnerDisplay.textContent = '';
+            const winnerEmoji = document.createElement('span');
+            winnerEmoji.className = 'winner-emoji';
+            winnerEmoji.textContent = '\u{1F389}';
+            const winnerName = document.createElement('span');
+            winnerName.className = 'winner-name';
+            winnerName.textContent = names[targetIndex];
+            winnerDisplay.append(winnerEmoji, winnerName);
             btnRemoveWinner.style.display = '';
         }
     }

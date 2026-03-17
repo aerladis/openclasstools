@@ -69,9 +69,6 @@ project-root/
 ├── wheel.js               # Wheel spinner logic
 ├── wheel.css              # Wheel-specific styles
 │
-├── book-upload.js         # Shared book upload component
-├── book-upload.css        # Book upload component styles
-│
 ├── admin.html             # Admin panel for remote monitoring
 ├── admin.js               # Admin panel logic (Socket.IO client)
 ├── admin.css              # Admin panel styles
@@ -136,21 +133,6 @@ Generate Millionaire quiz questions
 Generate Kelime Oyunu questions (Turkish word game)
 - Body: `{ theme: string, count: number }`
 - Returns: `{ success: true, questions: [{ question, answer }] }`
-
-### POST `/api/upload-book`
-Upload book screenshots/images and extract topics using AI Vision
-- Content-Type: `multipart/form-data`
-- Body: `{ images: File[], gameType: string }`
-- Returns: `{ success: true, extractedText, topicData: { title, description, themes[], keyTerms[], difficulty } }`
-
-### POST `/api/generate-from-book`
-Generate game content from extracted book text
-- Body: `{ content: string, gameType: 'whoami'|'taboo'|'hangman'|'millionaire', theme?: string, count?: number }`
-- Returns: Game-specific data (characters, cards, words, or questions)
-
-### File Upload
-The server supports uploading book screenshots (JPG, PNG, WEBP) up to 10MB per file, max 5 files.
-Gemini Vision API extracts text from images, then generates game topics automatically.
 
 ## Socket.IO Events
 

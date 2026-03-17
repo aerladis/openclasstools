@@ -1,7 +1,6 @@
 /* ============================================
    Party Games – Express Server (Secure)
    Serves static files + Gemini AI generation
-   With file upload, OCR, and topic extraction
    ============================================ */
 
 import 'dotenv/config';
@@ -11,7 +10,6 @@ import { Server } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import multer from 'multer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,42 +28,22 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 8090;
 const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_VISION_MODEL = 'gemini-2.5-flash'; // Vision-capable model
 
-// ============================================
-// File Upload Configuration
-// ============================================
-
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+function createTraceId(prefix = 'req') {
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'book-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+function serializeError(err) {
+    if (!err) return { message: 'Unknown error' };
 
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max
-        files: 5 // Max 5 files at once
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'application/pdf'];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only images and PDFs are allowed.'), false);
-        }
-    }
-});
+    return {
+        name: err.name,
+        message: err.message,
+        code: err.code,
+        status: err.status,
+        stack: err.stack
+    };
+}
 
 // ============================================
 // Security Middleware
@@ -118,7 +96,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 // Session Tracking
 // ============================================
 
-const activeGames = new Map(); // gameId -> { hostSocketId, createdAt, type }
+const activeGames = new Map(); // gameId -> { hostSocketId, createdAt, lastActivity, type }
 const MAX_GAME_AGE = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_GAMES = 1000; // Maximum concurrent games
 
@@ -127,7 +105,8 @@ setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     for (const [gameId, data] of activeGames.entries()) {
-        if (now - data.createdAt > MAX_GAME_AGE) {
+        const lastSeenAt = data.lastActivity || data.createdAt;
+        if (now - lastSeenAt > MAX_GAME_AGE) {
             activeGames.delete(gameId);
             cleaned++;
         }
@@ -152,13 +131,14 @@ io.on('connection', (socket) => {
         }
         
         const upperGameId = gameId.toUpperCase();
+        const existingGame = activeGames.get(upperGameId);
+        const now = Date.now();
         
         // Check if another host already controls this game
-        if (activeGames.has(upperGameId)) {
-            const existing = activeGames.get(upperGameId);
-            if (existing.hostSocketId !== socket.id) {
+        if (existingGame) {
+            if (existingGame.hostSocketId !== socket.id) {
                 // Check if existing host is still connected
-                const hostSocket = io.sockets.sockets.get(existing.hostSocketId);
+                const hostSocket = io.sockets.sockets.get(existingGame.hostSocketId);
                 if (hostSocket && hostSocket.connected) {
                     if (callback) callback({ 
                         success: false, 
@@ -173,8 +153,10 @@ io.on('connection', (socket) => {
         // Register/Update this game
         activeGames.set(upperGameId, {
             hostSocketId: socket.id,
-            createdAt: Date.now(),
-            type: 'unknown'
+            createdAt: existingGame?.createdAt || now,
+            lastActivity: now,
+            type: existingGame?.type || 'unknown',
+            disconnectedAt: null
         });
         
         socket.join(upperGameId);
@@ -199,6 +181,9 @@ io.on('connection', (socket) => {
             if (callback) callback({ success: false, error: 'Game not found' });
             return;
         }
+
+        const game = activeGames.get(upperGameId);
+        game.lastActivity = Date.now();
         
         socket.join(upperGameId);
         socket.gameId = upperGameId;
@@ -231,6 +216,9 @@ io.on('connection', (socket) => {
         
         const upperGameId = gameId.toUpperCase();
         if (!socket.gameId || socket.gameId !== upperGameId || !socket.isAdmin) return;
+
+        const game = activeGames.get(upperGameId);
+        if (game) game.lastActivity = Date.now();
         
         socket.to(upperGameId).emit('hostSendState');
     });
@@ -258,6 +246,9 @@ io.on('connection', (socket) => {
         
         const gameId = data.gameId?.toUpperCase();
         if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isAdmin) return;
+
+        const game = activeGames.get(gameId);
+        if (game) game.lastActivity = Date.now();
         
         socket.to(gameId).emit('hostWordListUpdate', { ...data, gameId });
     });
@@ -268,6 +259,9 @@ io.on('connection', (socket) => {
         
         const gameId = data.gameId?.toUpperCase();
         if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isAdmin) return;
+
+        const game = activeGames.get(gameId);
+        if (game) game.lastActivity = Date.now();
         
         socket.to(gameId).emit('adminUpdate', { ...data, gameId });
     });
@@ -280,21 +274,10 @@ io.on('connection', (socket) => {
         if (socket.isHost && socket.gameId) {
             const game = activeGames.get(socket.gameId);
             if (game && game.hostSocketId === socket.id) {
-                // Keep game alive for 5 minutes in case host reconnects
+                // Preserve the game so the host can reconnect without losing the room state.
                 game.disconnectedAt = Date.now();
-                console.log(`⏳ Host disconnected from ${socket.gameId}, keeping game alive for 5min`);
-                
-                setTimeout(() => {
-                    const currentGame = activeGames.get(socket.gameId);
-                    if (currentGame && currentGame.disconnectedAt) {
-                        // Check if a new host has taken over
-                        const newHostSocket = io.sockets.sockets.get(currentGame.hostSocketId);
-                        if (!newHostSocket || !newHostSocket.connected) {
-                            activeGames.delete(socket.gameId);
-                            console.log(`🗑️ Game ${socket.gameId} cleaned up after host timeout`);
-                        }
-                    }
-                }, 5 * 60 * 1000);
+                game.lastActivity = Date.now();
+                console.log(`⏳ Host disconnected from ${socket.gameId}, preserving game until inactivity cleanup`);
             }
         }
     });
@@ -380,107 +363,37 @@ async function callGemini(prompt) {
     }
 }
 
-// ============================================
-// Helper: call Gemini Vision (Image Analysis)
-// ============================================
-
-async function callGeminiVision(imageBase64, mimeType, prompt) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'your-api-key-here' || apiKey.length < 10) {
-        throw new Error('GEMINI_API_KEY is not configured');
-    }
-
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_VISION_MODEL}:generateContent?key=${apiKey}`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000); // 45 second timeout for images
-
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        {
-                            inline_data: {
-                                mime_type: mimeType,
-                                data: imageBase64
-                            }
-                        }
-                    ]
-                }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 2048
-                }
-            }),
-            signal: controller.signal
-        });
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error('Gemini Vision API error:', errBody);
-            throw new Error('Image analysis service unavailable');
-        }
-
-        const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    } catch (err) {
-        clearTimeout(timeout);
-        if (err.name === 'AbortError') {
-            throw new Error('Image analysis timed out');
-        }
-        throw err;
-    }
+function cleanModelJsonText(text) {
+    return String(text ?? '')
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/g, '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/,\s*([}\]])/g, '$1')
+        .trim();
 }
 
-// ============================================
-// Helper: Extract Topics from Book Content
-// ============================================
-
-async function extractTopicsFromContent(content, gameType) {
-    const prompt = `Analyze this text extracted from a book or educational material and extract relevant topics for a "${gameType}" game.
-
-Extracted Text:
-"""
-${content.slice(0, 3000)}
-"""
-
-Based on this content, generate a JSON object with these fields:
-- "title": A catchy title for the game topic (max 50 chars)
-- "description": Brief description of what the content is about (max 100 chars)
-- "themes": Array of 3-5 specific theme suggestions for AI generation
-- "keyTerms": Array of 8-15 important terms/names/concepts from the text
-- "difficulty": "easy", "medium", or "hard" based on content complexity
-
-Return ONLY valid JSON, no markdown, no explanation.
-
-Example format:
-{
-  "title": "Photosynthesis Explained",
-  "description": "How plants convert sunlight into energy",
-  "themes": ["Plant Biology", "Cellular Processes", "Ecosystem Energy Flow"],
-  "keyTerms": ["chlorophyll", "mitochondria", "glucose", "carbon dioxide"],
-  "difficulty": "medium"
-}`;
+function parseModelJson(text) {
+    const cleaned = cleanModelJsonText(text);
 
     try {
-        const text = await callGemini(prompt);
-        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
         return JSON.parse(cleaned);
-    } catch (err) {
-        console.error('Topic extraction error:', err);
-        return {
-            title: 'Custom Topic',
-            description: 'Topics from uploaded material',
-            themes: ['General Knowledge'],
-            keyTerms: content.split(/\s+/).filter(w => w.length > 4).slice(0, 10),
-            difficulty: 'medium'
-        };
+    } catch {
+        const arrayStart = cleaned.indexOf('[');
+        const arrayEnd = cleaned.lastIndexOf(']');
+
+        if (arrayStart >= 0 && arrayEnd > arrayStart) {
+            return JSON.parse(cleaned.slice(arrayStart, arrayEnd + 1));
+        }
+
+        const objectStart = cleaned.indexOf('{');
+        const objectEnd = cleaned.lastIndexOf('}');
+
+        if (objectStart >= 0 && objectEnd > objectStart) {
+            return JSON.parse(cleaned.slice(objectStart, objectEnd + 1));
+        }
+
+        throw new Error('Invalid JSON response from model');
     }
 }
 
@@ -500,254 +413,44 @@ function sanitizeCount(count, max = 100) {
     return num;
 }
 
-// ============================================
-// File Upload & OCR Endpoints
-// ============================================
+function sanitizeCefrLevel(level) {
+    const normalized = String(level ?? '').trim().toUpperCase();
+    return ['A1', 'A2', 'B1', 'B1+', 'B2', 'C1'].includes(normalized) ? normalized : '';
+}
 
-// POST /api/upload-book - Upload book screenshots/images
-app.post('/api/upload-book', upload.array('images', 5), async (req, res) => {
-    try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'No files uploaded' });
-        }
-
-        const gameType = req.body.gameType || 'general';
-        const extractedTexts = [];
-
-        // Process each uploaded file with Gemini Vision
-        for (const file of req.files) {
-            try {
-                // Read file as base64
-                const imageBuffer = fs.readFileSync(file.path);
-                const base64Image = imageBuffer.toString('base64');
-                const mimeType = file.mimetype;
-
-                // Use Gemini Vision to extract text
-                const extractionPrompt = `Extract all readable text from this image. If it's a book page, extract the main content. If it contains educational material, preserve the key terms and concepts. Return only the extracted text, no explanations.`;
-
-                const extractedText = await callGeminiVision(base64Image, mimeType, extractionPrompt);
-                extractedTexts.push(extractedText);
-
-                // Clean up uploaded file
-                fs.unlinkSync(file.path);
-            } catch (err) {
-                console.error(`Error processing file ${file.filename}:`, err);
-                // Clean up on error
-                if (fs.existsSync(file.path)) {
-                    fs.unlinkSync(file.path);
-                }
-            }
-        }
-
-        if (extractedTexts.length === 0) {
-            return res.status(500).json({ error: 'Failed to extract text from images' });
-        }
-
-        // Combine all extracted text
-        const combinedContent = extractedTexts.join('\n\n---\n\n');
-
-        // Extract topics based on game type
-        const topicData = await extractTopicsFromContent(combinedContent, gameType);
-
-        res.json({
-            success: true,
-            extractedText: combinedContent.slice(0, 500) + (combinedContent.length > 500 ? '...' : ''),
-            topicData,
-            filesProcessed: extractedTexts.length
-        });
-
-    } catch (err) {
-        console.error('Upload processing error:', err);
-        res.status(500).json({ error: err.message });
+function buildWordGameCefrInstruction(cefrLevel) {
+    if (!cefrLevel) {
+        return `
+- Keep the language broadly accessible for mixed-level English learners
+- Keep clue sentences short, direct, and easy to process`;
     }
-});
 
-// POST /api/generate-from-book - Generate game content from book text
-app.post('/api/generate-from-book', apiRateLimit, async (req, res) => {
-    try {
-        const { content, gameType, theme, count = 15 } = req.body;
-        
-        if (!content || !gameType) {
-            return res.status(400).json({ error: 'Content and gameType are required' });
-        }
-
-        let result;
-        
-        switch (gameType) {
-            case 'millionaire':
-                result = await generateMillionaireFromBook(content, theme, count);
-                break;
-            case 'whoami':
-                result = await generateWhoAmIFromBook(content, count);
-                break;
-            case 'taboo':
-                result = await generateTabooFromBook(content, count);
-                break;
-            case 'hangman':
-                result = await generateHangmanFromBook(content, count);
-                break;
-            case 'kelime':
-                result = await generateKelimeFromBook(content, count);
-                break;
-            default:
-                return res.status(400).json({ error: 'Unknown game type' });
-        }
-
-        res.json({ success: true, ...result });
-    } catch (err) {
-        console.error('Generation from book error:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ============================================
-// Game Content Generation from Book
-// ============================================
-
-async function generateMillionaireFromBook(content, theme, count) {
-    const prompt = `Based on this educational content, create EXACTLY ${count} quiz questions for "Who Wants to Be a Millionaire".
-
-Content:
-"""
-${content.slice(0, 4000)}
-"""
-
-Theme: ${theme || 'General Knowledge'}
-
-Requirements:
-- Questions 1-5: Easy (basic facts from content)
-- Questions 6-10: Medium (understanding concepts)
-- Questions 11-15: Hard (application/analysis)
-- Each question has exactly 4 options
-- Only ONE correct answer per question
-- Questions must be based ONLY on the provided content
-
-Return ONLY valid JSON array:
-[
-  {
-    "question": "Question text?",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correct": 0
-  }
-]`;
-
-    let text = await callGemini(prompt);
-    text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    const questions = JSON.parse(text);
-    
-    return { questions: questions.slice(0, count) };
+    return `
+CEFR target: ${cefrLevel}
+- Match both the target word AND the clue wording to CEFR ${cefrLevel}
+- The explanation/clue itself must fit the CEFR level, not just the answer
+- Keep clues classroom-safe, unambiguous, and useful for English language teaching
+- Avoid using words in the clue that are harder than the target CEFR level
+- Do not make the clue language more advanced than necessary
+- Prefer definition-style, simple paraphrase, function, category, synonym, antonym, or context clues
+- For A1 use very short, very simple clues with common words and basic sentence patterns
+- For A2 use simple everyday English and short direct explanations
+- For B1 use clear sentence-level paraphrases and familiar school/everyday vocabulary
+- For B1+ use intermediate but still clear clues with modest abstraction and natural paraphrasing
+- For B2 use richer paraphrases and broader academic/general-interest vocabulary, but keep clues readable
+- For C1 allow precise and more abstract wording, but keep the clue solvable and concise`;
 }
 
-async function generateWhoAmIFromBook(content, count) {
-    const prompt = `Based on this educational content, extract ${count} important characters, people, historical figures, or entities mentioned.
+function sortWordGameQuestionsByAnswerLength(questions) {
+    return [...questions].sort((left, right) => {
+        const leftAnswer = String(left.answer ?? '');
+        const rightAnswer = String(right.answer ?? '');
+        const lengthDiff = leftAnswer.length - rightAnswer.length;
 
-Content:
-"""
-${content.slice(0, 4000)}
-"""
+        if (lengthDiff !== 0) return lengthDiff;
 
-Return ONLY a list of names, one per line. No descriptions, no numbering.
-
-Example:
-Albert Einstein
-Marie Curie
-Isaac Newton`;
-
-    const text = await callGemini(prompt);
-    const characters = text
-        .split('\n')
-        .map(l => l.replace(/^\d+[\.\)\-]\s*/, '').trim())
-        .filter(l => l && l.length > 2 && l.length < 50);
-    
-    return { characters: characters.slice(0, count) };
-}
-
-async function generateTabooFromBook(content, count) {
-    const prompt = `Based on this educational content, create ${count} Taboo game cards using key terms from the text.
-
-Content:
-"""
-${content.slice(0, 4000)}
-"""
-
-For each card, provide:
-- Main word (key term from content)
-- 5 forbidden words (related terms that can't be said)
-
-Return ONLY valid JSON:
-[
-  {
-    "word": "Photosynthesis",
-    "forbidden": ["chlorophyll", "sunlight", "plants", "energy", "leaves"]
-  }
-]`;
-
-    let text = await callGemini(prompt);
-    text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    const cards = JSON.parse(text);
-    
-    return { cards: cards.slice(0, count) };
-}
-
-async function generateHangmanFromBook(content, count) {
-    const prompt = `Based on this educational content, extract ${count} important words (4-12 letters) that represent key concepts.
-
-Content:
-"""
-${content.slice(0, 4000)}
-"""
-
-Return ONLY a list of words, one per line. Only words with 4-12 letters, no proper nouns with spaces.
-
-Example:
-atom
-molecule
-cell
-growth`;
-
-    const text = await callGemini(prompt);
-    const words = text
-        .split('\n')
-        .map(l => l.trim().toUpperCase())
-        .filter(l => l.length >= 4 && l.length <= 12 && /^[A-Z]+$/.test(l));
-    
-    return { words: words.slice(0, count) };
-}
-
-async function generateKelimeFromBook(content, count) {
-    const prompt = `Based on this educational content, create EXACTLY ${count} Turkish word game questions for "Kelime Oyunu".
-
-Content:
-"""
-${content.slice(0, 4000)}
-"""
-
-Requirements:
-- Questions should be in Turkish
-- Answers should be single words (3-12 letters, UPPERCASE)
-- Questions based on the content provided
-- Vary difficulty level
-
-Return ONLY valid JSON array:
-[
-  {
-    "question": "Soru metni?",
-    "answer": "CEVAP"
-  }
-]
-
-No markdown, no explanation, just the JSON array.`;
-
-    let text = await callGemini(prompt);
-    text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    const questions = JSON.parse(text);
-    
-    return { 
-        questions: questions.slice(0, count).map(q => ({
-            question: q.question,
-            answer: q.answer.toUpperCase().trim()
-        }))
-    };
+        return leftAnswer.localeCompare(rightAnswer) || String(left.question ?? '').localeCompare(String(right.question ?? ''));
+    });
 }
 
 // ============================================
@@ -793,12 +496,7 @@ Example format:
 No markdown, no code fences, no explanation — just the JSON array.`;
 
     try {
-        let text = await callGemini(prompt);
-
-        // Strip markdown code fences if present
-        text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-
-        const cards = JSON.parse(text);
+        const cards = parseModelJson(await callGemini(prompt));
 
         if (!Array.isArray(cards) || cards.length === 0) {
             throw new Error('Invalid response format');
@@ -840,41 +538,47 @@ Return ONLY the words, one per line, no numbering, no extra text, no explanation
     }
 });
 
-// ---- POST /api/generate-kelime (Kelime Oyunu questions) ----
+// ---- POST /api/generate-kelime (Word Game questions) ----
 app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'genel kültür';
+    const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
     const count = sanitizeCount(req.body.count, 30);
+    const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
+    const cefrInstruction = buildWordGameCefrInstruction(cefrLevel);
 
-    const prompt = `Generate EXACTLY ${count} Turkish word game questions for "Kelime Oyunu" about "${theme}".
+    const prompt = `Generate EXACTLY ${count} English word game questions for "Word Game" about "${theme}" for ELT classes.
 
 Each question should have:
-- A question in Turkish
-- An answer (single word or short phrase, uppercase, no spaces if possible)
+- A question in English
+- An answer (single word, uppercase, no spaces)
 - Answers should be 3-12 letters
 - Questions should vary in difficulty
+- Use clue-based prompts that help learners understand vocabulary meaning, use, category, synonym, antonym, function, or context
+- Prefer practical classroom vocabulary over niche trivia
+- Keep clues unambiguous and suitable for the answer length
+- Make the answer a meaningful target vocabulary item students might study in class
+- Keep clue sentences as simple as the CEFR target requires
+- Example: for A1, write very simple clues like "It is an animal. It is big and gray."
+${cefrInstruction}
 
 Return ONLY valid JSON array:
 [
   {
-    "question": "Türkiye'nin başkenti neresidir?",
-    "answer": "ANKARA"
+    "question": "What is the capital of France?",
+    "answer": "PARIS"
   }
 ]
 
 No markdown, no explanation, just the JSON array.`;
 
     try {
-        let text = await callGemini(prompt);
-        text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-
-        const questions = JSON.parse(text);
+        const questions = parseModelJson(await callGemini(prompt));
 
         if (!Array.isArray(questions)) {
             throw new Error('Invalid response format');
         }
 
         // Validate and clean
-        const validQuestions = questions.filter(q =>
+        const validQuestions = sortWordGameQuestionsByAnswerLength(questions.filter(q =>
             q.question && 
             q.answer && 
             q.answer.length >= 3 && 
@@ -882,7 +586,7 @@ No markdown, no explanation, just the JSON array.`;
         ).map(q => ({
             question: q.question,
             answer: q.answer.toUpperCase().trim()
-        })).slice(0, count);
+        })).slice(0, count));
 
         res.json({ success: true, count: validQuestions.length, questions: validQuestions });
     } catch (err) {
@@ -918,12 +622,7 @@ Return ONLY valid JSON in this exact format:
 No markdown, no explanation, just the JSON array. Ensure all 15 questions are included.`;
 
     try {
-        let text = await callGemini(prompt);
-
-        // Strip markdown code fences if present
-        text = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-
-        const questions = JSON.parse(text);
+        const questions = parseModelJson(await callGemini(prompt));
 
         if (!Array.isArray(questions) || questions.length < 10) {
             throw new Error('Invalid response format - expected at least 10 questions');
@@ -974,7 +673,12 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error('Server error:', err);
+    const traceId = createTraceId('srv');
+    console.error(`[trace:${traceId}] Server error`, {
+        method: req?.method,
+        path: req?.originalUrl,
+        error: serializeError(err)
+    });
     res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -982,5 +686,4 @@ server.listen(PORT, () => {
     console.log(`🎮 BerkAI Game Hub running → http://localhost:${PORT}`);
     console.log(`🔒 Security: Rate limiting enabled, CORS configured`);
     console.log(`📊 Max concurrent games: ${MAX_GAMES}`);
-    console.log(`📁 File uploads: Enabled (max 10MB)`);
 });

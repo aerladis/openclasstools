@@ -2,73 +2,6 @@
    WHO AM I? – Game Logic
    ============================================ */
 
-// ---- Book Upload Component ----
-let bookUploadComponent = null;
-
-function initBookUpload() {
-  const container = document.getElementById('book-upload-container');
-  if (!container) return;
-  
-  bookUploadComponent = new BookUploadComponent('book-upload-container', {
-    gameType: 'whoami',
-    onExtract: (data) => {
-      generateFromBook(data);
-    },
-    onError: (error) => {
-      const statusEl = document.getElementById('generate-status');
-      statusEl.textContent = error;
-      statusEl.style.color = '#ef4444';
-    },
-    onLoading: (isLoading) => {
-      // Handle loading state
-    }
-  });
-}
-
-async function generateFromBook(data) {
-  const statusEl = document.getElementById('generate-status');
-  const countInput = document.getElementById('count-input');
-  const count = parseInt(countInput.value) || 30;
-  
-  statusEl.textContent = `Generating characters about "${data.topicData.title}"...`;
-  statusEl.style.color = 'var(--accent-1)';
-
-  try {
-    const response = await fetch('/api/generate-from-book', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: data.content,
-        gameType: 'whoami',
-        count: count
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate from book');
-    }
-
-    const result = await response.json();
-    
-    if (result.success && result.characters && result.characters.length > 0) {
-      CHARACTERS = result.characters;
-      bag = [];
-      statusEl.textContent = `✅ Generated ${result.characters.length} characters! Ready to play.`;
-      statusEl.style.color = '#22c55e';
-      
-      if (socket) {
-        socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
-      }
-    } else {
-      throw new Error('Invalid character data');
-    }
-  } catch (err) {
-    console.error('Book generation error:', err);
-    statusEl.textContent = '❌ Failed. Try text-based generation instead.';
-    statusEl.style.color = '#ef4444';
-  }
-}
-
 const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
 const socket = typeof io !== 'undefined' ? io() : null;
 
@@ -195,6 +128,41 @@ const btnGenerate = document.getElementById('btn-generate');
 const themeInput = document.getElementById('theme-input');
 const countInput = document.getElementById('count-input');
 const generateStatus = document.getElementById('generate-status');
+const btnReuseGenerated = document.getElementById('btn-reuse-generated');
+const WHOAMI_STORAGE_KEY = 'whoami';
+
+function saveGeneratedCharacters(characters, meta = {}) {
+  window.generatedContentStore?.save(WHOAMI_STORAGE_KEY, { characters, meta });
+  updateReuseButton();
+}
+
+function updateReuseButton() {
+  if (!btnReuseGenerated) return;
+
+  const stored = window.generatedContentStore?.load(WHOAMI_STORAGE_KEY);
+  btnReuseGenerated.hidden = !stored?.characters?.length;
+
+  if (stored?.characters?.length) {
+    const savedAt = window.generatedContentStore?.formatTimestamp(stored.savedAt);
+    btnReuseGenerated.textContent = savedAt
+      ? `Reuse Saved Pack (${savedAt})`
+      : 'Reuse Saved Pack';
+  }
+}
+
+function restoreGeneratedCharacters() {
+  const stored = window.generatedContentStore?.load(WHOAMI_STORAGE_KEY);
+  if (!stored?.characters?.length) return;
+
+  CHARACTERS = stored.characters;
+  bag = [];
+  if (stored.meta?.theme) themeInput.value = stored.meta.theme;
+  if (stored.meta?.count) countInput.value = stored.meta.count;
+  generateStatus.textContent = `Restored ${CHARACTERS.length} characters from saved content.`;
+  generateStatus.className = 'generate-status success';
+
+  if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
+}
 
 btnGenerate.addEventListener('click', async () => {
   const theme = themeInput.value.trim();
@@ -221,6 +189,7 @@ btnGenerate.addEventListener('click', async () => {
 
     // Reload the character list from new list.txt
     await loadCharacters();
+    saveGeneratedCharacters(CHARACTERS, { source: 'ai', theme, count: CHARACTERS.length });
     bag = []; // reset shuffle bag
     if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
   } catch (err) {
@@ -240,9 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
   idDisplay.className = 'game-id-badge';
   idDisplay.textContent = `Game ID: ${gameId}`;
   document.body.appendChild(idDisplay);
-  
-  // Initialize book upload component
-  initBookUpload();
+
+  btnReuseGenerated?.addEventListener('click', restoreGeneratedCharacters);
+  updateReuseButton();
 });
 
 // ============================================
