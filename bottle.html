@@ -33,6 +33,16 @@
                     <button id="btn-add" class="btn-accent btn-add-player">+</button>
                 </div>
             </div>
+            <div class="zebra-toggle-row">
+                <label class="toggle-label" for="zebra-toggle">
+                    <span class="toggle-icon">🦓</span> Zebra Mode
+                    <span class="toggle-hint">(doubles names for more randomness)</span>
+                </label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="zebra-toggle" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
             <button id="btn-start" class="btn-primary pulse" disabled>
                 <span class="btn-text">Start</span>
                 <span class="btn-arrow">→</span>
@@ -77,11 +87,27 @@
                 </div>
             </div>
             <h2 class="prompt-display" id="prompt-display"></h2>
-            <button id="btn-spin" class="btn-primary btn-spin-game">
-                <span class="btn-text">Spin!</span>
-            </button>
-            <a href="index.html" class="btn-secondary btn-ingame-menu"
-                style="text-decoration:none;margin-top:.3rem;font-size:.8rem;padding:.45rem 1.2rem;">🏠 Main Menu</a>
+            <div class="game-controls">
+                <button id="btn-spin" class="btn-primary btn-spin-game">
+                    <span class="btn-text">Spin!</span>
+                </button>
+                <button id="btn-shuffle" class="btn-secondary btn-shuffle" title="Shuffle player order">
+                    🔀 Shuffle
+                </button>
+            </div>
+            <div class="game-controls-secondary">
+                <div class="zebra-toggle-row zebra-toggle-ingame">
+                    <label class="toggle-label-sm" for="zebra-toggle-game">
+                        <span class="toggle-icon-sm">🦓</span> Zebra
+                    </label>
+                    <label class="toggle-switch toggle-switch-sm">
+                        <input type="checkbox" id="zebra-toggle-game" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <a href="index.html" class="btn-secondary btn-ingame-menu"
+                    style="text-decoration:none;font-size:.8rem;padding:.45rem 1.2rem;">🏠 Main Menu</a>
+            </div>
         </div>
     </div>
 

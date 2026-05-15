@@ -1,6 +1,6 @@
 /* ============================================
    Party Games – Express Server (Secure)
-   Serves static files + Gemini AI generation
+   Serves static files + AI-powered game generation
    ============================================ */
 
 import 'dotenv/config';
@@ -20,14 +20,39 @@ const server = http.createServer(app);
 // Security: Configure CORS
 const io = new Server(server, {
     cors: {
-        origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:8090", "http://play.berkaybilge.space"],
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+            "http://localhost:8090",
+            "http://play.metrix.dpdns.org",
+            "https://play.metrix.dpdns.org"
+        ],
         methods: ["GET", "POST"],
         credentials: true
     }
 });
 
 const PORT = process.env.PORT || 8090;
-const GEMINI_MODEL = 'gemini-2.5-flash';
+
+// ============================================
+// AI Provider: auto-detect Gemini (free) or OpenAI
+// ============================================
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+
+function getProvider() {
+    if (GEMINI_API_KEY && GEMINI_API_KEY.length > 10 && GEMINI_API_KEY !== 'your-api-key-here') {
+        return 'gemini';
+    }
+    if (OPENAI_API_KEY && OPENAI_API_KEY.length > 10 && OPENAI_API_KEY !== 'your-api-key-here') {
+        return 'openai';
+    }
+    return null;
+}
+
+const AI_PROVIDER = getProvider();
+
 
 function createTraceId(prefix = 'req') {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -316,30 +341,125 @@ function apiRateLimit(req, res, next) {
 }
 
 // ============================================
-// Helper: call Gemini (Text)
+// Helper: call AI (auto-routes to Gemini or OpenAI)
 // ============================================
 
-async function callGemini(prompt) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'your-api-key-here' || apiKey.length < 10) {
-        throw new Error('GEMINI_API_KEY is not configured');
+const TABOO_CARD_SCHEMA = {
+    type: 'array',
+    items: {
+        type: 'object',
+        properties: {
+            word: { type: 'string' },
+            forbidden: {
+                type: 'array',
+                items: { type: 'string' },
+                minItems: 5,
+                maxItems: 5
+            }
+        },
+        required: ['word', 'forbidden']
+    }
+};
+
+const WORD_GAME_SCHEMA = {
+    type: 'array',
+    items: {
+        type: 'object',
+        properties: {
+            question: { type: 'string' },
+            answer: { type: 'string' }
+        },
+        required: ['question', 'answer']
+    }
+};
+
+const MILLIONAIRE_SCHEMA = {
+    type: 'array',
+    items: {
+        type: 'object',
+        properties: {
+            question: { type: 'string' },
+            options: {
+                type: 'array',
+                items: { type: 'string' },
+                minItems: 4,
+                maxItems: 4
+            },
+            correct: {
+                type: 'integer',
+                minimum: 0,
+                maximum: 3
+            }
+        },
+        required: ['question', 'options', 'correct']
+    }
+};
+
+const THINKING_HATS_SCHEMA = {
+    type: 'array',
+    items: {
+        type: 'object',
+        properties: {
+            color: {
+                type: 'string',
+                enum: ['white', 'red', 'black', 'yellow', 'green', 'blue']
+            },
+            questions: {
+                type: 'array',
+                items: { type: 'string' },
+                minItems: 2,
+                maxItems: 3
+            },
+            starters: {
+                type: 'array',
+                items: { type: 'string' },
+                minItems: 3,
+                maxItems: 4
+            }
+        },
+        required: ['color', 'questions', 'starters']
+    }
+};
+
+function buildGeminiGenerationConfig(options = {}) {
+    const {
+        temperature = 0.9,
+        maxOutputTokens = 4096,
+        responseJsonSchema
+    } = options;
+
+    const generationConfig = {
+        temperature,
+        maxOutputTokens
+    };
+
+    if (responseJsonSchema) {
+        generationConfig.responseMimeType = 'application/json';
+        generationConfig.responseJsonSchema = responseJsonSchema;
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    return generationConfig;
+}
+
+async function callGemini(prompt, options = {}) {
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+    const generationConfig = buildGeminiGenerationConfig(options);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': GEMINI_API_KEY
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.9,
-                    maxOutputTokens: 4096
-                }
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig
             }),
             signal: controller.signal
         });
@@ -356,11 +476,76 @@ async function callGemini(prompt) {
         return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     } catch (err) {
         clearTimeout(timeout);
-        if (err.name === 'AbortError') {
-            throw new Error('AI generation timed out');
-        }
+        if (err.name === 'AbortError') throw new Error('AI generation timed out');
         throw err;
     }
+}
+
+async function callOpenAIProvider(prompt) {
+    const apiUrl = 'https://api.openai.com/v1/chat/completions';
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: OPENAI_MODEL,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a helpful assistant that generates game content. Always respond with the exact format requested. Do not include markdown code fences or extra commentary.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: 0.9,
+                max_tokens: 4096
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('OpenAI API error:', errBody);
+            throw new Error('AI generation service unavailable');
+        }
+
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content ?? '';
+    } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') throw new Error('AI generation timed out');
+        throw err;
+    }
+}
+
+async function callAI(prompt, options = {}) {
+    if (AI_PROVIDER === 'gemini') return callGemini(prompt, options);
+    if (AI_PROVIDER === 'openai') return callOpenAIProvider(prompt);
+    throw new Error('No AI provider configured. Set GEMINI_API_KEY (free) or OPENAI_API_KEY in .env');
+}
+
+async function callTextAI(prompt, options = {}) {
+    return callAI(prompt, options);
+}
+
+async function callJsonAI(prompt, responseJsonSchema, options = {}) {
+    const text = await callAI(prompt, {
+        ...options,
+        responseJsonSchema
+    });
+
+    return parseModelJson(text);
 }
 
 function cleanModelJsonText(text) {
@@ -466,7 +651,7 @@ app.post('/api/generate', apiRateLimit, async (req, res) => {
 Return ONLY the character names, one per line, no numbering, no extra text, no explanations.`;
 
     try {
-        const text = await callGemini(prompt);
+        const text = await callTextAI(prompt);
 
         const names = text
             .split('\n')
@@ -496,7 +681,7 @@ Example format:
 No markdown, no code fences, no explanation — just the JSON array.`;
 
     try {
-        const cards = parseModelJson(await callGemini(prompt));
+        const cards = await callJsonAI(prompt, TABOO_CARD_SCHEMA, { temperature: 0.7 });
 
         if (!Array.isArray(cards) || cards.length === 0) {
             throw new Error('Invalid response format');
@@ -524,7 +709,7 @@ Each word should be between 4 and 10 letters long.
 Return ONLY the words, one per line, no numbering, no extra text, no explanations.`;
 
     try {
-        const text = await callGemini(prompt);
+        const text = await callTextAI(prompt);
 
         const words = text
             .split('\n')
@@ -571,7 +756,7 @@ Return ONLY valid JSON array:
 No markdown, no explanation, just the JSON array.`;
 
     try {
-        const questions = parseModelJson(await callGemini(prompt));
+        const questions = await callJsonAI(prompt, WORD_GAME_SCHEMA, { temperature: 0.7 });
 
         if (!Array.isArray(questions)) {
             throw new Error('Invalid response format');
@@ -622,7 +807,7 @@ Return ONLY valid JSON in this exact format:
 No markdown, no explanation, just the JSON array. Ensure all 15 questions are included.`;
 
     try {
-        const questions = parseModelJson(await callGemini(prompt));
+        const questions = await callJsonAI(prompt, MILLIONAIRE_SCHEMA, { temperature: 0.6 });
 
         if (!Array.isArray(questions) || questions.length < 10) {
             throw new Error('Invalid response format - expected at least 10 questions');
@@ -645,6 +830,118 @@ No markdown, no explanation, just the JSON array. Ensure all 15 questions are in
         res.json({ success: true, count: validQuestions.length, questions: validQuestions });
     } catch (err) {
         console.error('Millionaire generation error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ---- POST /api/generate-hats (6 Thinking Hats prompts) ----
+app.post('/api/generate-hats', apiRateLimit, async (req, res) => {
+    const topic = sanitizeTheme(req.body.topic) || 'general topic';
+    const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
+
+    let cefrInstruction = '';
+    if (cefrLevel) {
+        const levelGuides = {
+            'A1': 'Use very simple words and very short sentences. Use present simple tense. Example starters: "I think...", "It is...", "I feel..."',
+            'A2': 'Use simple everyday English. Short clear sentences. Basic connectors (and, but, because). Example starters: "I believe that...", "The problem is...", "One good thing is..."',
+            'B1': 'Use clear, standard English. Moderate sentence length. Common academic words. Example starters: "In my opinion...", "One advantage is...", "We should consider..."',
+            'B1+': 'Use intermediate English with some complexity. Natural paraphrasing. Example starters: "From my perspective...", "It could be argued that...", "An alternative would be..."',
+            'B2': 'Use richer vocabulary and more complex sentences. Academic register is acceptable. Example starters: "Taking into account...", "One significant concern is...", "Evidence suggests that..."',
+            'C1': 'Use precise, nuanced language. Abstract concepts are fine. Sophisticated connectors. Example starters: "One could argue that...", "A critical consideration is...", "This raises the question of..."'
+        };
+        cefrInstruction = `
+CEFR Level: ${cefrLevel}
+Language guidance: ${levelGuides[cefrLevel] || levelGuides['B1']}
+- ALL questions and sentence starters MUST match this CEFR level
+- Do NOT use vocabulary or grammar structures above this level
+- Sentence starters should scaffold student output at this level`;
+    } else {
+        cefrInstruction = `
+- Use broadly accessible English suitable for mixed-level ELT classrooms
+- Keep questions clear and direct
+- Provide simple but varied sentence starters`;
+    }
+
+    const prompt = `You are an ELT (English Language Teaching) specialist. Generate discussion content for a "6 Thinking Hats" classroom activity about "${topic}".
+${cefrInstruction}
+
+For EACH of the 6 hats below, generate:
+- 2-3 discussion questions specific to "${topic}" that match the hat's thinking style
+- 3-4 sentence starters that students can use to begin their responses
+
+The 6 hats are:
+1. WHITE (Facts & Data) – objective information, statistics, what we know
+2. RED (Feelings & Emotions) – gut reactions, feelings, no justification needed
+3. BLACK (Caution & Risks) – dangers, problems, what could go wrong
+4. YELLOW (Benefits & Optimism) – advantages, positive outcomes, why it works
+5. GREEN (Creativity & Ideas) – new ideas, alternatives, creative solutions
+6. BLUE (Process & Summary) – organize discussion, summarize, next steps
+
+Return ONLY valid JSON in this exact format:
+[
+  {
+    "color": "white",
+    "questions": ["Question 1?", "Question 2?"],
+    "starters": ["I know that...", "The data shows...", "One fact is..."]
+  },
+  {
+    "color": "red",
+    "questions": ["Question 1?", "Question 2?"],
+    "starters": ["I feel...", "My reaction is...", "This makes me feel..."]
+  },
+  {
+    "color": "black",
+    "questions": ["Question 1?", "Question 2?"],
+    "starters": ["The risk is...", "One problem is...", "I am worried that..."]
+  },
+  {
+    "color": "yellow",
+    "questions": ["Question 1?", "Question 2?"],
+    "starters": ["One benefit is...", "This is good because...", "The advantage is..."]
+  },
+  {
+    "color": "green",
+    "questions": ["Question 1?", "Question 2?"],
+    "starters": ["What if we...", "A new idea is...", "We could try..."]
+  },
+  {
+    "color": "blue",
+    "questions": ["Question 1?", "Question 2?"],
+    "starters": ["To summarize...", "Our next step is...", "We have learned that..."]
+  }
+]
+
+No markdown, no explanation, just the JSON array with exactly 6 objects.`;
+
+    try {
+        const parsed = await callJsonAI(prompt, THINKING_HATS_SCHEMA, { temperature: 0.7 });
+
+        if (!Array.isArray(parsed) || parsed.length < 6) {
+            throw new Error('Invalid response format — expected 6 hat objects');
+        }
+
+        // Map by color to ensure correct order
+        const colorOrder = ['white', 'red', 'black', 'yellow', 'green', 'blue'];
+        const colorMap = {};
+        for (const item of parsed) {
+            if (item.color && Array.isArray(item.questions)) {
+                colorMap[item.color.toLowerCase()] = {
+                    questions: item.questions.slice(0, 3),
+                    starters: (item.starters || []).slice(0, 4)
+                };
+            }
+        }
+
+        // Build ordered array (fallback to empty if a color is missing)
+        const hats = colorOrder.map(color => ({
+            color,
+            questions: colorMap[color]?.questions || [],
+            starters: colorMap[color]?.starters || []
+        }));
+
+        res.json({ success: true, topic, hats });
+    } catch (err) {
+        console.error('Hats generation error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -686,4 +983,11 @@ server.listen(PORT, () => {
     console.log(`🎮 BerkAI Game Hub running → http://localhost:${PORT}`);
     console.log(`🔒 Security: Rate limiting enabled, CORS configured`);
     console.log(`📊 Max concurrent games: ${MAX_GAMES}`);
+    if (AI_PROVIDER === 'gemini') {
+        console.log(`🤖 AI Provider: Gemini (${GEMINI_MODEL}) — FREE`);
+    } else if (AI_PROVIDER === 'openai') {
+        console.log(`🤖 AI Provider: OpenAI (${OPENAI_MODEL}) — paid`);
+    } else {
+        console.log(`⚠️  No AI key configured! Set GEMINI_API_KEY (free) or OPENAI_API_KEY in .env`);
+    }
 });

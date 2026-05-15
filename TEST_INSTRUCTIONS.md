@@ -384,7 +384,7 @@ The Millionaire game is ready for production when:
 
 ## Deployment Checklist
 
-Before deploying to `play.berkaybilge.space`:
+Before deploying to `play.metrix.dpdns.org`:
 
 - [ ] `npm install` executed
 - [ ] `.env` file has valid `GEMINI_API_KEY`

@@ -158,28 +158,27 @@ btnSpin.addEventListener('click', () => {
     btnRemoveWinner.style.display = 'none';
 
     const n = names.length;
-    const arc = (2 * Math.PI) / n;
-    const targetIndex = Math.floor(Math.random() * n);
+    const arc = FULL_TURN / n;
 
-    // Pointer at top = -π/2. Segment center at currentAngle + i*arc + arc/2.
-    const baseTarget = -Math.PI / 2 - targetIndex * arc - arc / 2;
-    const offset = (Math.random() - 0.5) * arc * 0.6;
+    // Generate a random total spin (always negative = clockwise visual)
+    const spinTurns = MIN_WHEEL_SPIN_TURNS + Math.random() * MAX_WHEEL_EXTRA_TURNS;
+    const randomExtra = Math.random() * FULL_TURN; // random landing within a full turn
+    const totalDelta = -(spinTurns * FULL_TURN + randomExtra);
 
     const startAngle = currentAngle;
-    const currentNormalized = ((startAngle % FULL_TURN) + FULL_TURN) % FULL_TURN;
-    const targetNormalized = (((baseTarget + offset) % FULL_TURN) + FULL_TURN) % FULL_TURN;
-    let landingDelta = targetNormalized - currentNormalized;
-
-    if (landingDelta > 0) {
-        landingDelta -= FULL_TURN;
-    }
-
-    const spinTurns = MIN_WHEEL_SPIN_TURNS + Math.random() * MAX_WHEEL_EXTRA_TURNS;
-    const totalDelta = landingDelta - spinTurns * FULL_TURN;
     const duration = 5000;
     const startTime = performance.now();
 
     function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+    function getWinnerIndex(angle) {
+        // The pointer is at the top of the canvas (12 o'clock = -π/2).
+        // The wheel is rotated by `angle`. Segment i spans from angle i*arc to (i+1)*arc.
+        // The pointer points at wheel-angle: (-π/2 - angle).
+        // Normalize to [0, 2π) and find which segment it falls in.
+        let pointerAngle = ((-Math.PI / 2 - angle) % FULL_TURN + FULL_TURN) % FULL_TURN;
+        return Math.floor(pointerAngle / arc) % n;
+    }
 
     function animate(now) {
         const elapsed = now - startTime;
@@ -192,14 +191,18 @@ btnSpin.addEventListener('click', () => {
         } else {
             spinning = false;
             btnSpin.disabled = false;
-            lastWinnerIndex = targetIndex;
+
+            // Read the winner from the actual final angle
+            const winnerIndex = getWinnerIndex(currentAngle);
+            lastWinnerIndex = winnerIndex;
+
             winnerDisplay.textContent = '';
             const winnerEmoji = document.createElement('span');
             winnerEmoji.className = 'winner-emoji';
             winnerEmoji.textContent = '\u{1F389}';
             const winnerName = document.createElement('span');
             winnerName.className = 'winner-name';
-            winnerName.textContent = names[targetIndex];
+            winnerName.textContent = names[winnerIndex];
             winnerDisplay.append(winnerEmoji, winnerName);
             btnRemoveWinner.style.display = '';
         }

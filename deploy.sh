@@ -1,10 +1,10 @@
 #!/bin/bash
 # OpenClassTools VPS Deployment Script
-# Deploys to: play.berkaybilge.space
+# Deploys to: play.metrix.dpdns.org
 
 set -e
 
-echo "🚀 Starting deployment to play.berkaybilge.space..."
+echo "🚀 Starting deployment to play.metrix.dpdns.org..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,8 +14,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_NAME="openclasstools"
-APP_DIR="/var/www/play.berkaybilge.space"
-DOMAIN="play.berkaybilge.space"
+APP_DIR="/var/www/play.metrix.dpdns.org"
+DOMAIN="play.metrix.dpdns.org"
 PORT=8090
 
 # Check if running as root for initial setup
@@ -87,7 +87,7 @@ echo -e "${YELLOW}Step 6: Setting up Nginx configuration...${NC}"
 sudo tee /etc/nginx/sites-available/$DOMAIN > /dev/null << 'EOF'
 server {
     listen 80;
-    server_name play.berkaybilge.space;
+    server_name play.metrix.dpdns.org;
 
     location / {
         proxy_pass http://127.0.0.1:8090;

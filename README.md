@@ -11,6 +11,7 @@ The old screenshot-to-book generation flow has been removed from the app and ser
 - **Hangman**: classic word guessing with categories and AI-generated word packs
 - **Spin the Bottle**: local multiplayer bottle spinner
 - **Wheel of Names**: customizable name wheel for random picks
+- **6 Thinking Hats**: De Bono-inspired classroom discussion board with AI-generated prompts and CEFR-aware scaffolding
 - **Word Game**: admin-controlled classroom word game with AI-generated question packs
 - **Who Wants to Be a Millionaire?**: 15-question quiz ladder with lifelines and admin sync
 - **Flappy Crocodile**: self-contained arcade mini-game
@@ -43,6 +44,7 @@ The old screenshot-to-book generation flow has been removed from the app and ser
 - Flat-file setup with no database
 - Real-time host/admin sync through Socket.IO
 - Theme-based AI generation for `Who Am I?`, `Taboo`, `Hangman`, `Word Game`, and `Millionaire`
+- Theme-based AI generation for `6 Thinking Hats` discussion boards
 - Local reuse of the last generated pack per supported game
 - Mobile-friendly glassmorphism UI
 
@@ -66,7 +68,7 @@ Create `.env` in the project root:
 ```env
 GEMINI_API_KEY=your_actual_api_key_here
 PORT=8090
-ALLOWED_ORIGINS=http://localhost:8090,http://play.berkaybilge.space
+ALLOWED_ORIGINS=http://localhost:8090,http://play.metrix.dpdns.org,https://play.metrix.dpdns.org
 ```
 
 ### Run
@@ -96,6 +98,7 @@ Current admin-supported game flows:
 - `POST /api/generate-hangman`
 - `POST /api/generate-kelime`
 - `POST /api/generate-millionaire`
+- `POST /api/generate-hats`
 - `GET /api/health`
 
 ## Manual Smoke Test

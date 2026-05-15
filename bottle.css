@@ -406,6 +406,153 @@ h1 {
     font-size: 1.1rem
 }
 
+/* ---- Game Controls Layout ---- */
+.game-controls {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.game-controls-secondary {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: .2rem;
+}
+
+/* ---- Shuffle Button ---- */
+.btn-shuffle {
+    padding: .6rem 1.4rem;
+    font-size: .85rem;
+    font-weight: 600;
+    transition: transform .2s, background .2s, box-shadow .3s;
+}
+
+.btn-shuffle:hover {
+    background: rgba(255, 255, 255, .14);
+    transform: translateY(-1px);
+}
+
+.shuffle-flash {
+    box-shadow: 0 0 20px rgba(168, 85, 247, .5) !important;
+    background: rgba(168, 85, 247, .2) !important;
+}
+
+/* ---- Zebra Toggle ---- */
+.zebra-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .8rem;
+    margin: .8rem 0;
+}
+
+.zebra-toggle-ingame {
+    margin: 0;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-label-sm {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-icon {
+    font-size: 1.2rem;
+}
+
+.toggle-icon-sm {
+    font-size: 1rem;
+}
+
+.toggle-hint {
+    font-size: .7rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.toggle-switch-sm {
+    width: 36px;
+    height: 20px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, .1);
+    border: 1px solid var(--glass-border);
+    border-radius: 100px;
+    transition: background .3s, border-color .3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    transition: transform .3s, background .3s;
+}
+
+.toggle-switch-sm .toggle-slider::before {
+    width: 14px;
+    height: 14px;
+    left: 2px;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: rgba(168, 85, 247, .3);
+    border-color: var(--accent-1);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateY(-50%) translateX(20px);
+    background: var(--accent-1);
+}
+
+.toggle-switch-sm input:checked + .toggle-slider::before {
+    transform: translateY(-50%) translateX(16px);
+}
+
 @keyframes float {
 
     0%,
