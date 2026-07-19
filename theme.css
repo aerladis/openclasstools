@@ -104,3 +104,87 @@
         font-size: 1.1rem;
     }
 }
+
+/* Category tabs in light theme */
+:root[data-theme="light"] .cat-tab {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-color: rgba(203, 213, 225, 0.9) !important;
+    color: #1e293b !important;
+    box-shadow: 0 2px 8px rgba(148, 163, 184, 0.2);
+}
+
+:root[data-theme="light"] .cat-tab:hover {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: var(--accent-1) !important;
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.2);
+}
+
+:root[data-theme="light"] .cat-tab.active {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2)) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.35);
+}
+
+/* Glass panel in light mode */
+:root[data-theme="light"] .glass-panel,
+:root[data-theme="light"] .board-surface {
+    background: var(--glass-bg) !important;
+    border-color: var(--glass-border) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+/* Card faces in light mode */
+:root[data-theme="light"] .card-front {
+    background: linear-gradient(135deg, rgba(241, 245, 249, 0.95), rgba(226, 232, 240, 0.98)) !important;
+    border-color: rgba(203, 213, 225, 0.8) !important;
+}
+
+:root[data-theme="light"] .card-back {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.85), rgba(99, 102, 241, 0.9)) !important;
+    border-color: rgba(168, 85, 247, 0.5) !important;
+}
+
+:root[data-theme="light"] .card-front .card-text {
+    color: #0f172a !important;
+}
+
+/* Status banner in light mode */
+:root[data-theme="light"] .status-banner {
+    background: rgba(255, 255, 255, 0.8) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Solo controls in light mode */
+:root[data-theme="light"] .solo-controls {
+    background: rgba(255, 255, 255, 0.65) !important;
+    border-color: var(--glass-border) !important;
+}
+
+/* Stat badges in light mode */
+:root[data-theme="light"] .stat-badge {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border-color: rgba(203, 213, 225, 0.8) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .mastered-badge {
+    border-color: rgba(34, 197, 94, 0.5) !important;
+    color: #15803d !important;
+}
+
+:root[data-theme="light"] .review-badge {
+    border-color: rgba(244, 63, 94, 0.5) !important;
+    color: #be123c !important;
+}
+
+/* Action buttons in light mode */
+:root[data-theme="light"] .action-btn {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border-color: rgba(203, 213, 225, 0.8) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .action-btn:hover {
+    background: rgba(255, 255, 255, 0.95) !important;
+}

@@ -373,7 +373,7 @@ function emitGameState() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initParticles();
+    // particles.js auto-initializes via OptimizedParticles; no manual call needed
 
     // ID Badge
     const idDisplay = document.createElement('div');
