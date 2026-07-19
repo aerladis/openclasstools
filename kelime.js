@@ -199,54 +199,7 @@ function setStatusMessage(message, color = '#cbd5e1') {
 }
 
 function initParticles() {
-    const canvas = document.getElementById('particles');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    let width = 0;
-    let height = 0;
-    let particles = [];
-
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-    }
-
-    window.addEventListener('resize', resize, { passive: true });
-    resize();
-
-    const colors = ['rgba(56,189,248,.35)', 'rgba(79,70,229,.28)', 'rgba(251,191,36,.18)'];
-    particles = Array.from({ length: 60 }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        r: Math.random() * 2.5 + 1,
-        dx: (Math.random() - 0.5) * 0.4,
-        dy: (Math.random() - 0.5) * 0.4,
-        c: colors[Math.floor(Math.random() * colors.length)]
-    }));
-
-    function draw() {
-        ctx.clearRect(0, 0, width, height);
-
-        for (const particle of particles) {
-            particle.x += particle.dx;
-            particle.y += particle.dy;
-
-            if (particle.x < 0) particle.x = width;
-            if (particle.x > width) particle.x = 0;
-            if (particle.y < 0) particle.y = height;
-            if (particle.y > height) particle.y = 0;
-
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
-            ctx.fillStyle = particle.c;
-            ctx.fill();
-        }
-
-        requestAnimationFrame(draw);
-    }
-
-    draw();
+    if (window.OptimizedParticles) { window.OptimizedParticles.init('particles'); return; }
 }
 
 function formatTime(seconds) {
@@ -370,6 +323,10 @@ function loadQuestion(index, options = {}) {
             questionText.textContent = 'The question list is empty. Add questions from the admin panel.';
         }
         return;
+    }
+
+    if (waitingMsg) {
+        waitingMsg.style.display = 'none';
     }
 
     const safeIndex = Math.min(Math.max(index, 0), gameState.questions.length - 1);
@@ -591,9 +548,11 @@ async function generateWithAI(theme, count = 20) {
         if (result.success && questions.length > 0) {
             gameState.questions = questions;
             gameState.currentIndex = -1;
+            gameState.currentScore = 0;
+            if (scoreDisplay) scoreDisplay.textContent = '0';
             playSound('sync');
-            setStatusMessage(`${questions.length} questions are ready. Start the round from the admin panel.`, '#22c55e');
-            broadcastState();
+            setStatusMessage(`${questions.length} AI questions generated and started!`, '#22c55e');
+            loadQuestion(0, { resetRoundTimer: true, startTimer: true });
             return true;
         }
 
@@ -702,10 +661,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-use-default')?.addEventListener('click', () => {
-        gameState.questions = normalizeQuestions(DEFAULT_QUESTIONS);
-        gameState.currentIndex = -1;
-        playSound('sync');
-        setStatusMessage('Default questions loaded. Start the round from the admin panel.', '#22c55e');
-        broadcastState();
+        if (!gameState.questions || gameState.questions.length === 0) {
+            gameState.questions = normalizeQuestions(DEFAULT_QUESTIONS);
+        }
+        gameState.currentScore = 0;
+        if (scoreDisplay) scoreDisplay.textContent = '0';
+        playSound('start');
+        setStatusMessage('Default questions loaded & started!', '#22c55e');
+        loadQuestion(0, { resetRoundTimer: true, startTimer: true });
     });
+
+    // Solo Action Buttons
+    document.getElementById('btn-reveal-letter')?.addEventListener('click', revealRandomLetter);
+    document.getElementById('btn-correct-answer')?.addEventListener('click', handleCorrectAnswer);
+    document.getElementById('btn-pass-question')?.addEventListener('click', handlePassQuestion);
+    document.getElementById('btn-toggle-timer')?.addEventListener('click', toggleTimer);
+    document.getElementById('btn-prev-question')?.addEventListener('click', prevQuestion);
+    document.getElementById('btn-next-question')?.addEventListener('click', nextQuestion);
 });

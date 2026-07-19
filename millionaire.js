@@ -354,11 +354,13 @@ const elements = {
     answerTexts: [
         document.getElementById('answer-text-0'),
         document.getElementById('answer-text-1'),
-        document.getElementById('answer-text-2'),
         document.getElementById('answer-text-3')
     ],
     timerCircle: document.getElementById('timer-circle'),
     timerDisplay: document.getElementById('timer-display'),
+    timerBox: document.getElementById('timer-box'),
+    btnTimerToggle: document.getElementById('btn-timer-toggle'),
+    btnTimerStop: document.getElementById('btn-timer-stop'),
     prizeList: document.getElementById('prize-list'),
     lifelineBtns: {
         fiftyFifty: document.getElementById('lifeline-5050'),
@@ -513,6 +515,10 @@ elements.answerBtns.forEach((btn, index) => {
     btn.addEventListener('click', () => selectAnswer(index));
 });
 
+elements.btnTimerToggle?.addEventListener('click', toggleTimer);
+elements.btnTimerStop?.addEventListener('click', stopTimer);
+elements.timerBox?.addEventListener('click', toggleTimer);
+
 // ============================================
 // Game Functions
 // ============================================
@@ -653,11 +659,49 @@ function loadQuestion() {
     emitGameState();
 }
 
+function stopTimer() {
+    if (!gameState.gameActive) return;
+    clearInterval(gameState.timer);
+    gameState.timer = null;
+    gameState.timerStopped = true;
+    gameState.timerPaused = false;
+
+    if (elements.btnTimerToggle) {
+        elements.btnTimerToggle.innerHTML = '▶️';
+        elements.btnTimerToggle.title = 'Resume Timer';
+    }
+    if (elements.timerBox) {
+        elements.timerBox.classList.add('stopped');
+        elements.timerBox.classList.remove('paused');
+    }
+    elements.timerDisplay.textContent = '∞';
+    elements.timerCircle.style.setProperty('--timer-progress', 1);
+    elements.timerCircle.classList.remove('danger', 'warning');
+    elements.timerCircle.classList.add('stopped');
+
+    showNotification('Timer stopped for this question', 'info');
+    emitGameState();
+}
+
 function startTimer(resetTime = false) {
     clearInterval(gameState.timer);
 
     if (resetTime || !Number.isFinite(gameState.timeRemaining) || gameState.timeRemaining <= 0) {
         gameState.timeRemaining = QUESTION_TIME;
+        gameState.timerStopped = false;
+        gameState.timerPaused = false;
+        if (elements.btnTimerToggle) {
+            elements.btnTimerToggle.innerHTML = '⏸️';
+            elements.btnTimerToggle.title = 'Pause Timer';
+        }
+        if (elements.timerBox) {
+            elements.timerBox.classList.remove('stopped', 'paused');
+        }
+        elements.timerCircle?.classList.remove('stopped');
+    }
+
+    if (gameState.timerStopped || gameState.timerPaused) {
+        return;
     }
 
     updateTimerDisplay();
@@ -688,14 +732,46 @@ function toggleTimer() {
     if (gameState.timer) {
         clearInterval(gameState.timer);
         gameState.timer = null;
+        gameState.timerPaused = true;
+        if (elements.btnTimerToggle) {
+            elements.btnTimerToggle.innerHTML = '▶️';
+            elements.btnTimerToggle.title = 'Resume Timer';
+        }
+        if (elements.timerBox) {
+            elements.timerBox.classList.add('paused');
+        }
+        showNotification('Timer Paused', 'info');
     } else {
+        gameState.timerStopped = false;
+        gameState.timerPaused = false;
+        if (elements.btnTimerToggle) {
+            elements.btnTimerToggle.innerHTML = '⏸️';
+            elements.btnTimerToggle.title = 'Pause Timer';
+        }
+        if (elements.timerBox) {
+            elements.timerBox.classList.remove('stopped', 'paused');
+        }
+        elements.timerCircle?.classList.remove('stopped');
+        if (gameState.timeRemaining <= 0 || !Number.isFinite(gameState.timeRemaining)) {
+            gameState.timeRemaining = QUESTION_TIME;
+        }
         startTimer(false);
+        showNotification('Timer Resumed', 'info');
     }
 
     emitGameState();
 }
 
 function updateTimerDisplay() {
+    if (gameState.timerStopped) {
+        elements.timerDisplay.textContent = '∞';
+        elements.timerCircle.style.setProperty('--timer-progress', 1);
+        elements.timerCircle.classList.remove('danger', 'warning');
+        elements.timerCircle.classList.add('stopped');
+        emitGameState();
+        return;
+    }
+
     elements.timerDisplay.textContent = gameState.timeRemaining;
 
     const progress = gameState.timeRemaining / QUESTION_TIME;
@@ -1036,80 +1112,7 @@ function resetGame() {
 // ============================================
 
 (function initParticles() {
-    const canvas = document.getElementById('particles');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    let w;
-    let h;
-    let particles;
-    let animationId;
-    let isVisible = true;
-
-    let resizeTimeout;
-    function resize() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }, 100);
-    }
-
-    window.addEventListener('resize', resize, { passive: true });
-    resize();
-
-    const colors = ['rgba(168,85,247,.35)', 'rgba(99,102,241,.3)', 'rgba(236,72,153,.25)'];
-    particles = Array.from({ length: 30 }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        r: Math.random() * 2 + 1,
-        dx: (Math.random() - 0.5) * 0.3,
-        dy: (Math.random() - 0.5) * 0.3,
-        c: colors[Math.floor(Math.random() * colors.length)]
-    }));
-
-    document.addEventListener('visibilitychange', () => {
-        isVisible = document.visibilityState === 'visible';
-        if (isVisible && !animationId) {
-            draw();
-        }
-    });
-
-    let frameCount = 0;
-    function draw() {
-        if (!isVisible) {
-            animationId = null;
-            return;
-        }
-
-        frameCount++;
-        if (frameCount % 2 !== 0) {
-            animationId = requestAnimationFrame(draw);
-            return;
-        }
-
-        ctx.clearRect(0, 0, w, h);
-        ctx.save();
-
-        for (const particle of particles) {
-            particle.x += particle.dx;
-            particle.y += particle.dy;
-            if (particle.x < 0) particle.x = w;
-            if (particle.x > w) particle.x = 0;
-            if (particle.y < 0) particle.y = h;
-            if (particle.y > h) particle.y = 0;
-
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
-            ctx.fillStyle = particle.c;
-            ctx.fill();
-        }
-
-        ctx.restore();
-        animationId = requestAnimationFrame(draw);
-    }
-
-    draw();
+    if (window.OptimizedParticles) { window.OptimizedParticles.init('particles'); return; }
 })();
 
 // ============================================

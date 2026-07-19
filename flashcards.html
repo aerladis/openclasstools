@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vocabulary Flashcards - OpenClassTools</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="flashcards.css">
+    <link rel="stylesheet" href="theme.css" />
+    <script src="theme.js"></script>
+</head>
+
+<body>
+    <canvas id="particles"></canvas>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="flashcards-stage">
+        <header class="game-header">
+            <a href="index.html" class="back-link">🏠 Main Menu</a>
+            <h1 class="page-title">Vocabulary <span class="accent-text">Flashcards</span></h1>
+        </header>
+
+        <section class="board-surface glass-panel">
+            <div class="solo-controls glass-panel">
+                <div class="solo-top-row">
+                    <input type="text" id="theme-input" class="theme-input" placeholder="AI Topic (e.g. Kitchen Items, B1 Idioms, Travel)..." />
+                    <button id="btn-generate-ai" class="btn-primary"><span class="btn-icon">✨</span> AI Generate</button>
+                    <button id="btn-use-default" class="btn-secondary"><span class="btn-icon">▶️</span> Default Deck</button>
+                    <button id="btn-review-mode" class="btn-secondary btn-review-mode" title="Study only cards marked for review" hidden>🔁 Review Mode (0)</button>
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <span id="card-counter" class="stat-badge">Card 1 / 10</span>
+                <span id="mastered-counter" class="stat-badge mastered-badge">✅ Mastered: 0</span>
+                <span id="review-counter" class="stat-badge review-badge">❌ Review: 0</span>
+            </div>
+
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <!-- 3D Flip Card Scene -->
+            <div class="card-scene">
+                <div id="flashcard" class="flashcard">
+                    <div class="card-face card-front">
+                        <div class="card-header-row">
+                            <span class="card-side-label">ENGLISH WORD</span>
+                            <button id="btn-pronounce" class="btn-pronounce" title="Listen to pronunciation">🔊</button>
+                        </div>
+                        <div class="card-body">
+                            <h2 id="card-word" class="card-text">EGG</h2>
+                        </div>
+                        <span class="flip-hint">💡 Click or press Space to Flip</span>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="card-header-row">
+                            <span class="card-side-label">TURKISH MEANING</span>
+                        </div>
+                        <div class="card-body">
+                            <h2 id="card-meaning" class="card-text">YUMURTA</h2>
+                        </div>
+                        <span class="flip-hint">💡 Click or press Space to Flip Back</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-actions-bar">
+                <button id="btn-prev" class="action-btn btn-nav" title="Previous Card (Left Arrow)">⬅️ Previous</button>
+                <button id="btn-mark-review" class="action-btn btn-mark-review" title="Mark for review (R)">❌ Needs Review</button>
+                <button id="btn-flip" class="action-btn btn-flip-card" title="Flip Card (Space)">🔄 Flip Card</button>
+                <button id="btn-mark-mastered" class="action-btn btn-mark-mastered" title="Mark mastered (M)">✅ Mastered</button>
+                <button id="btn-next" class="action-btn btn-nav" title="Next Card (Right Arrow)">Next ➡️</button>
+            </div>
+
+            <p id="status-banner" class="status-banner glass-panel">Welcome! Flip the card to study, or generate custom decks with AI above.</p>
+        </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="particles.js"></script>
+    <script src="flashcards.js"></script>
+</body>
+
+</html>

@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="millionaire.css" />
+    <link rel="stylesheet" href="theme.css" />
+    <script src="theme.js"></script>
 </head>
 
 <body>
@@ -95,12 +97,18 @@
                             <span class="lifeline-icon">&#128101;</span>
                         </button>
                     </div>
-                    <div class="timer-container">
-                        <svg class="timer-svg" viewBox="0 0 60 60">
-                            <circle class="timer-bg" cx="30" cy="30" r="26" />
-                            <circle class="timer-progress" id="timer-circle" cx="30" cy="30" r="26" />
-                        </svg>
-                        <span class="timer-text" id="timer-display">30</span>
+                    <div class="timer-section">
+                        <div class="timer-controls">
+                            <button class="timer-control-btn" id="btn-timer-toggle" title="Pause / Resume Timer">⏸️</button>
+                            <button class="timer-control-btn" id="btn-timer-stop" title="Stop Timer (Disable limit)">🛑</button>
+                        </div>
+                        <div class="timer-container" id="timer-box" title="Click to Pause / Resume Timer">
+                            <svg class="timer-svg" viewBox="0 0 60 60">
+                                <circle class="timer-bg" cx="30" cy="30" r="26" />
+                                <circle class="timer-progress" id="timer-circle" cx="30" cy="30" r="26" />
+                            </svg>
+                            <span class="timer-text" id="timer-display">30</span>
+                        </div>
                     </div>
                 </div>
 
@@ -169,6 +177,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="generated-content.js"></script>
+    <script src="particles.js"></script>
     <script src="millionaire.js"></script>
 </body>
 

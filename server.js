@@ -638,6 +638,21 @@ function sortWordGameQuestionsByAnswerLength(questions) {
     });
 }
 
+function loadPrompt(key, replacements = {}) {
+    try {
+        const promptsPath = path.join(__dirname, 'prompts.json');
+        const promptsData = JSON.parse(fs.readFileSync(promptsPath, 'utf8'));
+        let promptTemplate = promptsData[key] || '';
+        for (const [k, v] of Object.entries(replacements)) {
+            promptTemplate = promptTemplate.split(`{${k}}`).join(v);
+        }
+        return promptTemplate;
+    } catch (err) {
+        console.error(`Error loading prompt key "${key}" from prompts.json:`, err);
+        throw err;
+    }
+}
+
 // ============================================
 // API Endpoints
 // ============================================
@@ -647,8 +662,7 @@ app.post('/api/generate', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'iconic characters';
     const count = sanitizeCount(req.body.count, 50);
 
-    const prompt = `Generate a list of EXACTLY ${count} well-known ${theme}. 
-Return ONLY the character names, one per line, no numbering, no extra text, no explanations.`;
+    const prompt = loadPrompt('who_am_i', { count, theme });
 
     try {
         const text = await callTextAI(prompt);
@@ -673,12 +687,7 @@ app.post('/api/generate-taboo', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
     const count = sanitizeCount(req.body.count, 30);
 
-    const prompt = `Generate EXACTLY ${count} Taboo game cards about "${theme}".
-For each card, provide a main word and exactly 5 forbidden words.
-Return ONLY valid JSON — an array of objects with "word" and "forbidden" keys.
-Example format:
-[{"word":"Pizza","forbidden":["Cheese","Italian","Slice","Dough","Oven"]}]
-No markdown, no code fences, no explanation — just the JSON array.`;
+    const prompt = loadPrompt('taboo', { count, theme });
 
     try {
         const cards = await callJsonAI(prompt, TABOO_CARD_SCHEMA, { temperature: 0.7 });
@@ -704,9 +713,7 @@ app.post('/api/generate-hangman', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'common words';
     const count = sanitizeCount(req.body.count, 20);
 
-    const prompt = `Generate a list of EXACTLY ${count} words for a Hangman game about "${theme}".
-Each word should be between 4 and 10 letters long.
-Return ONLY the words, one per line, no numbering, no extra text, no explanations.`;
+    const prompt = loadPrompt('hangman', { count, theme });
 
     try {
         const text = await callTextAI(prompt);
@@ -730,30 +737,7 @@ app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
     const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
     const cefrInstruction = buildWordGameCefrInstruction(cefrLevel);
 
-    const prompt = `Generate EXACTLY ${count} English word game questions for "Word Game" about "${theme}" for ELT classes.
-
-Each question should have:
-- A question in English
-- An answer (single word, uppercase, no spaces)
-- Answers should be 3-12 letters
-- Questions should vary in difficulty
-- Use clue-based prompts that help learners understand vocabulary meaning, use, category, synonym, antonym, function, or context
-- Prefer practical classroom vocabulary over niche trivia
-- Keep clues unambiguous and suitable for the answer length
-- Make the answer a meaningful target vocabulary item students might study in class
-- Keep clue sentences as simple as the CEFR target requires
-- Example: for A1, write very simple clues like "It is an animal. It is big and gray."
-${cefrInstruction}
-
-Return ONLY valid JSON array:
-[
-  {
-    "question": "What is the capital of France?",
-    "answer": "PARIS"
-  }
-]
-
-No markdown, no explanation, just the JSON array.`;
+    const prompt = loadPrompt('kelime', { count, theme, cefrInstruction: cefrInstruction || '' });
 
     try {
         const questions = await callJsonAI(prompt, WORD_GAME_SCHEMA, { temperature: 0.7 });
@@ -784,27 +768,7 @@ No markdown, no explanation, just the JSON array.`;
 app.post('/api/generate-millionaire', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
 
-    const prompt = `Generate EXACTLY 15 multiple-choice quiz questions for "Who Wants to Be a Millionaire" about "${theme}".
-
-Requirements:
-- Questions 1-5: Easy difficulty
-- Questions 6-10: Medium difficulty  
-- Questions 11-15: Hard difficulty
-- Each question must have exactly 4 options (A, B, C, D)
-- Only ONE correct answer per question (use 0-based index)
-- Questions should get progressively harder
-- Make sure correct answers are accurate
-
-Return ONLY valid JSON in this exact format:
-[
-  {
-    "question": "Question text here?",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "correct": 2
-  }
-]
-
-No markdown, no explanation, just the JSON array. Ensure all 15 questions are included.`;
+    const prompt = loadPrompt('millionaire', { theme });
 
     try {
         const questions = await callJsonAI(prompt, MILLIONAIRE_SCHEMA, { temperature: 0.6 });
@@ -942,6 +906,35 @@ No markdown, no explanation, just the JSON array with exactly 6 objects.`;
         res.json({ success: true, topic, hats });
     } catch (err) {
         console.error('Hats generation error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ---- POST /api/generate-flashcards (Vocabulary Flashcards) ----
+app.post('/api/generate-flashcards', apiRateLimit, async (req, res) => {
+    const theme = sanitizeTheme(req.body.theme) || 'daily vocabulary';
+    const count = sanitizeCount(req.body.count, 20);
+
+    const prompt = loadPrompt('flashcards', { count, theme });
+
+    try {
+        const cards = parseModelJson(await callGemini(prompt));
+
+        if (!Array.isArray(cards)) {
+            throw new Error('Invalid response format - expected array of cards');
+        }
+
+        const validCards = cards.filter(c =>
+            c.word && typeof c.word === 'string' && c.word.trim().length > 0 &&
+            c.meaning && typeof c.meaning === 'string' && c.meaning.trim().length > 0
+        ).map(c => ({
+            word: c.word.trim(),
+            meaning: c.meaning.trim()
+        })).slice(0, count);
+
+        res.json({ success: true, count: validCards.length, cards: validCards });
+    } catch (err) {
+        console.error('Flashcards generation error:', err);
         res.status(500).json({ error: err.message });
     }
 });

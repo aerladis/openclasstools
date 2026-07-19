@@ -342,7 +342,7 @@ function updateScore() {
 
 // Game Loop
 function gameLoop(timestamp) {
-    if (state !== 'PLAYING') return;
+    if (state !== 'PLAYING' || document.hidden) return;
 
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     drawBackground();
@@ -383,3 +383,10 @@ function gameLoop(timestamp) {
 // Initial draw
 drawBackground();
 croc.draw();
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state === 'PLAYING') {
+        lastPipeSpawnTime = performance.now();
+        animationId = requestAnimationFrame(gameLoop);
+    }
+});

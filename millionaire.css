@@ -478,6 +478,43 @@ h1 {
     font-weight: 700;
 }
 
+.timer-section {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.timer-control-btn {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+}
+
+.timer-control-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.timer-control-btn:active {
+    transform: scale(0.95);
+}
+
 .timer-container {
     position: relative;
     width: 4.8rem;
@@ -485,6 +522,17 @@ h1 {
     display: grid;
     place-items: center;
     flex-shrink: 0;
+    cursor: pointer;
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.timer-container.paused {
+    opacity: 0.65;
+    filter: grayscale(40%);
+}
+
+.timer-container.stopped {
+    opacity: 0.8;
 }
 
 .timer-svg {
@@ -515,6 +563,11 @@ h1 {
 
 .timer-progress.danger {
     stroke: var(--accent-red);
+}
+
+.timer-progress.stopped {
+    stroke: var(--text-muted) !important;
+    stroke-dashoffset: 0 !important;
 }
 
 .timer-text {

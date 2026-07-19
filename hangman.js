@@ -422,37 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
 });
 
-// ---- Particle background ----
 (function () {
-    const canvas = document.getElementById('particles');
-    const ctx = canvas.getContext('2d');
-    let w, h, pts;
-    function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-    const C = ['rgba(168,85,247,.35)', 'rgba(99,102,241,.3)', 'rgba(236,72,153,.25)'];
-    pts = Array.from({ length: 60 }, () => ({
-        x: Math.random() * w, y: Math.random() * h,
-        r: Math.random() * 2.5 + 1,
-        dx: (Math.random() - .5) * .4, dy: (Math.random() - .5) * .4,
-        c: C[Math.floor(Math.random() * C.length)]
-    }));
-    (function draw() {
-        ctx.clearRect(0, 0, w, h);
-        for (const p of pts) {
-            p.x += p.dx; p.y += p.dy;
-            if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
-            if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = p.c; ctx.fill();
-        }
-        for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-            const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            if (d < 120) {
-                ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
-                ctx.strokeStyle = `rgba(168,85,247,${.12 * (1 - d / 120)})`; ctx.lineWidth = .6; ctx.stroke();
-            }
-        }
-        requestAnimationFrame(draw);
-    })();
+    if (window.OptimizedParticles) { window.OptimizedParticles.init('particles'); return; }
 })();
