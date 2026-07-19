@@ -246,7 +246,7 @@ Use the provided `nginx-play.conf` as a template:
 - Valid GEMINI_API_KEY in environment
 - Port 8090 available (or configure via PORT env var)
 
-## VPS Deployment (play.berkaybilge.space)
+## VPS Deployment (play.metrix.dpdns.org)
 
 ### Quick Deploy
 The repository includes a `deploy.sh` script for automated VPS deployment.
@@ -254,7 +254,7 @@ The repository includes a `deploy.sh` script for automated VPS deployment.
 **Prerequisites:**
 - Ubuntu 20.04+ VPS with SSH access
 - SSH key configured for authentication
-- Domain `play.berkaybilge.space` pointing to VPS IP
+- Domain `play.metrix.dpdns.org` pointing to VPS IP
 
 **Deployment Steps:**
 
@@ -276,7 +276,7 @@ The repository includes a `deploy.sh` script for automated VPS deployment.
 
 The script will:
 - Install Node.js 18 LTS, Nginx, and PM2
-- Copy application files to `/var/www/play.berkaybilge.space`
+- Copy application files to `/var/www/play.metrix.dpdns.org`
 - Install npm dependencies
 - Configure Nginx reverse proxy
 - Setup PM2 process manager with auto-restart
@@ -292,11 +292,11 @@ curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs nginx git
 
 # 2. Setup app directory
-sudo mkdir -p /var/www/play.berkaybilge.space
-sudo chown $USER:$USER /var/www/play.berkaybilge.space
+sudo mkdir -p /var/www/play.metrix.dpdns.org
+sudo chown $USER:$USER /var/www/play.metrix.dpdns.org
 
 # 3. Deploy files
-cd /var/www/play.berkaybilge.space
+cd /var/www/play.metrix.dpdns.org
 git clone <repo-url> . || cp -r /local/path/* .
 
 # 4. Install dependencies
@@ -317,10 +317,10 @@ pm2 save
 pm2 startup
 
 # 8. Configure Nginx
-sudo tee /etc/nginx/sites-available/play.berkaybilge.space << 'EOF'
+sudo tee /etc/nginx/sites-available/play.metrix.dpdns.org << 'EOF'
 server {
     listen 80;
-    server_name play.berkaybilge.space;
+    server_name play.metrix.dpdns.org;
 
     location / {
         proxy_pass http://127.0.0.1:8090;
@@ -336,7 +336,7 @@ server {
 }
 EOF
 
-sudo ln -sf /etc/nginx/sites-available/play.berkaybilge.space /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/play.metrix.dpdns.org /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
@@ -353,7 +353,7 @@ After initial deployment:
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d play.berkaybilge.space
+sudo certbot --nginx -d play.metrix.dpdns.org
 ```
 
 ### Post-Deployment Management
@@ -373,7 +373,7 @@ sudo certbot --nginx -d play.berkaybilge.space
 To update the deployed application:
 
 ```bash
-cd /var/www/play.berkaybilge.space
+cd /var/www/play.metrix.dpdns.org
 git pull origin main  # or rsync new files
 npm install
 pm2 restart openclasstools
@@ -382,7 +382,7 @@ pm2 restart openclasstools
 ## Security Considerations
 
 - **API Key**: Never commit `.env` file with real API keys
-- **CORS**: Configured via `ALLOWED_ORIGINS` env variable (defaults to localhost and play.berkaybilge.space)
+- **CORS**: Configured via `ALLOWED_ORIGINS` env variable (defaults to localhost and play.metrix.dpdns.org)
 - **Input Validation**: All API endpoints validate and sanitize inputs
 - **Rate Limiting**: 
   - General: 100 requests per minute per IP
@@ -411,7 +411,7 @@ The server now tracks active games and prevents multiple hosts from using the sa
 ```env
 GEMINI_API_KEY=your_api_key_here
 PORT=8090
-ALLOWED_ORIGINS=http://localhost:8090,http://play.berkaybilge.space
+ALLOWED_ORIGINS=http://localhost:8090,http://play.metrix.dpdns.org
 ```
 
 ## Debugging Tips
