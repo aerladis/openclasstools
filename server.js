@@ -291,6 +291,26 @@ io.on('connection', (socket) => {
         socket.to(gameId).emit('adminUpdate', { ...data, gameId });
     });
 
+    // LingoParty real-time mobile classroom action (e.g., student rolling dice from phone or grading)
+    socket.on('lingoAction', (data) => {
+        if (!data || typeof data !== 'object') return;
+        const gameId = data.gameId?.toUpperCase();
+        if (!gameId || !socket.gameId || socket.gameId !== gameId) return;
+        const game = activeGames.get(gameId);
+        if (game) game.lastActivity = Date.now();
+        socket.to(gameId).emit('lingoActionHost', { ...data, gameId });
+    });
+
+    // LingoParty real-time state sync from host to all mobile participants
+    socket.on('lingoSync', (data) => {
+        if (!data || typeof data !== 'object') return;
+        const gameId = data.gameId?.toUpperCase();
+        if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isHost) return;
+        const game = activeGames.get(gameId);
+        if (game) game.lastActivity = Date.now();
+        socket.to(gameId).emit('lingoSyncClient', { ...data, gameId });
+    });
+
     // Handle disconnect
     socket.on('disconnect', () => {
         console.log('🔌 User disconnected:', socket.id);
@@ -418,6 +438,31 @@ const THINKING_HATS_SCHEMA = {
             }
         },
         required: ['color', 'questions', 'starters']
+    }
+};
+
+const LINGOPARTY_SCHEMA = {
+    type: 'array',
+    items: {
+        type: 'object',
+        properties: {
+            type: {
+                type: 'string',
+                enum: ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay']
+            },
+            word: { type: 'string' },
+            scrambledWord: { type: 'string' },
+            targetWord: { type: 'string' },
+            clue: { type: 'string' },
+            prompt: { type: 'string' },
+            answer: { type: 'string' },
+            coins: {
+                type: 'integer',
+                minimum: 5,
+                maximum: 50
+            }
+        },
+        required: ['type', 'coins']
     }
 };
 
@@ -625,6 +670,33 @@ CEFR target: ${cefrLevel}
 - For B2 use richer paraphrases and broader academic/general-interest vocabulary, but keep clues readable
 - For C1 allow precise and more abstract wording, but keep the clue solvable and concise`;
 }
+
+function sanitizeCEFR(level) {
+    return sanitizeCefrLevel(level);
+}
+
+function getCEFRInstruction(cefr) {
+    return buildWordGameCefrInstruction(cefr);
+}
+
+function jumbleWord(word) {
+    const raw = String(word ?? '').toUpperCase().trim();
+    const chars = raw.replace(/[^A-Z]/g, '').split('');
+    if (chars.length < 2) return raw;
+    let shuffled = [...chars];
+    let attempts = 0;
+    const targetStr = chars.join('');
+    while (attempts < 25 && shuffled.join('') === targetStr) {
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        attempts++;
+    }
+    return shuffled.join(' - ');
+}
+
+
 
 function sortWordGameQuestionsByAnswerLength(questions) {
     return [...questions].sort((left, right) => {
@@ -939,6 +1011,91 @@ app.post('/api/generate-flashcards', apiRateLimit, async (req, res) => {
     }
 });
 
+// ---- POST /api/generate-lingoparty (Interactive Board Game Deck) ----
+app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
+    const theme = sanitizeTheme(req.body.theme) || 'General English';
+    const count = sanitizeCount(req.body.count, 24);
+    const cefr = sanitizeCEFR(req.body.cefr);
+    const cefrInstruction = getCEFRInstruction(cefr);
+
+    const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
+
+    try {
+        const cards = await callJsonAI(prompt, LINGOPARTY_SCHEMA, { temperature: 0.7 });
+
+        if (!Array.isArray(cards) || cards.length === 0) {
+            throw new Error('Invalid response format - expected array of challenge objects');
+        }
+
+        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'taboo'];
+        const validCards = cards.filter(c => c && typeof c === 'object' && c.type && validTypes.includes(c.type)).map(c => {
+            if (c.type === 'riddle') {
+                return {
+                    type: 'riddle',
+                    prompt: String(c.prompt || 'Solve the linguistic riddle.').trim(),
+                    answer: String(c.answer || 'Answer').trim(),
+                    coins: Number(c.coins) || 15
+                };
+            } else if (c.type === 'scramble') {
+                const targetWord = String(c.targetWord || c.word || 'WORD').toUpperCase().trim();
+                const scrambledWord = jumbleWord(targetWord);
+                return {
+                    type: 'scramble',
+                    scrambledWord,
+                    targetWord,
+                    clue: String(c.clue || c.prompt || 'Unscramble the letters to reveal the target word.').trim(),
+                    coins: Number(c.coins) || 15
+                };
+            } else if (c.type === 'pronunciation') {
+                return {
+                    type: 'pronunciation',
+                    prompt: String(c.prompt || 'Read this sentence out loud clearly.').trim(),
+                    coins: Number(c.coins) || 15
+                };
+            } else if (c.type === 'association') {
+                return {
+                    type: 'association',
+                    prompt: String(c.prompt || 'Name 3 words associated with the topic.').trim(),
+                    answer: String(c.answer || 'Valid collocations').trim(),
+                    coins: Number(c.coins) || 10
+                };
+            } else if (c.type === 'grammar') {
+                return {
+                    type: 'grammar',
+                    prompt: String(c.prompt || 'Correct the error in the sentence.').trim(),
+                    answer: String(c.answer || 'Correct sentence.').trim(),
+                    coins: Number(c.coins) || 15
+                };
+            } else if (c.type === 'speed') {
+                return {
+                    type: 'speed',
+                    prompt: String(c.prompt || 'Name 3 words related to the topic in 15 seconds.').trim(),
+                    answer: String(c.answer || 'Any 3 valid words').trim(),
+                    coins: Number(c.coins) || 10
+                };
+            } else if (c.type === 'roleplay') {
+                return {
+                    type: 'roleplay',
+                    prompt: String(c.prompt || 'Have a short 30-second dialogue about the topic.').trim(),
+                    coins: Number(c.coins) || 20
+                };
+            } else {
+                return {
+                    type: 'taboo',
+                    word: String(c.word || 'Vocabulary').trim(),
+                    forbidden: Array.isArray(c.forbidden) ? c.forbidden.slice(0, 3).map(w => String(w).trim()) : ['Word 1', 'Word 2', 'Word 3'],
+                    coins: Number(c.coins) || 15
+                };
+            }
+        });
+
+        res.json({ success: true, count: validCards.length, cards: validCards });
+    } catch (err) {
+        console.error('LingoParty generation error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -953,12 +1110,24 @@ app.get('/admin', (req, res) => {
     res.redirect('/admin.html');
 });
 
-// ---- Serve static files (after API routes) ----
+// ---- Serve static files (React + Vite build & legacy html) ----
+const frontendDist = path.join(__dirname, 'frontend', 'dist');
+if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+}
 app.use(express.static(__dirname));
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ error: 'Not found' });
+// SPA Wildcard Route (serves React app for client-side routes like /lingoparty)
+app.get('*', (req, res, next) => {
+    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
+        return next();
+    }
+    const indexHtmlPath = path.join(frontendDist, 'index.html');
+    if (fs.existsSync(indexHtmlPath)) {
+        res.sendFile(indexHtmlPath);
+    } else {
+        res.status(404).json({ error: 'Not found' });
+    }
 });
 
 // Error handler

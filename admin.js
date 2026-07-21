@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hangmanDataEl = document.getElementById('hangman-data');
     const tabooDataEl = document.getElementById('taboo-data');
     const whoamiDataEl = document.getElementById('whoami-data');
+    const lingopartyDataEl = document.getElementById('lingoparty-data');
     const kelimeDataEl = document.getElementById('kelime-data');
     const kelimeThemeInput = document.getElementById('kelime-theme-input');
     const kelimeCefrLevel = document.getElementById('kelime-cefr-level');
@@ -457,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hangmanDataEl?.classList.add('hidden');
         tabooDataEl?.classList.add('hidden');
         whoamiDataEl?.classList.add('hidden');
+        lingopartyDataEl?.classList.add('hidden');
         kelimeDataEl?.classList.add('hidden');
         millionaireDataEl?.classList.add('hidden');
 
@@ -464,8 +466,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.game === 'Hangman') updateHangman(data);
         else if (data.game === 'Taboo') updateTaboo(data);
         else if (data.game === 'Who Am I') updateWhoAmI(data);
+        else if (data.game === 'LingoParty') updateLingoParty(data);
         else if (data.game === 'Word Game') updateKelime(data);
         else if (data.game === 'Who Wants to Be a Millionaire') updateMillionaire(data);
+    });
+
+    socket.on('lingoSyncClient', (data) => {
+        if (!data || data.gameId !== currentGameId) return;
+        gameNameEl.textContent = 'LingoParty';
+        waitingMessageEl.classList.add('hidden');
+        hangmanDataEl?.classList.add('hidden');
+        tabooDataEl?.classList.add('hidden');
+        whoamiDataEl?.classList.add('hidden');
+        kelimeDataEl?.classList.add('hidden');
+        millionaireDataEl?.classList.add('hidden');
+        updateLingoParty(data.gameState || data);
+    });
+
+    // LingoParty remote action handlers
+    document.getElementById('btn-lingo-roll')?.addEventListener('click', () => {
+        if (currentGameId) socket.emit('lingoAction', { gameId: currentGameId, action: 'ROLL_DICE' });
+    });
+    document.getElementById('btn-lingo-correct')?.addEventListener('click', () => {
+        if (currentGameId) socket.emit('lingoAction', { gameId: currentGameId, action: 'GRADE_ANSWER', grade: 'correct' });
+    });
+    document.getElementById('btn-lingo-wrong')?.addEventListener('click', () => {
+        if (currentGameId) socket.emit('lingoAction', { gameId: currentGameId, action: 'GRADE_ANSWER', grade: 'wrong' });
+    });
+    document.getElementById('btn-lingo-pass')?.addEventListener('click', () => {
+        if (currentGameId) socket.emit('lingoAction', { gameId: currentGameId, action: 'GRADE_ANSWER', grade: 'pass' });
     });
 
     function updateHangman(data) {
@@ -500,6 +529,31 @@ document.addEventListener('DOMContentLoaded', () => {
         whoamiDataEl.classList.remove('hidden');
         const char = data.active && data.character ? data.character : '---';
         document.getElementById('whoami-character').textContent = char;
+    }
+
+    function updateLingoParty(data) {
+        if (!lingopartyDataEl) return;
+        lingopartyDataEl.classList.remove('hidden');
+
+        const currentTeam = data.teams && data.teams[data.currentTeamIndex];
+        const turnTextEl = document.getElementById('lingo-turn-text');
+        const roundTextEl = document.getElementById('lingo-round-text');
+
+        if (currentTeam) {
+            turnTextEl.textContent = `${currentTeam.pawn} ${currentTeam.name}'s Turn`;
+        } else {
+            turnTextEl.textContent = data.activeScreen === 'setup' ? 'In Setup Screen' : 'Active Game';
+        }
+        roundTextEl.textContent = `Round ${data.round || 1}`;
+
+        const challengeBox = document.getElementById('lingo-active-challenge');
+        if (data.activeChallenge && challengeBox) {
+            challengeBox.classList.remove('hidden');
+            document.getElementById('lingo-challenge-type').textContent = `${(data.activeChallenge.type || 'CHALLENGE').toUpperCase()} (${data.activeChallenge.coins || 15} Coins)`;
+            document.getElementById('lingo-challenge-prompt').textContent = data.activeChallenge.scrambledWord || data.activeChallenge.word || data.activeChallenge.prompt || 'View board screen for details!';
+        } else if (challengeBox) {
+            challengeBox.classList.add('hidden');
+        }
     }
 
     function updateKelime(data) {

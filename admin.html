@@ -171,6 +171,27 @@
                     <p class="hint">Character is visible on screen</p>
                 </div>
 
+                <div id="lingoparty-data" class="game-data hidden">
+                    <div class="word-box" style="margin-bottom: 1rem;">
+                        <h3 id="lingo-turn-text" class="main-word" style="color:#a855f7;">Waiting for Turn...</h3>
+                        <p id="lingo-round-text" class="hint">Round 1</p>
+                    </div>
+                    
+                    <div class="control-grid" style="margin-bottom: 1rem;">
+                        <button id="btn-lingo-roll" class="btn-accent" style="font-size:1.1rem; padding:0.8rem;">🎲 Roll Dice Remote</button>
+                    </div>
+
+                    <div id="lingo-active-challenge" class="question-box hidden" style="margin-top: 1rem; border: 1px solid rgba(168,85,247,0.4);">
+                        <p id="lingo-challenge-type" style="color:#f59e0b; font-weight:700; margin-bottom:0.4rem;">Challenge</p>
+                        <p id="lingo-challenge-prompt" class="question-text" style="font-size:1.15rem;">-</p>
+                        <div class="control-grid" style="margin-top:0.8rem;">
+                            <button id="btn-lingo-correct" class="btn-success">✅ Correct (+Coins)</button>
+                            <button id="btn-lingo-wrong" class="btn-danger">❌ Wrong (0 Coins)</button>
+                            <button id="btn-lingo-pass" class="btn-secondary">⏭️ Pass</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="waiting-message" class="waiting">
                     <p>Waiting for game to start...</p>
                 </div>

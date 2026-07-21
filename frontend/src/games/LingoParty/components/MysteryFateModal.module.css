@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════════════
+   MysteryFateModal — Cosmic Fate Orb
+   ═══════════════════════════════════════════════════════════════ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 2, 12, 0.9);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mysteryCardBox {
+  max-width: 520px;
+  width: 90%;
+  padding: 2.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  align-items: center;
+  animation: cosmicEntry 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: rgba(10, 8, 24, 0.92) !important;
+  border-color: rgba(236, 72, 153, 0.3) !important;
+  box-shadow:
+    0 0 60px rgba(236, 72, 153, 0.15),
+    inset 0 0 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+@keyframes cosmicEntry {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-10deg);
+    filter: blur(12px);
+  }
+  60% {
+    transform: scale(1.05) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+    filter: blur(0);
+  }
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #e2e8f0;
+  letter-spacing: 0.5px;
+}
+
+.teamSubtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* ── Fate Orb Reveal Area ── */
+.revealArea {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.08) 0%, transparent 60%),
+    rgba(15, 12, 35, 0.6);
+  border: 1px solid rgba(236, 72, 153, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Rotating galaxy effect in background */
+.revealArea::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    rgba(236, 72, 153, 0.03) 25%,
+    transparent 50%,
+    rgba(139, 92, 246, 0.03) 75%,
+    transparent 100%
+  );
+  animation: galaxySpin 12s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes galaxySpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.revealAreaRevealed {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.1);
+}
+
+.giftIcon {
+  font-size: 6rem;
+  line-height: 1;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.9));
+  position: relative;
+  z-index: 1;
+}
+
+.eventTitle {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #e2e8f0;
+  position: relative;
+  z-index: 1;
+}
+
+.eventDesc {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+.actionBtn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.05rem;
+}

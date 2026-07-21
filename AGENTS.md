@@ -21,6 +21,7 @@ OpenClassTools is a modern, interactive web-based party games platform designed 
 6. **Who Wants to Be a Millionaire** (`millionaire.html`, `millionaire.js`, `millionaire.css`) - Quiz show with 15 questions, lifelines, and progressive difficulty
 7. **Kelime Oyunu** (`kelime.html`, `kelime.js`, `kelime.css`) - Turkish word game with letter reveal, timer, scoring, and AI question generation
 8. **Flappy Crocodile** (`FlappyCrocodile/`) - Canvas-based arcade game (self-contained subdirectory)
+9. **LingoParty** (`lingoparty.html`, `lingoparty.js`, `lingoparty.css`) - Mario Party-style language board game with AI mini-challenges, shop, power-ups, and real-time mobile interaction
 
 ## Technology Stack
 
@@ -68,6 +69,10 @@ project-root/
 ├── wheel.html             # Wheel of Names game page
 ├── wheel.js               # Wheel spinner logic
 ├── wheel.css              # Wheel-specific styles
+│
+├── lingoparty.html        # LingoParty board game page
+├── lingoparty.js          # LingoParty game logic + dice/pawn animation + audio
+├── lingoparty.css         # LingoParty-specific styles (glassmorphism winding board)
 │
 ├── admin.html             # Admin panel for remote monitoring
 ├── admin.js               # Admin panel logic (Socket.IO client)
@@ -134,6 +139,11 @@ Generate Kelime Oyunu questions (Turkish word game)
 - Body: `{ theme: string, count: number }`
 - Returns: `{ success: true, questions: [{ question, answer }] }`
 
+### POST `/api/generate-lingoparty`
+Generate categorized language challenge cards for LingoParty
+- Body: `{ theme: string, count: number, cefr: string }`
+- Returns: `{ success: true, cards: [{ type, word, forbidden[], prompt, answer, coins }] }`
+
 ## Socket.IO Events
 
 ### Host Events (Game Pages)
@@ -148,6 +158,7 @@ Generate Kelime Oyunu questions (Turkish word game)
 - `hostSendState()` - Respond to state request from admin
 - `hostLifelineAction(data)` - (Millionaire) Handle lifeline from admin
   - Data: `{ gameId, action: 'useLifeline', lifeline: 'fiftyFifty' | 'phoneFriend' | 'askAudience' }`
+- `lingoSync(data)` - Sync full LingoParty game state (`{ gameId, gameState }`) to connected mobile/admin clients
 
 ### Admin Events
 - `adminJoin(gameId, callback)` - Admin joins a game room
@@ -160,6 +171,7 @@ Generate Kelime Oyunu questions (Turkish word game)
   - Data: `{ gameId, action: 'NEXT_QUESTION'|'PREV_QUESTION'|'REVEAL_LETTER'|'TOGGLE_TIMER'|'CORRECT_ANSWER'|... }`
 - `adminLifelineAction(data)` - (Millionaire) Trigger lifeline from admin panel
   - Data: `{ gameId, action: 'useLifeline', lifeline }`
+- `lingoAction(data)` - Send dice roll / grading commands (`action: 'ROLL_DICE' | 'GRADE_ANSWER' | 'BUY_ITEM'`)
 
 ### Broadcast Events
 - `adminUpdate(data)` - Game state update to admins
@@ -167,6 +179,7 @@ Generate Kelime Oyunu questions (Turkish word game)
 - `adminWordListSync(data)` - Word list sync to admins
 - `hostWordListUpdate(data)` - Word list update from admin
 - `hostLifelineAction(data)` - (Millionaire) Lifeline action to host
+- `lingoSyncClient(data)` - LingoParty state broadcast to mobile/admin clients
 
 ## Code Style Guidelines
 

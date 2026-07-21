@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LingoParty – BerkAI Game Hub</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="lingoparty.css">
+</head>
+<body>
+
+
+    <!-- Game ID Badge -->
+    <div id="game-id-badge" class="game-id-badge hidden">
+        <span class="pulse-dot"></span>
+        <span id="game-id-text">ID: ---</span>
+    </div>
+
+    <!-- Background Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- SETUP SCREEN -->
+        <section id="setup-screen" class="screen active">
+            <div class="glass-card setup-card">
+                <header class="game-header">
+                    <a href="index.html" class="back-link">🏠 Main Menu</a>
+                    <h1 class="game-title">🎲 Lingo<span class="accent-text">Party</span></h1>
+                    <p class="game-subtitle">The Ultimate Interactive Language Board Game Odyssey</p>
+                </header>
+
+                <div class="setup-grid">
+                    <!-- Teams Setup -->
+                    <div class="setup-section">
+                        <h3>👥 Teams Setup</h3>
+                        <div class="teams-list" id="teams-list">
+                            <div class="team-setup-row" data-team="0">
+                                <span class="team-pawn red-pawn">🔴</span>
+                                <input type="text" class="theme-input team-name-input" value="Red Dragons" placeholder="Team 1 Name">
+                            </div>
+                            <div class="team-setup-row" data-team="1">
+                                <span class="team-pawn blue-pawn">🔵</span>
+                                <input type="text" class="theme-input team-name-input" value="Blue Falcons" placeholder="Team 2 Name">
+                            </div>
+                            <div class="team-setup-row" data-team="2">
+                                <span class="team-pawn green-pawn">🟢</span>
+                                <input type="text" class="theme-input team-name-input" value="Green Vipers" placeholder="Team 3 Name">
+                            </div>
+                            <div class="team-setup-row" data-team="3">
+                                <span class="team-pawn yellow-pawn">🟡</span>
+                                <input type="text" class="theme-input team-name-input" value="Yellow Lions" placeholder="Team 4 Name">
+                            </div>
+                        </div>
+                        <div class="team-count-controls">
+                            <label>Active Teams:</label>
+                            <select id="team-count-select" class="theme-input small-select">
+                                <option value="2">2 Teams</option>
+                                <option value="3" selected>3 Teams</option>
+                                <option value="4">4 Teams</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Board & Topic Configuration -->
+                    <div class="setup-section">
+                        <h3>🗺️ Board & Challenge Topic</h3>
+                        
+                        <div class="input-group">
+                            <label for="board-length">Board Length (Total Tiles):</label>
+                            <select id="board-length" class="theme-input">
+                                <option value="15">⚡ Quick Track (15 Tiles ~15 mins)</option>
+                                <option value="22" selected>🏁 Standard Island (22 Tiles ~25 mins)</option>
+                                <option value="30">🌟 Epic Odyssey (30 Tiles ~40 mins)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="cefr-select">Target CEFR Level:</label>
+                            <select id="cefr-select" class="theme-input">
+                                <option value="A1">A1 – Beginner</option>
+                                <option value="A2" selected>A2 – Elementary</option>
+                                <option value="B1">B1 – Intermediate</option>
+                                <option value="B2">B2 – Upper Intermediate</option>
+                                <option value="C1">C1 – Advanced</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="topic-input">Classroom Vocabulary Topic:</label>
+                            <input type="text" id="topic-input" class="theme-input" placeholder="e.g., Food & Dining, Business English, Phrasal Verbs" value="General Classroom English">
+                        </div>
+
+                        <div class="button-row">
+                            <button id="btn-generate-ai" class="btn-primary btn-ai">
+                                ✨ AI Generate Deck
+                            </button>
+                            <button id="btn-default-deck" class="btn-secondary">
+                                ▶️ Play Default Deck
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tile Guide Box -->
+                <div class="tile-guide-box">
+                    <h4>🎯 Action Tile Guide</h4>
+                    <div class="guide-items">
+                        <span class="guide-tag riddle-tag">🧩 Riddle (+15 Coins)</span>
+                        <span class="guide-tag scramble-tag">🔡 Scramble (+15 Coins)</span>
+                        <span class="guide-tag pronunciation-tag">🗣️ Pronunciation (+15 Coins)</span>
+                        <span class="guide-tag association-tag">🔗 Association (+10 Coins)</span>
+                        <span class="guide-tag speed-tag">⚡ Speed (+10 Coins)</span>
+                        <span class="guide-tag grammar-tag">🔍 Grammar Trap (+15 Coins)</span>
+                        <span class="guide-tag roleplay-tag">🎭 Roleplay (+20 Coins)</span>
+                        <span class="guide-tag shop-tag">🛒 Trophy Shop</span>
+                        <span class="guide-tag chance-tag">🎁 Mystery Box</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GAME PLAY SCREEN -->
+        <section id="game-screen" class="screen">
+            <header class="board-header glass-card">
+                <div class="header-left">
+                    <a href="index.html" class="back-link mini-link">🏠 Exit</a>
+                    <h2 class="board-title">🎲 Lingo<span class="accent-text">Odyssey</span></h2>
+                </div>
+                
+                <!-- Current Turn Banner -->
+                <div class="turn-banner" id="turn-banner">
+                    <span class="turn-team-pawn" id="turn-pawn">🔴</span>
+                    <span class="turn-team-name" id="turn-team-name">Red Dragons' Turn</span>
+                </div>
+
+                <div class="header-right">
+                    <div class="round-counter" id="round-counter">Round 1</div>
+                </div>
+            </header>
+
+            <div class="game-stage">
+                <!-- Left: Leaderboard & Teams Panel -->
+                <aside class="leaderboard-panel glass-card">
+                    <h3>🏆 Scoreboard</h3>
+                    <div id="leaderboard-list" class="leaderboard-list">
+                        <!-- Dynamically populated -->
+                    </div>
+
+                    <!-- Shop / Quick Info -->
+                    <div class="shop-preview">
+                        <h4>🛒 Trophy Shop</h4>
+                        <p>Buy a <strong>🏆 Star Trophy</strong> on Gold Tiles or when reaching the End Goal!</p>
+                        <div class="shop-cost">Cost: <span>30 Coins</span></div>
+                    </div>
+                </aside>
+
+                <!-- Center: Winding Adventure Map -->
+                <div class="board-track-container glass-card">
+                    <div id="board-map-container" class="board-map-container">
+                        <svg id="board-map-svg" class="board-map-svg"></svg>
+                        <div id="board-map-nodes" class="board-map-nodes"></div>
+                        <div id="board-pawn-layer" class="board-pawn-layer"></div>
+                    </div>
+                </div>
+
+                <!-- Right / Bottom: Action & Dice Roller Panel -->
+                <div class="controls-panel glass-card">
+                    <div class="dice-section">
+                        <div class="dice-display" id="dice-display">🎲</div>
+                        <button id="btn-roll-dice" class="btn-primary dice-btn">
+                            🎲 Roll Dice
+                        </button>
+                        <p class="dice-hint" id="dice-hint">Click or roll via mobile controller!</p>
+                    </div>
+
+                    <!-- Active Power-Ups / Inventory -->
+                    <div class="team-inventory" id="team-inventory">
+                        <h4>🎒 Active Items</h4>
+                        <div id="inventory-list" class="inventory-list">
+                            <span class="no-items">No items available yet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- CHALLENGE MODAL -->
+    <div id="challenge-modal" class="modal-overlay hidden">
+        <div class="glass-card challenge-card">
+            <header class="challenge-header" id="challenge-header">
+                <span class="challenge-badge" id="challenge-type-badge">💬 Taboo Tile</span>
+                <div class="challenge-coins" id="challenge-coins-badge">💰 +15 Coins</div>
+            </header>
+
+            <div class="challenge-body">
+                <!-- Target Word / Prompt -->
+                <h2 class="challenge-word-title" id="challenge-word">Word or Prompt</h2>
+                
+                <!-- Forbidden words (for Taboo) or Subprompt -->
+                <div class="challenge-subcontent" id="challenge-subcontent">
+                    <!-- Dynamic -->
+                </div>
+
+                <!-- Countdown Timer -->
+                <div class="challenge-timer-wrap">
+                    <div class="challenge-timer-bar"><div class="challenge-timer-fill" id="challenge-timer-fill"></div></div>
+                    <span class="challenge-time-text" id="challenge-time-text">45s</span>
+                </div>
+            </div>
+
+            <footer class="challenge-actions">
+                <button id="btn-challenge-correct" class="btn-primary btn-correct">✅ Correct (+Coins)</button>
+                <button id="btn-challenge-wrong" class="btn-secondary btn-wrong">❌ Wrong (0 Coins)</button>
+                <button id="btn-challenge-pass" class="btn-secondary btn-pass">⏭️ Skip / Pass</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- SHOP / MYSTERY BOX MODAL -->
+    <div id="shop-modal" class="modal-overlay hidden">
+        <div class="glass-card shop-card">
+            <header class="shop-header">
+                <h2 id="shop-modal-title">🎁 Sanctuary Trophy Shop</h2>
+                <p id="shop-modal-subtitle">You landed on the Gold Tile! Choose your reward:</p>
+            </header>
+
+            <div class="shop-items-grid" id="shop-items-grid">
+                <!-- Dynamic shop items -->
+            </div>
+
+            <footer class="shop-actions">
+                <button id="btn-shop-close" class="btn-secondary">Dismiss / Skip Shop</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- MYSTERY EVENT MODAL -->
+    <div id="mystery-modal" class="modal-overlay hidden">
+        <div class="glass-card shop-card mystery-card-box">
+            <header class="shop-header">
+                <h2>🎁 Mystery Box of Fate</h2>
+                <p id="mystery-team-subtitle">A surprising twist awaits on the island path...</p>
+            </header>
+
+            <div class="mystery-reveal-area" id="mystery-reveal-area">
+                <div class="mystery-gift-icon" id="mystery-gift-icon">🎁</div>
+                <div class="mystery-event-title" id="mystery-event-title">Click to Reveal Your Fate!</div>
+                <div class="mystery-event-desc" id="mystery-event-desc">Are the classroom gods in your favor today?</div>
+            </div>
+
+            <footer class="shop-actions">
+                <button id="btn-mystery-action" class="btn-primary" style="min-width: 220px;">🎲 Reveal Mystery Fate!</button>
+                <button id="btn-mystery-close" class="btn-secondary hidden">Continue Adventure ⏭️</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="particles.js"></script>
+    <script src="lingoparty.js" type="module"></script>
+    <script>
+        // Theme toggle setup
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('theme-toggle-btn');
+            const html = document.documentElement;
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const current = html.getAttribute('data-theme') || 'dark';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    html.setAttribute('data-theme', next);
+                    localStorage.setItem('theme', next);
+                });
+            }
+            const saved = localStorage.getItem('theme');
+            if (saved) html.setAttribute('data-theme', saved);
+        });
+    </script>
+</body>
+</html>

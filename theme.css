@@ -62,6 +62,11 @@
     box-shadow: 0 8px 20px rgba(148, 163, 184, 0.25);
 }
 
+/* When theme toggle coexists with game-id-badge, push badge left */
+.game-id-badge {
+    right: 4.4rem !important;
+}
+
 /* Theme Toggle Button */
 .theme-toggle-btn {
     position: fixed;
