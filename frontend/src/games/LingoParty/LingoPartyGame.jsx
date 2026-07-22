@@ -126,14 +126,21 @@ export default function LingoPartyGame() {
 
   const handleStartGame = useCallback(({ teams, boardLength, deck }) => {
     const tiles = generateTiles(boardLength, deck);
+    const initTeams = teams.map(t => ({
+      ...t,
+      position: 0,
+      trophies: 0,
+      gibelCubes: 0,
+      items: []
+    }));
+
     const newState = {
       ...gameState,
-      gameId,
       activeScreen: 'board',
-      teams,
+      teams: initTeams,
       boardLength,
       tiles,
-      deck,
+      deck: deck || [],
       currentTeamIndex: 0,
       round: 1
     };

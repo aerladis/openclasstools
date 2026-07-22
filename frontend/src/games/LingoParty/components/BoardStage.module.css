@@ -168,6 +168,29 @@
   letter-spacing: 0.5px;
 }
 
+.tileStyleBtn {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(99, 102, 241, 0.35));
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  color: #f3e8ff;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
+}
+
+.tileStyleBtn:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.45), rgba(99, 102, 241, 0.55));
+  border-color: rgba(236, 72, 153, 0.8);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45);
+}
+
 /* ════════════════════════════════════════════════
    Right Panel: Holographic Dice Controller
    ════════════════════════════════════════════════ */

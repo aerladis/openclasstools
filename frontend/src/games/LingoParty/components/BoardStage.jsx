@@ -30,6 +30,18 @@ export default function BoardStage({
 
   const usedChallengeKeysRef = useRef(new Set());
 
+  const [tileStyle, setTileStyle] = useState(() => {
+    return localStorage.getItem('lingoparty_tile_style') || 'sphere';
+  });
+
+  const cycleTileStyle = () => {
+    const STYLES = ['sphere', 'hex', 'capsule'];
+    const nextStyle = STYLES[(STYLES.indexOf(tileStyle) + 1) % STYLES.length];
+    setTileStyle(nextStyle);
+    localStorage.setItem('lingoparty_tile_style', nextStyle);
+    if (playSound) playSound('roll');
+  };
+
   const activeTeam = gameState.teams[gameState.currentTeamIndex] || gameState.teams[0];
 
   const triggerConfetti = () => {
@@ -57,6 +69,25 @@ export default function BoardStage({
     broadcastGameState(updatedState);
   };
 
+  const shuffleTiles = (currentTiles) => {
+    if (!currentTiles || currentTiles.length < 3) return currentTiles;
+    const tilesCopy = [...currentTiles];
+    const middleIndices = [];
+    for (let i = 1; i < tilesCopy.length - 1; i++) {
+      middleIndices.push(i);
+    }
+    const middleTiles = middleIndices.map(i => ({ ...tilesCopy[i] }));
+    for (let i = middleTiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [middleTiles[i], middleTiles[j]] = [middleTiles[j], middleTiles[i]];
+    }
+    for (let i = 0; i < middleIndices.length; i++) {
+      tilesCopy[middleIndices[i]] = middleTiles[i];
+      tilesCopy[middleIndices[i]].id = middleIndices[i];
+    }
+    return tilesCopy;
+  };
+
   const handleTileAction = (tile, teamsList) => {
     const team = teamsList[gameState.currentTeamIndex];
     if (!tile) {
@@ -70,16 +101,68 @@ export default function BoardStage({
     } else if (tile.type === 'trophy' || tile.type === 'finish') {
       if (playSound) playSound('trophy');
       triggerConfetti();
-      team.trophies += 2;
-      setActiveModal('victory');
+
+      if ((team.gibelCubes || 0) >= 3) {
+        setActiveModal('victory');
+      } else {
+        team.gibelCubes = (team.gibelCubes || 0) + 1;
+        team.trophies = (team.trophies || 0) + 1;
+        team.position = 0;
+
+        const nextRound = gameState.round + 1;
+        const shuffled = shuffleTiles(gameState.tiles);
+
+        setCategoryAnnouncement({
+          text: `🧊 +1 Gibel Cube Acquired! (${team.gibelCubes}/3) — Board Shuffled into Orbit ${nextRound}!`,
+          color: '#38bdf8'
+        });
+        setTimeout(() => setCategoryAnnouncement(null), 4500);
+
+        const updatedState = {
+          ...gameState,
+          teams: teamsList,
+          tiles: shuffled,
+          round: nextRound,
+          currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsList.length
+        };
+        setGameState(updatedState);
+        broadcastGameState(updatedState);
+      }
     } else if (tile.type === 'chance') {
       setActiveModal('mystery');
     } else if (tile.type === 'shop') {
       setActiveModal('shop');
     } else if (tile.type === 'blackhole') {
       if (playSound) playSound('damage');
-      team.position = Math.max(0, team.position - 4);
-      advanceTurn(teamsList);
+      const isReset25 = Math.random() < 0.25;
+
+      if (isReset25) {
+        const prevRound = Math.max(1, gameState.round - 1);
+        const shuffled = shuffleTiles(gameState.tiles);
+        const updatedTeams = teamsList.map(t => ({
+          ...t,
+          position: Math.max(0, t.position - 3)
+        }));
+
+        setCategoryAnnouncement({
+          text: `💥 25% SPACETIME COLLAPSE! Map Reset to Orbit ${prevRound} Galaxy Layout & Palette!`,
+          color: '#ec4899'
+        });
+        setTimeout(() => setCategoryAnnouncement(null), 5000);
+
+        const updatedState = {
+          ...gameState,
+          teams: updatedTeams,
+          tiles: shuffled,
+          round: prevRound,
+          currentTeamIndex: (gameState.currentTeamIndex + 1) % updatedTeams.length
+        };
+        setGameState(updatedState);
+        broadcastGameState(updatedState);
+      } else {
+        team.position = Math.max(0, team.position - 4);
+        advanceTurn(teamsList);
+      }
     } else if (tile.type === 'vortex') {
       if (playSound) playSound('damage');
       const randOffset = Math.random() < 0.5 ? -3 : 3;
@@ -333,6 +416,9 @@ export default function BoardStage({
               </div>
               <div className={styles.teamStats}>
                 <span className={styles.trophyTag}>🏆 {team.trophies}</span>
+                <span style={{ fontSize: '0.82rem', color: '#38bdf8', marginTop: '2px', fontWeight: 800 }}>
+                  🧊 {team.gibelCubes || 0}/3
+                </span>
               </div>
             </div>
           ))}
@@ -354,12 +440,25 @@ export default function BoardStage({
             <span>{activeTeam?.pawn}</span>
             <span>Mission Turn: {activeTeam?.name}</span>
           </div>
-          <div className={styles.roundCounter}>🛸 Orbit {gameState.round}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <button
+              className={styles.tileStyleBtn}
+              onClick={cycleTileStyle}
+              title="Click to cycle tile shape design (Spheres / Hexagons / Capsules)"
+            >
+              {tileStyle === 'sphere' && '🌌 Style: Spheres'}
+              {tileStyle === 'hex' && '⬡ Style: Hexagons'}
+              {tileStyle === 'capsule' && '💊 Style: Capsules'}
+            </button>
+            <div className={styles.roundCounter}>🛸 Orbit {gameState.round}</div>
+          </div>
         </header>
 
         <BoardMap
           tiles={gameState.tiles}
           teams={gameState.teams}
+          tileStyle={tileStyle}
+          round={gameState.round}
           onTileClick={(tile) => {
             console.log('Tile inspection:', tile);
           }}

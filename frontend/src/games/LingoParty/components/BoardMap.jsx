@@ -102,10 +102,41 @@ function generateStars(count = 80) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   BoardMap Component — Space Odyssey
+   Hexagon Generator Helper
    ═══════════════════════════════════════════════════════════════ */
-export default function BoardMap({ tiles = [], teams = [], onTileClick, onHoverPlanet }) {
+function getHexPoints(R) {
+  const points = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const x = R * Math.cos(angle);
+    const y = R * Math.sin(angle);
+    points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  return points.join(' ');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Orbit Galaxy Theme Configuration — Unique Galaxy Palettes Per Orbit
+   ═══════════════════════════════════════════════════════════════ */
+const ORBIT_THEMES = [
+  { name: 'Violet Nebula', color: '#8b5cf6', glow: 'rgba(139,92,246,0.6)', bg: 'radial-gradient(ellipse at 30% 20%, rgba(139, 92, 246, 0.22) 0%, transparent 60%)' },
+  { name: 'Cyan Cyber Galaxy', color: '#06b6d4', glow: 'rgba(6,182,212,0.6)', bg: 'radial-gradient(ellipse at 30% 20%, rgba(6, 182, 212, 0.22) 0%, transparent 60%)' },
+  { name: 'Solar Flare Supernova', color: '#f59e0b', glow: 'rgba(245,158,11,0.6)', bg: 'radial-gradient(ellipse at 30% 20%, rgba(245, 158, 11, 0.22) 0%, transparent 60%)' },
+  { name: 'Emerald Quantum Void', color: '#10b981', glow: 'rgba(16,185,129,0.6)', bg: 'radial-gradient(ellipse at 30% 20%, rgba(16, 185, 129, 0.22) 0%, transparent 60%)' },
+  { name: 'Prism Deep Space', color: '#ec4899', glow: 'rgba(236,72,153,0.6)', bg: 'radial-gradient(ellipse at 30% 20%, rgba(236, 72, 153, 0.22) 0%, transparent 60%)' }
+];
+
+export function getOrbitTheme(orbitNumber = 1) {
+  const idx = Math.max(0, (orbitNumber - 1) % ORBIT_THEMES.length);
+  return ORBIT_THEMES[idx];
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BoardMap Component — Space Odyssey Multi-Shape Widescreen Board
+   ═══════════════════════════════════════════════════════════════ */
+export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere', round = 1, onTileClick, onHoverPlanet }) {
   const stars = useMemo(() => generateStars(90), []);
+  const currentOrbitTheme = useMemo(() => getOrbitTheme(round), [round]);
 
   // Pre-compute SVG coordinates for each tile
   const tilePoints = useMemo(() =>
@@ -180,7 +211,10 @@ export default function BoardMap({ tiles = [], teams = [], onTileClick, onHoverP
         {tilePoints.map((tp) => {
           const conf = TILE_CONFIG[tp.type] || DEFAULT_CONF;
           const isSpecial = tp.type === 'start' || tp.type === 'trophy';
-          const radius = isSpecial ? 66 : 54;
+          const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'blackhole', 'vortex', 'asteroid'].includes(tp.type);
+          const tileColor = isIconicTile ? conf.color : currentOrbitTheme.color;
+          const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
+          const radius = isSpecial ? 64 : 52;
           const cssClass = conf.cssClass || '';
 
           return (
@@ -191,44 +225,52 @@ export default function BoardMap({ tiles = [], teams = [], onTileClick, onHoverP
               onClick={() => onTileClick && onTileClick(tp, tp.idx)}
               onMouseEnter={() => onHoverPlanet && onHoverPlanet(tp)}
               onMouseLeave={() => onHoverPlanet && onHoverPlanet(null)}
-              style={{ '--tile-glow': conf.glow }}
+              style={{ '--tile-glow': tileGlow }}
             >
-              {/* Outer glow halo */}
-              <circle
-                r={radius + 24}
-                fill={conf.color}
-                opacity="0.12"
-                className={styles.tileGlowOuter}
-              />
-
-              {/* Orbit ring (hover effect) */}
-              <circle
-                r={radius + 14}
-                className={styles.tileOrbitRing}
-              />
-
-              {/* Planet body — gradient sphere */}
-              <circle
-                r={radius}
-                className={styles.tilePlanet}
-                fill={`url(#planet-${tp.idx})`}
-                stroke="rgba(255,255,255,0.2)"
-                strokeWidth="2"
-              />
-
-              {/* Per-tile radial gradient for sphere look */}
+              {/* Radial gradient defs */}
               <defs>
                 <radialGradient id={`planet-${tp.idx}`} cx="35%" cy="35%" r="65%">
-                  <stop offset="0%" stopColor={lightenColor(conf.color, 40)} />
-                  <stop offset="60%" stopColor={conf.color} />
-                  <stop offset="100%" stopColor={darkenColor(conf.color, 30)} />
+                  <stop offset="0%" stopColor={lightenColor(tileColor, 40)} />
+                  <stop offset="60%" stopColor={tileColor} />
+                  <stop offset="100%" stopColor={darkenColor(tileColor, 30)} />
                 </radialGradient>
               </defs>
 
-              {/* Centered Planet Emoji Icon */}
-              <text y="0" className={styles.tileEmoji}>
-                {conf.icon}
-              </text>
+              {/* ── STYLE 1: SPHERE (Classic Cosmic Orbital Spheres) ── */}
+              {tileStyle === 'sphere' && (
+                <>
+                  <circle r={radius + 22} fill={tileColor} opacity="0.12" className={styles.tileGlowOuter} />
+                  <circle r={radius + 12} className={styles.tileOrbitRing} stroke={tileColor} />
+                  <circle r={radius} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
+                  <text y="0" className={styles.tileEmoji}>{conf.icon}</text>
+                </>
+              )}
+
+              {/* ── STYLE 2: HEX (Cyber-Hexagonal Quantum Nodes) ── */}
+              {tileStyle === 'hex' && (
+                <>
+                  <polygon points={getHexPoints(radius + 16)} fill={tileColor} opacity="0.12" className={styles.tileGlowOuter} />
+                  <polygon points={getHexPoints(radius + 8)} fill="none" stroke={tileColor} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.6" />
+                  <polygon points={getHexPoints(radius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="2.5" />
+                  <text y="0" className={styles.tileEmoji}>{conf.icon}</text>
+                </>
+              )}
+
+              {/* ── STYLE 3: CAPSULE (Holographic High-UX Space Capsules) ── */}
+              {tileStyle === 'capsule' && (() => {
+                const capW = 108;
+                const capH = 44;
+                return (
+                  <>
+                    <rect x={-capW / 2 - 4} y={-capH / 2 - 4} width={capW + 8} height={capH + 8} rx="24" fill={tileColor} opacity="0.18" filter="blur(5px)" />
+                    <rect x={-capW / 2} y={-capH / 2} width={capW} height={capH} rx="22" fill="rgba(15, 12, 35, 0.88)" stroke={tileColor} strokeWidth="2.5" />
+                    <circle cx={-capW / 2 + 22} cy={0} r="17" fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                    <text x={-capW / 2 + 22} y="1" textAnchor="middle" dominantBaseline="central" fontSize="17">{conf.icon}</text>
+                    <text x={-capW / 2 + 46} y="-2" textAnchor="start" fill="#ffffff" fontSize="11" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
+                    <text x={-capW / 2 + 46} y="11" textAnchor="start" fill={tileColor} fontSize="10" fontWeight="900">#{tp.idx + 1}</text>
+                  </>
+                );
+              })()}
             </g>
           );
         })}
