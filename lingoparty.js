@@ -330,6 +330,28 @@ function generateBoardTiles(totalLength) {
             });
         }
     }
+
+    // Sprinkle 1-2 Black Hole hazard planets on ordinary challenge tiles
+    const eligibleIndices = gameState.tiles
+        .map((t, idx) => idx)
+        .filter(idx => !['start', 'finish', 'shop', 'chance'].includes(gameState.tiles[idx].type));
+
+    let blackHoleCount = 0;
+    if (eligibleIndices.length > 0 && Math.random() < 0.65) blackHoleCount = 1;
+    if (eligibleIndices.length > 1 && blackHoleCount === 1 && Math.random() < 0.3) blackHoleCount = 2;
+
+    for (let n = 0; n < blackHoleCount && eligibleIndices.length > 0; n++) {
+        const pick = Math.floor(Math.random() * eligibleIndices.length);
+        const tileIdx = eligibleIndices.splice(pick, 1)[0];
+        const coords = gameState.tiles[tileIdx];
+        gameState.tiles[tileIdx] = {
+            type: 'blackhole',
+            label: 'Black Hole',
+            icon: '🕳️',
+            x: coords.x,
+            y: coords.y
+        };
+    }
 }
 
 function getMapCoordinates(index, totalLength) {
@@ -658,6 +680,12 @@ function handleTileAction(tileIndex, team) {
         openShopModal(team);
     } else if (tile.type === 'chance') {
         triggerMysteryBoxEvent(team);
+    } else if (tile.type === 'blackhole') {
+        playSound('damage');
+        team.position = Math.max(0, team.position - 4);
+        renderPawns();
+        setStatusMessage(`🕳️ BLACK HOLE HAZARD! ${team.name} got pulled back 4 spaces on the flight path!`, '#a78bfa');
+        advanceTurn();
     } else if (tile.type === 'finish') {
         playSound('trophy');
         team.trophies += 1;

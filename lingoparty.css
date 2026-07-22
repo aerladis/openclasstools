@@ -499,6 +499,7 @@
 .map-node.chance { background: linear-gradient(135deg, #6366f1, #4f46e5); }
 .map-node.start { background: linear-gradient(135deg, #10b981, #059669); border-color: #a7f3d0; }
 .map-node.finish { background: linear-gradient(135deg, #f43f5e, #e11d48); border-color: #fecdd3; }
+.map-node.blackhole { background: linear-gradient(135deg, #1e1b2e, #4c1d95); border-color: #a78bfa; box-shadow: 0 0 20px rgba(139, 92, 246, 0.8), inset 0 2px 10px rgba(255, 255, 255, 0.2); }
 
 .node-number {
     position: absolute;
