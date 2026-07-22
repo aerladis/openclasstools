@@ -104,20 +104,27 @@ export default function LingoPartyGame() {
       }
     }
 
-    // Sprinkle hazard planets (Black Hole, Cosmic Vortex, Asteroid Belt) on challenge tiles
-    const eligibleIdx = tiles
-      .map((t, idx) => idx)
-      .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
+    // 10% random Black Hole spawn probability on eligible tiles anywhere on the map
+    eligibleIdx.forEach((tileIdx) => {
+      if (Math.random() < 0.10) {
+        tiles[tileIdx] = { id: tileIdx, type: 'blackhole', label: 'Black Hole' };
+      }
+    });
 
-    const hazardTypes = ['blackhole', 'vortex', 'asteroid'];
-    let hazardCount = Math.min(Math.floor(length / 7), 5);
+    // Sprinkle remaining hazard planets (Cosmic Vortex, Asteroid Belt) on challenge tiles
+    const remainingEligible = tiles
+      .map((t, idx) => idx)
+      .filter(idx => !['start', 'trophy', 'chance', 'shop', 'blackhole'].includes(tiles[idx].type));
+
+    const hazardTypes = ['vortex', 'asteroid'];
+    let hazardCount = Math.min(Math.floor(length / 7), 4);
     if (hazardCount < 1) hazardCount = 1;
 
-    for (let n = 0; n < hazardCount && eligibleIdx.length > 0; n++) {
-      const pick = Math.floor(Math.random() * eligibleIdx.length);
-      const tileIdx = eligibleIdx.splice(pick, 1)[0];
+    for (let n = 0; n < hazardCount && remainingEligible.length > 0; n++) {
+      const pick = Math.floor(Math.random() * remainingEligible.length);
+      const tileIdx = remainingEligible.splice(pick, 1)[0];
       const hType = hazardTypes[n % hazardTypes.length];
-      const hLabels = { blackhole: 'Black Hole', vortex: 'Cosmic Vortex', asteroid: 'Asteroid Belt' };
+      const hLabels = { vortex: 'Cosmic Vortex', asteroid: 'Asteroid Belt' };
       tiles[tileIdx] = { id: tileIdx, type: hType, label: hLabels[hType] };
     }
 

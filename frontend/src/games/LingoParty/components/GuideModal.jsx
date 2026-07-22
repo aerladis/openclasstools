@@ -77,7 +77,7 @@ export default function GuideModal({ onClose }) {
                 <strong style={{ color: '#6366f1' }}>🌀 Cosmic Vortex:</strong> Teleports crew to a surprise position.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#f59e0b' }}>☄️ Asteroid Belt:</strong> Speed penalty! Pulls ship back 2 spaces.
+                <strong style={{ color: '#f59e0b' }}>☄️ Asteroid Belt:</strong> Gravitational collision field! Knockback maneuver pushes your ship back -2 spaces.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
                 <strong style={{ color: '#10b981' }}>🏁 Start Base & 🏆 Goal Sanctuary:</strong> Safe bases where trophies are earned!

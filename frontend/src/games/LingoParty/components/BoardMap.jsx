@@ -246,7 +246,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                   <circle r={radius + 10} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
                   <circle r={radius + 6} className={styles.tileOrbitRing} stroke={tileColor} />
                   <circle r={radius} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
-                  <text y="0" className={styles.tileEmoji}>{conf.icon}</text>
+                  {isIconicTile && <text y="0" className={styles.tileEmoji}>{conf.icon}</text>}
                 </>
               )}
 
@@ -256,7 +256,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                   <polygon points={getHexPoints(hexRadius + 8)} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
                   <polygon points={getHexPoints(hexRadius + 4)} fill="none" stroke={tileColor} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.6" />
                   <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="2.5" />
-                  <text y="0" className={styles.tileEmoji}>{conf.icon}</text>
+                  {isIconicTile && <text y="0" className={styles.tileEmoji}>{conf.icon}</text>}
                 </>
               )}
 
@@ -269,7 +269,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                     <rect x={-capW / 2 - 2} y={-capH / 2 - 2} width={capW + 4} height={capH + 4} rx="26" fill={tileColor} opacity="0.14" filter="blur(4px)" className={styles.tileGlowOuter} />
                     <rect x={-capW / 2} y={-capH / 2} width={capW} height={capH} rx="24" fill="rgba(15, 12, 35, 0.88)" stroke={tileColor} strokeWidth="2.5" />
                     <circle cx={-capW / 2 + 24} cy={0} r="19" fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                    <text x={-capW / 2 + 24} y="1" textAnchor="middle" dominantBaseline="central" fontSize="18">{conf.icon}</text>
+                    {isIconicTile && <text x={-capW / 2 + 24} y="1" textAnchor="middle" dominantBaseline="central" fontSize="18">{conf.icon}</text>}
                     <text x={-capW / 2 + 50} y="-2" textAnchor="start" fill="#ffffff" fontSize="12" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
                     <text x={-capW / 2 + 50} y="12" textAnchor="start" fill={tileColor} fontSize="11" fontWeight="900">#{tp.idx + 1}</text>
                   </>
