@@ -198,14 +198,14 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           </filter>
         </defs>
 
-        {/* Glow trail (wide, blurred) */}
-        <path d={smoothPath} className={styles.mapPathGlow} />
-
-        {/* Stardust trail (faint dots) */}
-        <path d={smoothPath} className={styles.mapPathStardust} />
-
-        {/* Main cosmic trail */}
-        <path d={smoothPath} className={styles.mapPath} />
+        {/* ── Render connecting path lines ONLY for sphere & capsule modes (hidden for Honeycomb Hex mode) ── */}
+        {tileStyle !== 'hex' && (
+          <>
+            <path d={smoothPath} className={styles.mapPathGlow} />
+            <path d={smoothPath} className={styles.mapPathStardust} />
+            <path d={smoothPath} className={styles.mapPath} />
+          </>
+        )}
 
         {/* ── Planet Tile Nodes ── */}
         {tilePoints.map((tp) => {
@@ -218,8 +218,8 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           const total = tiles.length;
           const tilesPerRow = Math.ceil(total / 3);
           const colSpacing = 900 / Math.max(1, tilesPerRow - 1);
-          // Hex Chess surface scaling — hexagon radius fills column spacing so tiles almost touch
-          const hexRadius = Math.max(36, Math.min(85, (colSpacing / 1.732) * 0.94));
+          // Honeycomb surface scaling — hexagon radius increased by 8 more to fill board matching Picture 2
+          const hexRadius = Math.max(48, Math.min(95, (colSpacing / 1.732) * 1.05 + 8));
 
           const baseRadius = total > 36 ? 36 : (total > 24 ? 44 : 54);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
@@ -238,9 +238,9 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
               {/* Radial gradient defs */}
               <defs>
                 <radialGradient id={`planet-${tp.idx}`} cx="35%" cy="35%" r="65%">
-                  <stop offset="0%" stopColor={lightenColor(tileColor, 40)} />
+                  <stop offset="0%" stopColor={lightenColor(tileColor, 35)} />
                   <stop offset="60%" stopColor={tileColor} />
-                  <stop offset="100%" stopColor={darkenColor(tileColor, 30)} />
+                  <stop offset="100%" stopColor={darkenColor(tileColor, 35)} />
                 </radialGradient>
               </defs>
 
@@ -254,16 +254,16 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                 </>
               )}
 
-              {/* ── STYLE 2: HEX CHESS SURFACE (Large Hexagons Almost Touching) ── */}
+              {/* ── STYLE 2: HONEYCOMB SURFACE (Picture 2 Hex Floor Grid) ── */}
               {tileStyle === 'hex' && (
                 <>
-                  <polygon points={getHexPoints(hexRadius + 4)} fill={tileColor} opacity="0.12" className={styles.tileGlowOuter} />
-                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="3.5" />
-                  <polygon points={getHexPoints(hexRadius * 0.82)} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" strokeDasharray="4 3" />
+                  <polygon points={getHexPoints(hexRadius + 2)} fill={tileColor} opacity="0.08" className={styles.tileGlowOuter} />
+                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2.5" />
+                  <polygon points={getHexPoints(hexRadius * 0.88)} fill="none" stroke={tileColor} strokeWidth="1.5" opacity="0.7" />
                   {isIconicTile ? (
-                    <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.48}>{conf.icon}</text>
+                    <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
                   ) : (
-                    <text y="1" textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={hexRadius * 0.40} fontWeight="900" style={{ textShadow: '0 0 8px rgba(0,0,0,0.95)' }}>
+                    <text y="1" textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={hexRadius * 0.38} fontWeight="900" style={{ textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>
                       #{tp.idx + 1}
                     </text>
                   )}
