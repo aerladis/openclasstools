@@ -541,7 +541,7 @@ function buildGeminiGenerationConfig(options = {}) {
 // Supabase Telemetry & Custom Teacher Key Support
 // ============================================
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tomgxxgkhfviwbbvxzsl.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbWd4eGdraGZ2aXdiYnZ4enNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MjEwMTYsImV4cCI6MjEwMDI5NzAxNn0.y0nm0u3Y8dhVfpalTrWq-XC33U9t9b2aKc07GJY8ieI';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || 'berkai2026';
 
 function extractTeacherContext(req) {
