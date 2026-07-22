@@ -94,7 +94,13 @@ const DEFAULT_DECK = [
     { type: 'speed', prompt: 'Name 4 different sports played with a ball in 15 seconds.', answer: 'e.g. Football, Basketball, Tennis, Volleyball', coins: 10 },
     { type: 'speed', prompt: 'Name 3 things you can find inside a kitchen fridge.', answer: 'e.g. Milk, Cheese, Butter, Eggs', coins: 10 },
     { type: 'roleplay', prompt: 'You are at a clothes shop and bought a shirt yesterday, but it is too small. Speak to the cashier to exchange it.', coins: 20 },
-    { type: 'roleplay', prompt: 'You are ordering dinner at a fancy restaurant. Ask the waiter for recommendations and order a three-course meal.', coins: 20 }
+    { type: 'roleplay', prompt: 'You are ordering dinner at a fancy restaurant. Ask the waiter for recommendations and order a three-course meal.', coins: 20 },
+    { type: 'roleplay', prompt: 'You are at the airport and your flight gate just changed. Ask the airline agent where the new gate is located and if your flight is delayed.', coins: 20 },
+    { type: 'roleplay', prompt: 'You arrived at your hotel room, but the air conditioning is broken and there are no towels. Call the hotel front desk politely to request assistance.', coins: 20 },
+    { type: 'roleplay', prompt: 'You are in a job interview. Give a 30-second introduction explaining your background, skills, and why you are excited for this role.', coins: 20 },
+    { type: 'roleplay', prompt: 'Order a custom coffee drink and a snack at a busy cafe. Ask about milk options and pay with a card.', coins: 20 },
+    { type: 'roleplay', prompt: 'You lost your backpack at a train station. Describe your bag (color, size, contents) to station security.', coins: 20 },
+    { type: 'roleplay', prompt: 'You feel sick with a fever and sore throat. Describe your symptoms to the doctor and ask for medical advice.', coins: 20 }
 ];
 
 /* === Section: DOM Elements === */

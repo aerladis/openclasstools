@@ -5,6 +5,8 @@ import ChallengeModal from './ChallengeModal';
 import ShopModal from './ShopModal';
 import MysteryFateModal from './MysteryFateModal';
 import AttackTargetModal from './AttackTargetModal';
+import GuideModal from './GuideModal';
+import VictoryModal from './VictoryModal';
 import confetti from 'canvas-confetti';
 
 const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -18,7 +20,7 @@ export default function BoardStage({
 }) {
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
-  const [activeModal, setActiveModal] = useState(null); // 'challenge', 'shop', 'mystery'
+  const [activeModal, setActiveModal] = useState(null); // 'challenge', 'shop', 'mystery', 'guide', 'victory'
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [categoryAnnouncement, setCategoryAnnouncement] = useState(null);
   const [showQuestionReady, setShowQuestionReady] = useState(false);
@@ -32,9 +34,9 @@ export default function BoardStage({
 
   const triggerConfetti = () => {
     confetti({
-      particleCount: 120,
-      spread: 80,
-      origin: { y: 0.6 },
+      particleCount: 150,
+      spread: 90,
+      origin: { y: 0.5 },
       colors: ['#a855f7', '#6366f1', '#ec4899', '#f59e0b', '#10b981']
     });
   };
@@ -65,11 +67,12 @@ export default function BoardStage({
     if (tile.type === 'start') {
       if (playSound) playSound('correct');
       advanceTurn(teamsList);
-    } else if (tile.type === 'trophy') {
+    } else if (tile.type === 'trophy' || tile.type === 'finish') {
       if (playSound) playSound('trophy');
       triggerConfetti();
       team.trophies += 2;
-      advanceTurn(teamsList);
+      team.coins += 50;
+      setActiveModal('victory');
     } else if (tile.type === 'chance') {
       setActiveModal('mystery');
     } else if (tile.type === 'shop') {
@@ -77,6 +80,15 @@ export default function BoardStage({
     } else if (tile.type === 'blackhole') {
       if (playSound) playSound('damage');
       team.position = Math.max(0, team.position - 4);
+      advanceTurn(teamsList);
+    } else if (tile.type === 'vortex') {
+      if (playSound) playSound('damage');
+      const randOffset = Math.random() < 0.5 ? -3 : 3;
+      team.position = Math.max(0, Math.min(gameState.tiles.length - 1, team.position + randOffset));
+      advanceTurn(teamsList);
+    } else if (tile.type === 'asteroid') {
+      if (playSound) playSound('damage');
+      team.coins = Math.max(0, team.coins - 10);
       advanceTurn(teamsList);
     } else {
       // Language challenge tile (riddle, scramble, speed, pronunciation, association, grammar, roleplay)
@@ -431,7 +443,14 @@ export default function BoardStage({
           </button>
           <button
             className="btn-secondary"
-            style={{ width: '100%' }}
+            style={{ width: '100%', marginTop: '0.4rem' }}
+            onClick={() => setActiveModal('guide')}
+          >
+            📜 Card Guide & Rules
+          </button>
+          <button
+            className="btn-secondary"
+            style={{ width: '100%', marginTop: '0.4rem' }}
             onClick={() => {
               setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
               broadcastGameState({ ...gameState, activeScreen: 'setup' });
@@ -443,6 +462,23 @@ export default function BoardStage({
       </aside>
 
       {/* Modals */}
+      {activeModal === 'guide' && (
+        <GuideModal onClose={() => setActiveModal(null)} />
+      )}
+
+      {activeModal === 'victory' && (
+        <VictoryModal
+          teams={gameState.teams}
+          onPlayAgain={() => {
+            setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
+            broadcastGameState({ ...gameState, activeScreen: 'setup' });
+          }}
+          onReturnHub={() => {
+            window.location.href = 'index.html';
+          }}
+        />
+      )}
+
       <ChallengeModal
         challenge={currentChallenge}
         activeTeam={activeModal === 'challenge' ? activeTeam : null}

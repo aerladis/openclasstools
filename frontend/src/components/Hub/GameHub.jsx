@@ -72,10 +72,10 @@ export default function GameHub() {
     },
     {
       id: 'kelime',
-      title: 'Kelime Oyunu',
-      subtitle: 'Turkish Word Game',
-      icon: '🇹🇷',
-      desc: 'Fast-paced letter reveal word guessing game with scoring and AI question generation.',
+      title: 'Word Game',
+      subtitle: 'English Clues & Vocabulary',
+      icon: '🔤',
+      desc: 'Reveal letters, solve clues, and stack the highest score on the board.',
       tags: ['Letter Reveal', 'Timer'],
       path: '/kelime.html',
       isReact: false

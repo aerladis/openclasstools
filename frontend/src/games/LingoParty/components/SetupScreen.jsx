@@ -146,8 +146,9 @@ export default function SetupScreen({ onStartGame, playSound }) {
               onChange={e => setBoardLength(Number(e.target.value))}
             >
               <option value={16}>16 Planets (Quick ~15 min)</option>
-              <option value={22}>22 Planets (Standard ~25 min)</option>
-              <option value={30}>30 Planets (Marathon ~40 min)</option>
+              <option value={24}>24 Planets (Standard ~25 min)</option>
+              <option value={32}>32 Planets (Galactic Odyssey ~35 min)</option>
+              <option value={40}>40 Planets (Deep Space Epic ~50 min)</option>
             </select>
           </div>
 

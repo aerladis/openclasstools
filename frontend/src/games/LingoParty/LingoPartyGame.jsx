@@ -104,20 +104,21 @@ export default function LingoPartyGame() {
       }
     }
 
-    // Rarely sprinkle in 1-2 Black Hole hazard planets on ordinary challenge
-    // tiles — never on start/trophy/chance/shop, which are structural.
+    // Sprinkle hazard planets (Black Hole, Cosmic Vortex, Asteroid Belt) on challenge tiles
     const eligibleIdx = tiles
       .map((t, idx) => idx)
       .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
 
-    let blackHoleCount = 0;
-    if (eligibleIdx.length > 0 && Math.random() < 0.65) blackHoleCount = 1;
-    if (eligibleIdx.length > 1 && blackHoleCount === 1 && Math.random() < 0.25) blackHoleCount = 2;
+    const hazardTypes = ['blackhole', 'vortex', 'asteroid'];
+    let hazardCount = Math.min(Math.floor(count / 7), 5);
+    if (hazardCount < 1) hazardCount = 1;
 
-    for (let n = 0; n < blackHoleCount && eligibleIdx.length > 0; n++) {
+    for (let n = 0; n < hazardCount && eligibleIdx.length > 0; n++) {
       const pick = Math.floor(Math.random() * eligibleIdx.length);
       const tileIdx = eligibleIdx.splice(pick, 1)[0];
-      tiles[tileIdx] = { id: tileIdx, type: 'blackhole', label: 'Black Hole' };
+      const hType = hazardTypes[n % hazardTypes.length];
+      const hLabels = { blackhole: 'Black Hole', vortex: 'Cosmic Vortex', asteroid: 'Asteroid Belt' };
+      tiles[tileIdx] = { id: tileIdx, type: hType, label: hLabels[hType] };
     }
 
     return tiles;

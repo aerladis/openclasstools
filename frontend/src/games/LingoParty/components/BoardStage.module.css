@@ -65,12 +65,12 @@
 }
 
 .teamItemActive {
-  border-color: rgba(139, 92, 246, 0.6);
+  border-color: rgba(139, 92, 246, 0.7);
   box-shadow:
-    0 0 20px rgba(139, 92, 246, 0.25),
-    inset 0 0 15px rgba(139, 92, 246, 0.08);
-  transform: scale(1.03);
-  background: rgba(139, 92, 246, 0.08);
+    0 0 20px rgba(139, 92, 246, 0.35),
+    inset 0 0 15px rgba(139, 92, 246, 0.12);
+  transform: none;
+  background: rgba(139, 92, 246, 0.12);
 }
 
 .teamInfo {
@@ -381,14 +381,17 @@
   background: rgba(8, 6, 26, 0.85);
   border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 14px;
-  padding: 0.6rem 1.2rem;
+  padding: 0.5rem 1.2rem;
   backdrop-filter: blur(12px);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
-  min-height: 48px;
+  height: 52px;
+  max-height: 52px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .planetHoverContent {

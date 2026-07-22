@@ -1040,16 +1040,16 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
 
     if (gameType === 'kelime') {
         const kelimeSamples = [
-            { question: 'Dünyamızın etrafında dönen tek doğal uydu', answer: 'AY' },
-            { question: 'Geceleri gökyüzünü aydınlatan parlak gök cismi', answer: 'YILDIZ' },
-            { question: 'Farklı diller arasında iletişim sağlayan sözcük dizgesi', answer: 'LİSAN' },
-            { question: 'Öğrenme ve bilgi edinme yeri veya kurumu', answer: 'OKUL' },
-            { question: 'Bir işi başarma sonucunda kazanılan ödül ve simge', answer: 'KUPA' },
-            { question: 'Birlikte mücadele eden oyuncular grubu', answer: 'TAKIM' },
-            { question: 'Yeni yerler görme ve bilgi edinme yolculuğu', answer: 'MACERA' },
-            { question: 'Hedefe ulaşma ve zorlukları aşma durumu', answer: 'BAŞARI' },
-            { question: 'Uzaya gönderilen insanlı veya insansız araç', answer: 'ROKET' },
-            { question: 'Evrendeki milyarlarca yıldızın oluşturduğu sistem', answer: 'GALAKSİ' }
+            { question: 'The natural satellite orbiting planet Earth', answer: 'MOON' },
+            { question: 'A luminous celestial body visible in the night sky', answer: 'STAR' },
+            { question: 'A structured system of communication used by humans', answer: 'LANGUAGE' },
+            { question: 'An institution for educating students and gaining knowledge', answer: 'SCHOOL' },
+            { question: 'A trophy awarded as a symbol of victory', answer: 'CUP' },
+            { question: 'A group of players coming together to achieve a goal', answer: 'TEAM' },
+            { question: 'An exciting and unusual experience or journey', answer: 'ADVENTURE' },
+            { question: 'The accomplishment of an aim or goal', answer: 'SUCCESS' },
+            { question: 'A vehicle designed to travel into outer space', answer: 'ROCKET' },
+            { question: 'A massive system of stars, gas, and dust bound by gravity', answer: 'GALAXY' }
         ];
         const questions = [];
         for (let i = 0; i < count; i++) {

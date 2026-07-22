@@ -222,9 +222,9 @@
 }
 
 @keyframes pulseTurn {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.03); border-color: rgba(255, 255, 255, 0.4); }
-    100% { transform: scale(1); }
+    0% { border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
+    50% { border-color: rgba(168, 85, 247, 0.6); box-shadow: 0 4px 22px rgba(168, 85, 247, 0.35); }
+    100% { border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
 }
 
 .turn-team-pawn {
@@ -1017,17 +1017,20 @@
     background: rgba(8, 6, 26, 0.85);
     border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 14px;
-    padding: 0.6rem 1.2rem;
+    padding: 0.5rem 1.2rem;
     backdrop-filter: blur(12px);
     box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
-    min-height: 46px;
+    height: 52px;
+    max-height: 52px;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
     text-align: center;
     color: rgba(148, 163, 184, 0.9);
     font-size: 0.9rem;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
