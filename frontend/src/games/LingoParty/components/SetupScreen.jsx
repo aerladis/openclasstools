@@ -102,7 +102,11 @@ export default function SetupScreen({ onStartGame, playSound }) {
     setIsGenerating(true);
     fetch('/api/generate-lingoparty', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-gemini-api-key': localStorage.getItem('berkai_gemini_api_key') || '',
+        'x-teacher-name': localStorage.getItem('berkai_teacher_name') || ''
+      },
       body: JSON.stringify({ theme: topic, cefr, count: 30 })
     })
       .then(res => res.json())

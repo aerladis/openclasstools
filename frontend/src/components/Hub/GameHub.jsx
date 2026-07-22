@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './GameHub.module.css';
+import ApiKeyModal from '../Common/ApiKeyModal';
 
 export default function GameHub() {
   const [serverHealth, setServerHealth] = useState({ status: 'checking', activeGames: 0 });
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [hasCustomKey, setHasCustomKey] = useState(false);
 
   useEffect(() => {
     fetch('/api/health')
@@ -17,7 +20,9 @@ export default function GameHub() {
       .catch(() => {
         setServerHealth({ status: 'offline', activeGames: 0 });
       });
-  }, []);
+
+    setHasCustomKey(!!localStorage.getItem('berkai_gemini_api_key'));
+  }, [isApiKeyModalOpen]);
 
   const games = [
     {
@@ -110,9 +115,22 @@ export default function GameHub() {
           <p>Next-Gen AI-Powered Classroom Party Games & Widescreen Interactive Board Suite</p>
         </div>
 
-        <div className={styles.statusBadge}>
-          <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>
-          <span>Server: {serverHealth.status === 'offline' ? 'Offline' : `Online (${serverHealth.activeGames} Active Games)`}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <button
+            className={styles.btnApiKey}
+            onClick={() => setIsApiKeyModalOpen(true)}
+          >
+            {hasCustomKey ? '🟢 Teacher Key Active' : '🔑 Teacher API Key'}
+          </button>
+
+          <Link to="/admin" className={styles.btnAdmin}>
+            🛡️ Admin Panel
+          </Link>
+
+          <div className={styles.statusBadge}>
+            <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>
+            <span>Server: {serverHealth.status === 'offline' ? 'Offline' : `Online (${serverHealth.activeGames} Active Games)`}</span>
+          </div>
         </div>
       </header>
 
@@ -138,6 +156,11 @@ export default function GameHub() {
           );
         })}
       </section>
+
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+      />
     </div>
   );
 }

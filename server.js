@@ -537,6 +537,60 @@ function buildGeminiGenerationConfig(options = {}) {
     return generationConfig;
 }
 
+// ============================================
+// Supabase Telemetry & Custom Teacher Key Support
+// ============================================
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tomgxxgkhfviwbbvxzsl.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbWd4eGdraGZ2aXdiYnZ4enNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MjEwMTYsImV4cCI6MjEwMDI5NzAxNn0.y0nm0u3Y8dhVfpalTrWq-XC33U9t9b2aKc07GJY8ieI';
+const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || 'berkai2026';
+
+function extractTeacherContext(req) {
+    const customApiKey = req.headers['x-gemini-api-key'] || req.body?.apiKey || null;
+    const teacherName = req.headers['x-teacher-name'] || req.body?.teacherName || 'Anonymous Teacher';
+    return {
+        customApiKey,
+        teacherName,
+        options: customApiKey ? { apiKey: customApiKey } : {}
+    };
+}
+
+async function logGameSessionToSupabase(sessionData) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/game_sessions`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(sessionData)
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data?.[0] || null;
+    } catch (err) {
+        console.warn('[Supabase Telemetry] Session log skipped:', err.message);
+        return null;
+    }
+}
+
+async function logGameActivityToSupabase(logData) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/game_activity_logs`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(logData)
+        });
+    } catch (err) {
+        console.warn('[Supabase Telemetry] Activity log skipped:', err.message);
+    }
+}
+
 async function callGemini(prompt, options = {}) {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
     const generationConfig = buildGeminiGenerationConfig(options);
@@ -549,7 +603,7 @@ async function callGemini(prompt, options = {}) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': GEMINI_API_KEY
+                'x-goog-api-key': options.apiKey || GEMINI_API_KEY
             },
             body: JSON.stringify({
                 contents: [{
@@ -1355,10 +1409,12 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
     const count = sanitizeCount(req.body.count, 24);
     const cefr = sanitizeCEFR(req.body.cefr);
     const cefrInstruction = getCEFRInstruction(cefr);
+    const { customApiKey, teacherName, options } = extractTeacherContext(req);
 
     try {
         const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
         const cards = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
+            ...options,
             temperature: 0.7,
             validate: (result) => (!Array.isArray(result) || result.length === 0)
                 ? 'Invalid response format - expected array of challenge objects'
@@ -1416,11 +1472,78 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
 
         if (validCards.length === 0) throw new Error('No valid LingoParty cards parsed');
 
-        res.json({ success: true, count: validCards.length, cards: validCards });
+        const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        logGameSessionToSupabase({
+            game_type: 'lingoparty',
+            game_id: gameId,
+            teacher_name: teacherName,
+            theme,
+            cefr_level: cefr,
+            teams_count: 3,
+            team_names: ['Dragons', 'Rockets', 'Androids'],
+            question_count: validCards.length,
+            custom_api_key_used: !!customApiKey
+        });
+
+        res.json({ success: true, gameId, count: validCards.length, cards: validCards });
     } catch (err) {
         console.warn(`[AI Fallback] /api/generate-lingoparty fallback for theme "${theme}":`, err.message);
         const fallbackCards = createFallbackQuestions('lingoparty', theme, count, { cefr });
         res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
+    }
+});
+
+// ---- Admin Telemetry API Endpoints ----
+app.get('/api/admin/telemetry', async (req, res) => {
+    const passcode = req.headers['x-admin-passcode'] || req.query.passcode;
+    if (passcode !== ADMIN_PASSCODE) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Invalid admin passcode' });
+    }
+
+    try {
+        const sessionsRes = await fetch(`${SUPABASE_URL}/rest/v1/game_sessions?select=*&order=created_at.desc&limit=100`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const sessions = await sessionsRes.json();
+
+        const totalSessions = Array.isArray(sessions) ? sessions.length : 0;
+        const customKeySessions = Array.isArray(sessions) ? sessions.filter(s => s.custom_api_key_used).length : 0;
+        const customKeyUsagePct = totalSessions > 0 ? Math.round((customKeySessions / totalSessions) * 100) : 0;
+        
+        const teacherNames = new Set(Array.isArray(sessions) ? sessions.map(s => s.teacher_name).filter(Boolean) : []);
+        const totalAIContentGenerated = Array.isArray(sessions) ? sessions.reduce((acc, s) => acc + (s.question_count || 0), 0) : 0;
+
+        res.json({
+            success: true,
+            sessions: Array.isArray(sessions) ? sessions : [],
+            overview: {
+                totalSessions,
+                totalAIContentGenerated,
+                activeTeachersCount: teacherNames.size,
+                customKeyUsagePct
+            }
+        });
+    } catch (err) {
+        console.error('Admin telemetry fetch error:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch telemetry data' });
+    }
+});
+
+app.get('/api/admin/session-logs/:gameId', async (req, res) => {
+    const passcode = req.headers['x-admin-passcode'] || req.query.passcode;
+    if (passcode !== ADMIN_PASSCODE) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const { gameId } = req.params;
+    try {
+        const logsRes = await fetch(`${SUPABASE_URL}/rest/v1/game_activity_logs?game_id=eq.${gameId}&order=created_at.asc`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const logs = await logsRes.json();
+        res.json({ success: true, logs: Array.isArray(logs) ? logs : [] });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to fetch session logs' });
     }
 });
 
