@@ -250,13 +250,19 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                 </>
               )}
 
-              {/* ── STYLE 2: HEX (Cyber-Hexagonal Quantum Nodes) ── */}
+              {/* ── STYLE 2: HEX (Full Cyber-Hexagonal Quantum Cover) ── */}
               {tileStyle === 'hex' && (
                 <>
-                  <polygon points={getHexPoints(hexRadius + 8)} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
-                  <polygon points={getHexPoints(hexRadius + 4)} fill="none" stroke={tileColor} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.6" />
-                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="2.5" />
-                  {isIconicTile && <text y="0" className={styles.tileEmoji}>{conf.icon}</text>}
+                  <polygon points={getHexPoints(hexRadius + 6)} fill={tileColor} opacity="0.14" className={styles.tileGlowOuter} />
+                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="3" />
+                  <polygon points={getHexPoints(hexRadius * 0.72)} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="4 3" />
+                  {isIconicTile ? (
+                    <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji}>{conf.icon}</text>
+                  ) : (
+                    <text y="1" textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={hexRadius * 0.36} fontWeight="900" style={{ textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>
+                      #{tp.idx + 1}
+                    </text>
+                  )}
                 </>
               )}
 
