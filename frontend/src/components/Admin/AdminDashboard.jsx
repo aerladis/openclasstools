@@ -35,31 +35,24 @@ export default function AdminDashboard() {
   const [activeGameState, setActiveGameState] = useState(null);
 
   useEffect(() => {
-    const savedToken = sessionStorage.getItem('berkai_admin_passcode');
-    if (savedToken) {
-      verifyPasscode(savedToken);
-    }
+    fetchTelemetry();
   }, []);
 
-  const verifyPasscode = async (code) => {
+  const fetchTelemetry = async () => {
     setLoading(true);
     setAuthError('');
     try {
-      const res = await fetch('/api/admin/telemetry', {
-        headers: { 'x-admin-passcode': code }
-      });
+      const res = await fetch('/api/admin/telemetry');
       const data = await res.json();
       if (res.ok && data.success) {
         setIsAuthenticated(true);
-        sessionStorage.setItem('berkai_admin_passcode', code);
         setSessions(data.sessions || []);
         setOverview(data.overview || null);
       } else {
-        setAuthError(data.error || 'Invalid admin passcode');
-        sessionStorage.removeItem('berkai_admin_passcode');
+        setAuthError(data.error || 'Failed to load telemetry data');
       }
     } catch (err) {
-      setAuthError('Connection error validating admin access');
+      setAuthError('Connection error loading admin telemetry');
     } finally {
       setLoading(false);
     }

@@ -1495,11 +1495,6 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
 
 // ---- Admin Telemetry API Endpoints ----
 app.get('/api/admin/telemetry', async (req, res) => {
-    const passcode = req.headers['x-admin-passcode'] || req.query.passcode;
-    if (passcode !== ADMIN_PASSCODE) {
-        return res.status(401).json({ success: false, error: 'Unauthorized: Invalid admin passcode' });
-    }
-
     try {
         const sessionsRes = await fetch(`${SUPABASE_URL}/rest/v1/game_sessions?select=*&order=created_at.desc&limit=100`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -1530,11 +1525,6 @@ app.get('/api/admin/telemetry', async (req, res) => {
 });
 
 app.get('/api/admin/session-logs/:gameId', async (req, res) => {
-    const passcode = req.headers['x-admin-passcode'] || req.query.passcode;
-    if (passcode !== ADMIN_PASSCODE) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
     const { gameId } = req.params;
     try {
         const logsRes = await fetch(`${SUPABASE_URL}/rest/v1/game_activity_logs?game_id=eq.${gameId}&order=created_at.asc`, {

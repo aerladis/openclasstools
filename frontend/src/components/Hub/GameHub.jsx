@@ -126,6 +126,10 @@ export default function GameHub() {
             {hasCustomKey ? '🟢 Teacher Key Active' : '🔑 Teacher API Key'}
           </button>
 
+          <Link to="/admin" className={styles.btnAdmin}>
+            🛡️ Admin Panel
+          </Link>
+
           <div className={styles.statusBadge}>
             <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>
             <span>Server: {serverHealth.status === 'offline' ? 'Offline' : `Online (${serverHealth.activeGames} Active Games)`}</span>
