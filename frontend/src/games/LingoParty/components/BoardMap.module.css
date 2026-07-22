@@ -112,8 +112,8 @@
 }
 
 .tileNode:hover .tileGlowOuter {
-  opacity: 0.5;
-  transform: scale(1.3);
+  opacity: 0.45;
+  transform: scale(1.1);
 }
 
 /* Planet body */

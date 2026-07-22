@@ -214,7 +214,11 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'blackhole', 'vortex', 'asteroid'].includes(tp.type);
           const tileColor = isIconicTile ? conf.color : currentOrbitTheme.color;
           const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
-          const radius = isSpecial ? 64 : 52;
+
+          const total = tiles.length;
+          const baseRadius = total > 28 ? 42 : (total > 16 ? 50 : 60);
+          const radius = isSpecial ? baseRadius + 12 : baseRadius;
+          const hexRadius = radius + 8;
           const cssClass = conf.cssClass || '';
 
           return (
@@ -239,8 +243,8 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
               {/* ── STYLE 1: SPHERE (Classic Cosmic Orbital Spheres) ── */}
               {tileStyle === 'sphere' && (
                 <>
-                  <circle r={radius + 22} fill={tileColor} opacity="0.12" className={styles.tileGlowOuter} />
-                  <circle r={radius + 12} className={styles.tileOrbitRing} stroke={tileColor} />
+                  <circle r={radius + 10} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
+                  <circle r={radius + 6} className={styles.tileOrbitRing} stroke={tileColor} />
                   <circle r={radius} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
                   <text y="0" className={styles.tileEmoji}>{conf.icon}</text>
                 </>
@@ -249,25 +253,25 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
               {/* ── STYLE 2: HEX (Cyber-Hexagonal Quantum Nodes) ── */}
               {tileStyle === 'hex' && (
                 <>
-                  <polygon points={getHexPoints(radius + 16)} fill={tileColor} opacity="0.12" className={styles.tileGlowOuter} />
-                  <polygon points={getHexPoints(radius + 8)} fill="none" stroke={tileColor} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.6" />
-                  <polygon points={getHexPoints(radius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="2.5" />
+                  <polygon points={getHexPoints(hexRadius + 8)} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
+                  <polygon points={getHexPoints(hexRadius + 4)} fill="none" stroke={tileColor} strokeWidth="1.5" strokeDasharray="6 4" opacity="0.6" />
+                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke={tileColor} strokeWidth="2.5" />
                   <text y="0" className={styles.tileEmoji}>{conf.icon}</text>
                 </>
               )}
 
               {/* ── STYLE 3: CAPSULE (Holographic High-UX Space Capsules) ── */}
               {tileStyle === 'capsule' && (() => {
-                const capW = 108;
-                const capH = 44;
+                const capW = total > 28 ? 110 : 124;
+                const capH = total > 28 ? 46 : 52;
                 return (
                   <>
-                    <rect x={-capW / 2 - 4} y={-capH / 2 - 4} width={capW + 8} height={capH + 8} rx="24" fill={tileColor} opacity="0.18" filter="blur(5px)" />
-                    <rect x={-capW / 2} y={-capH / 2} width={capW} height={capH} rx="22" fill="rgba(15, 12, 35, 0.88)" stroke={tileColor} strokeWidth="2.5" />
-                    <circle cx={-capW / 2 + 22} cy={0} r="17" fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                    <text x={-capW / 2 + 22} y="1" textAnchor="middle" dominantBaseline="central" fontSize="17">{conf.icon}</text>
-                    <text x={-capW / 2 + 46} y="-2" textAnchor="start" fill="#ffffff" fontSize="11" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
-                    <text x={-capW / 2 + 46} y="11" textAnchor="start" fill={tileColor} fontSize="10" fontWeight="900">#{tp.idx + 1}</text>
+                    <rect x={-capW / 2 - 2} y={-capH / 2 - 2} width={capW + 4} height={capH + 4} rx="26" fill={tileColor} opacity="0.14" filter="blur(4px)" className={styles.tileGlowOuter} />
+                    <rect x={-capW / 2} y={-capH / 2} width={capW} height={capH} rx="24" fill="rgba(15, 12, 35, 0.88)" stroke={tileColor} strokeWidth="2.5" />
+                    <circle cx={-capW / 2 + 24} cy={0} r="19" fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                    <text x={-capW / 2 + 24} y="1" textAnchor="middle" dominantBaseline="central" fontSize="18">{conf.icon}</text>
+                    <text x={-capW / 2 + 50} y="-2" textAnchor="start" fill="#ffffff" fontSize="12" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
+                    <text x={-capW / 2 + 50} y="12" textAnchor="start" fill={tileColor} fontSize="11" fontWeight="900">#{tp.idx + 1}</text>
                   </>
                 );
               })()}
