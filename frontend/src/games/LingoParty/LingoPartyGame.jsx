@@ -110,7 +110,7 @@ export default function LingoPartyGame() {
       .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
 
     const hazardTypes = ['blackhole', 'vortex', 'asteroid'];
-    let hazardCount = Math.min(Math.floor(count / 7), 5);
+    let hazardCount = Math.min(Math.floor(length / 7), 5);
     if (hazardCount < 1) hazardCount = 1;
 
     for (let n = 0; n < hazardCount && eligibleIdx.length > 0; n++) {

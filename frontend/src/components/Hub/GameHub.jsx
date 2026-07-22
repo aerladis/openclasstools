@@ -120,25 +120,10 @@ export default function GameHub() {
         {games.map(game => {
           const CardContent = (
             <div className={`glass-card ${styles.gameCard}`}>
-              <div>
-                <div className={styles.gameHeader}>
-                  <span className={styles.gameIcon}>{game.icon}</span>
-                  <div className={styles.gameTitle}>
-                    <h3>{game.title}</h3>
-                    <span>{game.subtitle}</span>
-                  </div>
-                </div>
-                <p className={styles.gameDesc}>{game.desc}</p>
+              <div className={styles.emojiWrapper}>
+                <span className={styles.gameIcon}>{game.icon}</span>
               </div>
-
-              <div className={styles.cardFooter}>
-                <div className={styles.tags}>
-                  {game.tags.map(t => <span key={t} className={styles.tag}>{t}</span>)}
-                </div>
-                <div className={styles.playBtn}>
-                  {game.isReact ? 'Launch React App 🚀' : 'Open Game Page ↗'}
-                </div>
-              </div>
+              <h3 className={styles.cardTitle}>{game.title}</h3>
             </div>
           );
 
