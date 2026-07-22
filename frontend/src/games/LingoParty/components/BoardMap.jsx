@@ -10,28 +10,22 @@ import PawnStandeesLayer from './PawnStandeesLayer';
 export function getMapCoordinates(index, totalLength) {
   if (totalLength <= 1) return { x: 50, y: 50 };
 
-  const ROWS = 3;
-  const padX = 10;
-  const padY = 16;
-  const rowHeight = (100 - padY * 2) / (ROWS - 1);
+  const tilesPerRow = 6;
+  const ROWS = Math.ceil(totalLength / tilesPerRow);
+  const padX = 12;
+  const padY = 10;
 
-  const tilesPerRow = Math.ceil(totalLength / ROWS);
-  const row = Math.min(ROWS - 1, Math.floor(index / tilesPerRow));
+  const row = Math.floor(index / tilesPerRow);
   const col = index % tilesPerRow;
   const isReversed = row % 2 === 1;
 
-  // Calculate actual number of tiles in this specific row so every row stretches evenly
-  const tilesInThisRow = (row === ROWS - 1) ? (totalLength - (ROWS - 1) * tilesPerRow) : tilesPerRow;
-  const safeTilesInRow = Math.max(1, tilesInThisRow);
+  const rowHeight = (100 - padY * 2) / Math.max(1, ROWS - 1);
+  const colProgress = tilesPerRow > 1 ? col / (tilesPerRow - 1) : 0.5;
 
-  const colProgress = safeTilesInRow > 1 ? col / (safeTilesInRow - 1) : 0.5;
   const x = padX + (isReversed ? (1 - colProgress) : colProgress) * (100 - padX * 2);
   const y = padY + row * rowHeight;
 
-  // Gentle vertical wave for organic aesthetic while keeping rows well separated
-  const wave = Math.sin(colProgress * Math.PI) * 2 * (row % 2 === 0 ? -1 : 1);
-
-  return { x, y: y + wave };
+  return { x, y };
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -216,10 +210,10 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
 
           const total = tiles.length;
-          const tilesPerRow = Math.ceil(total / 3);
-          const colSpacing = 900 / Math.max(1, tilesPerRow - 1);
-          // Honeycomb surface scaling — hexagon radius increased by 8 more to fill board matching Picture 2
-          const hexRadius = Math.max(48, Math.min(95, (colSpacing / 1.732) * 1.05 + 8));
+          const tilesPerRow = 6;
+          const colSpacing = (1600 - 320) / (tilesPerRow - 1);
+          // Honeycomb surface scaling — 6 planets per row with massive hexagons filling all empty space
+          const hexRadius = Math.max(82, Math.min(125, (colSpacing / 1.732) * 0.96));
 
           const baseRadius = total > 36 ? 36 : (total > 24 ? 44 : 54);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
