@@ -219,9 +219,9 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           const tilesPerRow = Math.ceil(total / 3);
           const colSpacing = 900 / Math.max(1, tilesPerRow - 1);
           // Hex Chess surface scaling — hexagon radius fills column spacing so tiles almost touch
-          const hexRadius = Math.max(54, Math.min(85, (colSpacing / 1.732) * 0.94));
+          const hexRadius = Math.max(36, Math.min(85, (colSpacing / 1.732) * 0.94));
 
-          const baseRadius = total > 28 ? 42 : (total > 16 ? 50 : 60);
+          const baseRadius = total > 36 ? 36 : (total > 24 ? 44 : 54);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
           const cssClass = conf.cssClass || '';
 

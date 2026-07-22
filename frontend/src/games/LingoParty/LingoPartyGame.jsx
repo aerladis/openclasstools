@@ -79,7 +79,7 @@ export default function LingoPartyGame() {
     teams: [],
     currentTeamIndex: 0,
     round: 1,
-    boardLength: 22,
+    boardLength: 42,
     tiles: [],
     deck: []
   });

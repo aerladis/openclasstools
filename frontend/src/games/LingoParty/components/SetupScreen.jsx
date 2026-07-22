@@ -70,7 +70,7 @@ const DEFAULT_NAMES = ['Dragons', 'Rockets', 'Androids', 'Foxes', 'Bolts', 'Owls
 
 export default function SetupScreen({ onStartGame, playSound }) {
   const [teamCount, setTeamCount] = useState(3);
-  const [boardLength, setBoardLength] = useState(22);
+  const [boardLength, setBoardLength] = useState(42);
   const [cefr, setCefr] = useState('B1');
   const [topic, setTopic] = useState('General Classroom Vocabulary & Idioms');
   const [customNames, setCustomNames] = useState(['Dragons', 'Rockets', 'Androids', 'Foxes', 'Bolts', 'Owls', 'Lions', 'Dolphins']);
@@ -149,10 +149,10 @@ export default function SetupScreen({ onStartGame, playSound }) {
               value={boardLength}
               onChange={e => setBoardLength(Number(e.target.value))}
             >
-              <option value={16}>16 Planets (Quick ~15 min)</option>
-              <option value={24}>24 Planets (Standard ~25 min)</option>
-              <option value={32}>32 Planets (Galactic Odyssey ~35 min)</option>
-              <option value={40}>40 Planets (Deep Space Epic ~50 min)</option>
+              <option value={42}>42 Planets (Galactic Odyssey — Default)</option>
+              <option value={24}>24 Planets (Quick Sprint ~20 min)</option>
+              <option value={32}>32 Planets (Standard Voyage ~30 min)</option>
+              <option value={54}>54 Planets (Deep Space Epic ~50 min)</option>
             </select>
           </div>
 
