@@ -59,12 +59,13 @@ rsync -av --exclude='node_modules' --exclude='.git' --exclude='deploy.tar.gz' ./
 
 echo -e "${GREEN}✓ Files copied${NC}"
 
-echo -e "${YELLOW}Step 4: Installing npm dependencies...${NC}"
+echo -e "${YELLOW}Step 4: Installing npm dependencies & building React frontend...${NC}"
 
 cd $APP_DIR
-npm install --production
+npm install
+npm run build
 
-echo -e "${GREEN}✓ Dependencies installed${NC}"
+echo -e "${GREEN}✓ Dependencies installed and React frontend built${NC}"
 
 echo -e "${YELLOW}Step 5: Setting up environment...${NC}"
 
