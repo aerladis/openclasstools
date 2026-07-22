@@ -55,8 +55,8 @@ export default function PawnStandeesLayer({ tiles = [], teams = [] }) {
           key={team.index}
           className={styles.pawnUnit}
           style={{
-            left: `${team.coords.x}%`,
-            top: `${team.coords.y}%`,
+            left: team.coords.sx !== undefined ? `${team.coords.sx}px` : `${team.coords.x}%`,
+            top: team.coords.sy !== undefined ? `${team.coords.sy}px` : `${team.coords.y}%`,
             '--dx': `${team.dx}px`,
             '--dy': `${team.dy}px`
           }}

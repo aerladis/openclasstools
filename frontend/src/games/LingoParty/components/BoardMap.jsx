@@ -8,24 +8,38 @@ import PawnStandeesLayer from './PawnStandeesLayer';
    Uses a multi-row serpentine layout for a natural winding board.
    ═══════════════════════════════════════════════════════════════ */
 export function getMapCoordinates(index, totalLength) {
-  if (totalLength <= 1) return { x: 50, y: 50 };
+  if (totalLength <= 1) return { x: 50, y: 50, sx: 800, sy: 450 };
 
   const tilesPerRow = 6;
   const ROWS = Math.ceil(totalLength / tilesPerRow);
-  const padX = 12;
-  const padY = 10;
-
   const row = Math.floor(index / tilesPerRow);
-  const col = index % tilesPerRow;
+  const colInRow = index % tilesPerRow;
   const isReversed = row % 2 === 1;
 
-  const rowHeight = (100 - padY * 2) / Math.max(1, ROWS - 1);
-  const colProgress = tilesPerRow > 1 ? col / (tilesPerRow - 1) : 0.5;
+  // Physical column index from left (0 to 5)
+  const c = isReversed ? (tilesPerRow - 1 - colInRow) : colInRow;
 
-  const x = padX + (isReversed ? (1 - colProgress) : colProgress) * (100 - padX * 2);
-  const y = padY + row * rowHeight;
+  // Exact hexagonal honeycomb grid geometry
+  const R = 120;
+  const Sx = R * Math.sqrt(3); // ~207.85px horizontal spacing between adjacent columns
+  const Sy = R * 1.5;          // 180px vertical center-to-center spacing between adjacent rows
 
-  return { x, y };
+  // Center the 6 columns + odd row stagger across 1600 width
+  const totalGridWidth = (tilesPerRow - 1 + 0.5) * Sx; // 5.5 * 207.85 = 1143.15px
+  const startX = (1600 - totalGridWidth) / 2;          // ~228.4px
+  const startY = 140;                                  // Top margin
+
+  // Stagger odd rows horizontally by half a column step so hexagons interlock precisely into adjacent row gaps
+  const rowShift = isReversed ? (0.5 * Sx) : 0;
+  const sx = startX + c * Sx + rowShift;
+  const sy = startY + row * Sy;
+
+  // Dynamic SVG height to hold all rows cleanly
+  const svgHeight = Math.max(900, startY + (ROWS - 1) * Sy + 160);
+  const x = (sx / 1600) * 100;
+  const y = (sy / svgHeight) * 100;
+
+  return { x, y, sx, sy };
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -133,6 +147,9 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
   const currentOrbitTheme = useMemo(() => getOrbitTheme(round), [round]);
 
   // Pre-compute SVG coordinates for each tile
+  const totalRows = Math.ceil((tiles.length || 42) / 6);
+  const svgHeight = Math.max(900, 140 + (totalRows - 1) * 180 + 160);
+
   const tilePoints = useMemo(() =>
     tiles.map((tile, idx) => {
       const coords = getMapCoordinates(idx, tiles.length);
@@ -141,8 +158,8 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
         idx,
         x: coords.x,
         y: coords.y,
-        sx: (coords.x / 100) * 1600,
-        sy: (coords.y / 100) * 900
+        sx: coords.sx,
+        sy: coords.sy
       };
     }),
     [tiles]
@@ -172,7 +189,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
       </div>
 
       {/* ── SVG Board ── */}
-      <svg className={styles.svgMap} viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet">
+      <svg className={styles.svgMap} viewBox={`0 0 1600 ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           {/* Cosmic trail gradient */}
           <linearGradient id="cosmicTrailGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -210,12 +227,10 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
 
           const total = tiles.length;
-          const tilesPerRow = 6;
-          const colSpacing = (1600 - 320) / (tilesPerRow - 1);
-          // Honeycomb surface scaling — 6 planets per row with massive hexagons filling all empty space
-          const hexRadius = Math.max(82, Math.min(125, (colSpacing / 1.732) * 0.96));
+          // Honeycomb grid scaling — exact radius 118 leaves 2px crisp grout border between adjacent touching hexagons of R=120
+          const hexRadius = 118;
 
-          const baseRadius = total > 36 ? 36 : (total > 24 ? 44 : 54);
+          const baseRadius = total > 36 ? 56 : (total > 24 ? 64 : 72);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
           const cssClass = conf.cssClass || '';
 
@@ -266,8 +281,8 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
 
               {/* ── STYLE 3: CAPSULE (Holographic High-UX Space Capsules) ── */}
               {tileStyle === 'capsule' && (() => {
-                const capW = total > 28 ? 110 : 124;
-                const capH = total > 28 ? 46 : 52;
+                const capW = total > 28 ? 136 : 148;
+                const capH = total > 28 ? 58 : 64;
                 return (
                   <>
                     <rect x={-capW / 2 - 2} y={-capH / 2 - 2} width={capW + 4} height={capH + 4} rx="26" fill={tileColor} opacity="0.14" filter="blur(4px)" className={styles.tileGlowOuter} />
@@ -282,10 +297,12 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
             </g>
           );
         })}
-      </svg>
 
-      {/* ── Floating Pawn Standees ── */}
-      <PawnStandeesLayer tiles={tiles} teams={teams} />
+        {/* ── ForeignObject overlay so pawn standees live right inside the exact SVG coordinate grid ── */}
+        <foreignObject x="0" y="0" width="1600" height={svgHeight} style={{ overflow: 'visible', pointerEvents: 'none' }}>
+          <PawnStandeesLayer tiles={tiles} teams={teams} />
+        </foreignObject>
+      </svg>
     </div>
   );
 }
