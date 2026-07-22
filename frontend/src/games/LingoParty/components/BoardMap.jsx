@@ -41,7 +41,7 @@ const TILE_CONFIG = {
   start:         { color: '#10b981', glow: 'rgba(16,185,129,0.5)',  icon: '🌍',  label: 'LAUNCH', cssClass: 'tileStart' },
   trophy:        { color: '#f59e0b', glow: 'rgba(245,158,11,0.5)', icon: '⭐',  label: 'GOAL',   cssClass: 'tileTrophy' },
   chance:        { color: '#ec4899', glow: 'rgba(236,72,153,0.5)', icon: '🪐',  label: 'FATE',   cssClass: 'tileChance' },
-  shop:          { color: '#3b82f6', glow: 'rgba(59,130,246,0.5)', icon: '🛸',  label: 'STATION', cssClass: 'tileShop' },
+  shop:          { color: '#3b82f6', glow: 'rgba(59,130,246,0.5)', icon: '🛸',  label: 'SHOP',   cssClass: 'tileShop' },
   riddle:        { color: '#8b5cf6', glow: 'rgba(139,92,246,0.5)', icon: '🧩',  label: 'Riddle' },
   scramble:      { color: '#06b6d4', glow: 'rgba(6,182,212,0.5)',  icon: '🔤',  label: 'Scramble' },
   pronunciation: { color: '#14b8a6', glow: 'rgba(20,184,166,0.5)', icon: '🗣️', label: 'Pronounce' },

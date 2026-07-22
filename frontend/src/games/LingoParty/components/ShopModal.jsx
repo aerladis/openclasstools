@@ -21,7 +21,7 @@ export default function ShopModal({ isOpen, activeTeam, onBuyItem, onClose, play
     <div className={styles.modalOverlay}>
       <div className={`glass-card ${styles.shopCard}`}>
         <div className={styles.shopHeader}>
-          <h2>🛸 Space Station Armory (1 Purchase Per Visit)</h2>
+          <h2>🛸 Space Station Shop</h2>
           <div className={styles.teamWallet}>
             🏆 {activeTeam.name}'s Wallet: {activeTeam.trophies} {activeTeam.trophies === 1 ? 'Trophy' : 'Trophies'}
           </div>
