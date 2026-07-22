@@ -104,6 +104,10 @@ export default function LingoPartyGame() {
       }
     }
 
+    const eligibleIdx = tiles
+      .map((t, idx) => idx)
+      .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
+
     // 10% random Black Hole spawn probability on eligible tiles anywhere on the map
     eligibleIdx.forEach((tileIdx) => {
       if (Math.random() < 0.10) {
