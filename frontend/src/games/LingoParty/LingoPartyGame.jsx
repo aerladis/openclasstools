@@ -23,6 +23,13 @@ export function playSound(type = 'roll') {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
       osc.start(now);
       osc.stop(now + 0.15);
+    } else if (type === 'step') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(520, now);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+      osc.start(now);
+      osc.stop(now + 0.06);
     } else if (type === 'correct') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(440, now); // A4
@@ -49,6 +56,14 @@ export function playSound(type = 'roll') {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
       osc.start(now);
       osc.stop(now + 0.7);
+    } else if (type === 'damage') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.45);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+      osc.start(now);
+      osc.stop(now + 0.45);
     }
   } catch (err) {
     console.warn('Audio play error:', err);
@@ -88,6 +103,23 @@ export default function LingoPartyGame() {
         tiles.push({ id: i, type: assignedType, label: assignedType });
       }
     }
+
+    // Rarely sprinkle in 1-2 Black Hole hazard planets on ordinary challenge
+    // tiles — never on start/trophy/chance/shop, which are structural.
+    const eligibleIdx = tiles
+      .map((t, idx) => idx)
+      .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
+
+    let blackHoleCount = 0;
+    if (eligibleIdx.length > 0 && Math.random() < 0.65) blackHoleCount = 1;
+    if (eligibleIdx.length > 1 && blackHoleCount === 1 && Math.random() < 0.25) blackHoleCount = 2;
+
+    for (let n = 0; n < blackHoleCount && eligibleIdx.length > 0; n++) {
+      const pick = Math.floor(Math.random() * eligibleIdx.length);
+      const tileIdx = eligibleIdx.splice(pick, 1)[0];
+      tiles[tileIdx] = { id: tileIdx, type: 'blackhole', label: 'Black Hole' };
+    }
+
     return tiles;
   };
 

@@ -419,6 +419,33 @@ function renderBoardTrack() {
             <span class="node-label">${tile.label}</span>
         `;
 
+        nodeEl.addEventListener('mouseenter', () => {
+            const hoverBarText = document.getElementById('planet-hover-text');
+            if (hoverBarText) {
+                const descriptions = {
+                    start: 'Launchpad Station — Starting origin for all space exploration crews',
+                    trophy: 'Victory Trophy Star — Claim a Star Trophy & +25 bonus coins!',
+                    chance: 'Mystery Box of Fate — Draw a cosmic fate card for rewards or hazards',
+                    shop: 'Space Station Shop — Purchase victory trophies, power-ups, and extra die rolls',
+                    riddle: 'Riddle Challenge — Solve brain-teaser riddles in English',
+                    scramble: 'Word Scramble — Unscramble letter tiles before time expires',
+                    pronunciation: 'Pronunciation Station — Read aloud with clear English pronunciation',
+                    association: 'Word Association — Connect related words & vocabulary concepts',
+                    grammar: 'Grammar Trap — Correct sentence structures & grammar rules',
+                    speed: 'Speed Challenge — Fast-paced rapid-reaction trivia question',
+                    roleplay: 'Roleplay Scenario — Act out practical English conversation scenarios'
+                };
+                const desc = descriptions[tile.type] || 'Language mission challenge planet';
+                hoverBarText.innerHTML = `<span style="font-size:1.2rem; margin-right:0.4rem;">${tile.icon || '🪐'}</span><strong style="color:#c4b5fd;">Planet #${index}: ${tile.label || tile.type.toUpperCase()}</strong> <span style="color:#94a3b8;">— ${desc}</span>`;
+            }
+        });
+        nodeEl.addEventListener('mouseleave', () => {
+            const hoverBarText = document.getElementById('planet-hover-text');
+            if (hoverBarText) {
+                hoverBarText.textContent = '🪐 Hover over any planet on the board to view its name & mission details';
+            }
+        });
+
         nodeEl.addEventListener('click', () => {
             // Teacher clicking node for inspection
         });
@@ -551,13 +578,12 @@ async function rollDice() {
     diceDisplayEl.classList.remove('rolling');
     diceDisplayEl.textContent = rollResult;
 
-    // Move pawn step by step
+    // Move pawn step by step (slower game-like steps with sound effect)
     const currentTeam = gameState.teams[gameState.currentTeamIndex];
     let stepsRemaining = rollResult;
 
-    // Check if team has "+2 Movement" item active or similar bonus
     while (stepsRemaining > 0) {
-        await new Promise(resolve => setTimeout(resolve, 320));
+        await new Promise(resolve => setTimeout(resolve, 440));
         currentTeam.position++;
         if (currentTeam.position >= gameState.boardLength - 1) {
             currentTeam.position = gameState.boardLength - 1; // Cap at finish
@@ -571,11 +597,56 @@ async function rollDice() {
     }
 
     gameState.isRolling = false;
-    btnRollDice.disabled = false;
     broadcastState();
 
-    // Trigger destination tile effect
-    handleTileAction(currentTeam.position, currentTeam);
+    // Trigger Top Flashing Category Banner & Show Question button
+    const destinationTile = gameState.tiles[currentTeam.position];
+    if (destinationTile) {
+        const flashBanner = document.getElementById('category-flash-banner');
+        const bannerText = document.getElementById('category-banner-text');
+        const btnShowQuestion = document.getElementById('btn-show-question');
+
+        if (flashBanner && bannerText) {
+            const tileLabels = {
+                riddle: '🧩 RIDDLE CHALLENGE LANDED!',
+                scramble: '🔤 WORD SCRAMBLE LANDED!',
+                pronunciation: '🗣️ PRONUNCIATION TRIAL LANDED!',
+                association: '🔗 WORD ASSOCIATION LANDED!',
+                grammar: '🔍 GRAMMAR TRAP LANDED!',
+                speed: '⚡ SPEED ROUND LANDED!',
+                roleplay: '🎭 ROLEPLAY ARENA LANDED!',
+                shop: '🛒 TROPHY STATION LANDED!',
+                chance: '🎁 MYSTERY BOX LANDED!',
+                start: '🌍 LAUNCHPAD STATION LANDED!',
+                finish: '⭐ GOAL SANCTUARY REACHED!'
+            };
+            bannerText.textContent = tileLabels[destinationTile.type] || `🎯 ${(destinationTile.type || 'CHALLENGE').toUpperCase()} TILE LANDED!`;
+            flashBanner.classList.remove('hidden');
+            playSound('correct');
+        }
+
+        if (btnShowQuestion) {
+            btnRollDice.classList.add('hidden');
+            btnShowQuestion.classList.remove('hidden');
+
+            const handleShowQuestion = () => {
+                btnShowQuestion.removeEventListener('click', handleShowQuestion);
+                btnShowQuestion.classList.add('hidden');
+                btnRollDice.classList.remove('hidden');
+                btnRollDice.disabled = false;
+                if (flashBanner) flashBanner.classList.add('hidden');
+                handleTileAction(currentTeam.position, currentTeam);
+            };
+
+            btnShowQuestion.addEventListener('click', handleShowQuestion);
+        } else {
+            btnRollDice.disabled = false;
+            handleTileAction(currentTeam.position, currentTeam);
+        }
+    } else {
+        btnRollDice.disabled = false;
+        handleTileAction(currentTeam.position, currentTeam);
+    }
 }
 
 /* === Section: Tile Actions & Challenge Handlers === */
@@ -782,6 +853,7 @@ function openShopModal(team) {
 
     const items = [
         { name: '🏆 Star Trophy', desc: 'The ultimate victory goal! +1 Trophy towards winning the game.', cost: 30, icon: '🏆', type: 'trophy' },
+        { name: '🎲 Extra Die Roll', desc: 'Grants an extra turn! Throw the Die again immediately.', cost: 10, icon: '🎲', type: 'roll_again' },
         { name: '🚀 +2 Movement Boost', desc: 'Add +2 extra tile steps on your very next dice roll.', cost: 10, icon: '🚀', type: 'boost' },
         { name: '🛡️ Grammar Shield', desc: 'Protect your team against penalties on Grammar Traps.', cost: 12, icon: '🛡️', type: 'shield' },
         { name: '💰 Coin Magnet', desc: 'Steal 8 coins from the team currently in the lead.', cost: 15, icon: '💰', type: 'steal' }
@@ -812,12 +884,23 @@ function buyShopItem(idx, itemObj) {
 
     const items = [
         { name: 'Star Trophy', cost: 30, icon: '🏆', effect: '+1 Trophy' },
+        { name: 'Extra Die Roll', cost: 10, icon: '🎲', effect: 'Throw the Die again' },
         { name: 'Movement Boost', cost: 10, icon: '🚀', effect: '+2 Steps next roll' },
         { name: 'Grammar Shield', cost: 12, icon: '🛡️', effect: 'Trap protection' },
         { name: 'Coin Magnet', cost: 15, icon: '💰', effect: 'Steal 8 coins' }
     ];
     const item = itemObj || items[idx];
     if (!item || team.coins < item.cost) return;
+
+    if (item.type === 'roll_again' || item.name.includes('Extra Die Roll')) {
+        team.coins -= item.cost;
+        playSound('roll');
+        shopModalEl.classList.add('hidden');
+        btnRollDice.disabled = false;
+        btnRollDice.classList.remove('hidden');
+        alert(`🎲 ${team.name} purchased an Extra Die Roll! Throw the Die again!`);
+        return;
+    }
 
     team.coins -= item.cost;
 
@@ -893,11 +976,13 @@ function triggerMysteryBoxEvent(team) {
     btnMysteryClose.classList.add('hidden');
 
     const events = [
+        { icon: '🎲', title: 'Lucky Die Roll!', desc: 'The dice gods favor you! Throw the Die again immediately!', doubleRoll: true },
+        { icon: '⚡', title: 'Double Roll Energy!', desc: 'You drink a magic potion! You get +20 Coins and Throw the Die again immediately!', coins: 20, doubleRoll: true },
+        { icon: '💫', title: 'Time Warp Extra Roll!', desc: 'A temporal anomaly occurs! Throw the Die again immediately!', doubleRoll: true },
         { icon: '🌟', title: 'AI Scholarship!', desc: 'The AI rewards your team for outstanding classroom participation! +25 Coins!', coins: 25 },
         { icon: '🚀', title: 'Warp Speed Tailwind!', desc: 'You catch a favorable wind across the island track. Advance +3 Tiles immediately!', steps: 3 },
         { icon: '🎉', title: 'Classroom Celebration!', desc: 'Every active team receives a celebratory +15 Coins from the bank!', globalCoins: 15 },
         { icon: '🎒', title: 'Mystery Power-Up Gift!', desc: 'You found a secret item box! A Star Trophy or Power-Up has been added to your bag!', item: { name: 'Star Trophy', cost: 0, icon: '🏆', effect: '+1 Trophy' } },
-        { icon: '⚡', title: 'Double Roll Energy!', desc: 'You drink a magic potion! You get +20 Coins and take ANOTHER dice roll immediately!', coins: 20, doubleRoll: true },
         { icon: '💎', title: 'Treasure Discovery!', desc: 'You uncovered a hidden chest buried right under this tile! +30 Coins!', coins: 30 }
     ];
 

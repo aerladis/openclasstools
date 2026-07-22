@@ -39,7 +39,7 @@
         };
         window.addEventListener('resize', resizeHandler);
 
-        const count = options.count || 35;
+        const count = options.count || 60;
         const colors = options.colors || ['rgba(168,85,247,0.35)', 'rgba(99,102,241,0.3)', 'rgba(236,72,153,0.25)'];
         const particles = Array.from({ length: count }, () => ({
             x: Math.random() * width,

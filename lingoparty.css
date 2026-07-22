@@ -545,7 +545,7 @@
 
 .pawn-cluster {
     position: absolute;
-    transform: translate(-50%, -122%);
+    transform: translate(-50%, -50%);
     display: flex;
     flex-wrap: nowrap;
     justify-content: center;
@@ -954,3 +954,79 @@
     max-width: 420px;
     line-height: 1.5;
 }
+
+/* ── Top Flashing Tile Category Banner ── */
+.category-flash-banner {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(10, 8, 26, 0.94);
+    border: 2px solid #a855f7;
+    border-radius: 30px;
+    padding: 0.6rem 1.8rem;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.7), inset 0 0 15px rgba(168, 85, 247, 0.3);
+    animation: flashEntrance 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), pulseGlow 1.2s infinite alternate;
+    pointer-events: none;
+}
+
+.banner-sparkle {
+    font-size: 1.3rem;
+    animation: spinSparkle 1.5s linear infinite;
+}
+
+.banner-text {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 1.2px;
+    text-shadow: 0 0 12px rgba(168, 85, 247, 0.9);
+    white-space: nowrap;
+}
+
+/* ── Show Question Glowing Button ── */
+.show-question-btn {
+    width: 100%;
+    padding: 1.1rem;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f59e0b 100%) !important;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.8), 0 0 18px rgba(236, 72, 153, 0.6) !important;
+    animation: questionPulse 1s ease-in-out infinite alternate !important;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.show-question-btn:hover {
+    transform: scale(1.05);
+    filter: brightness(1.25);
+    box-shadow: 0 0 45px rgba(236, 72, 153, 1), 0 0 20px rgba(245, 158, 11, 0.8) !important;
+}
+
+/* ── Planet Hover Information Bar ── */
+.planet-hover-info-bar {
+    margin-top: 0.6rem;
+    background: rgba(8, 6, 26, 0.85);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 14px;
+    padding: 0.6rem 1.2rem;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: rgba(148, 163, 184, 0.9);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+

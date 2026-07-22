@@ -3,48 +3,66 @@ import styles from './SetupScreen.module.css';
 
 const DEFAULT_DECK = [
   // --- A1 / A2 Beginner & Elementary ---
-  { type: 'riddle', prompt: 'I have keys but no locks. I have space but no room. You can enter, but you can\'t go outside. What am I?', answer: 'A keyboard', coins: 15 },
-  { type: 'riddle', prompt: 'I speak without a mouth and hear without ears. What am I?', answer: 'An echo', coins: 15 },
-  { type: 'riddle', prompt: 'I am a bright gas star that gives light and heat to Earth. What am I?', answer: 'The Sun', coins: 15 },
-  { type: 'scramble', scrambledWord: 'T-A-E-W-R', targetWord: 'WATER', clue: 'You drink this liquid every day.', coins: 15 },
-  { type: 'scramble', scrambledWord: 'L-E-P-P-A', targetWord: 'APPLE', clue: 'A sweet red or green fruit.', coins: 15 },
-  { type: 'scramble', scrambledWord: 'T-E-K-C-O-R', targetWord: 'ROCKET', clue: 'Vehicle that travels into space.', coins: 15 },
-  { type: 'pronunciation', prompt: 'She sells seashells by the seashore clearly.', coins: 15 },
-  { type: 'pronunciation', prompt: 'Red lorry, yellow lorry, red lorry, yellow lorry.', coins: 15 },
-  { type: 'association', prompt: 'Name 3 common adjectives that collocate with: WEATHER.', answer: 'sunny, rainy, cold, stormy, mild', coins: 10 },
-  { type: 'association', prompt: 'Name 3 things you can see in the night sky.', answer: 'stars, moon, planets, satellites', coins: 10 },
-  { type: 'grammar', prompt: 'Correct the error: She don\'t like eating vegetables.', answer: 'She doesn\'t like eating vegetables.', coins: 15 },
-  { type: 'grammar', prompt: 'Correct the error: The moon is more small than Earth.', answer: 'The moon is smaller than Earth.', coins: 15 },
-  { type: 'speed', prompt: 'Name 4 ball sports in 15 seconds.', answer: 'Football, Basketball, Tennis, Volleyball', coins: 10 },
-  { type: 'speed', prompt: 'Name 3 action verbs related to kitchen cooking.', answer: 'chop, boil, fry, stir, slice', coins: 10 },
-  { type: 'roleplay', prompt: 'You are ordering food in a restaurant but you have an allergy. Speak to the waiter.', coins: 20 },
-  { type: 'roleplay', prompt: 'You are an astronaut reporting a strange object in space to mission control.', coins: 20 },
-  { type: 'taboo', word: 'ASTRONAUT', forbidden: ['Space', 'Suit', 'Fly', 'Moon', 'NASA'], coins: 15 },
-  { type: 'taboo', word: 'TELESCOPE', forbidden: ['Look', 'Stars', 'Space', 'Glass', 'Night'], coins: 15 },
+  { type: 'riddle', prompt: 'I have keys but no locks. I have space but no room. You can enter, but you can\'t go outside. What am I?', answer: 'A keyboard' },
+  { type: 'riddle', prompt: 'I speak without a mouth and hear without ears. What am I?', answer: 'An echo' },
+  { type: 'riddle', prompt: 'I am a bright gas star that gives light and heat to Earth. What am I?', answer: 'The Sun' },
+  { type: 'scramble', scrambledWord: 'T-A-E-W-R', targetWord: 'WATER', clue: 'You drink this liquid every day.' },
+  { type: 'scramble', scrambledWord: 'L-E-P-P-A', targetWord: 'APPLE', clue: 'A sweet red or green fruit.' },
+  { type: 'scramble', scrambledWord: 'T-E-K-C-O-R', targetWord: 'ROCKET', clue: 'Vehicle that travels into space.' },
+  { type: 'pronunciation', prompt: 'She sells seashells by the seashore clearly.' },
+  { type: 'pronunciation', prompt: 'Red lorry, yellow lorry, red lorry, yellow lorry.' },
+  { type: 'pronunciation', prompt: 'Six sleek swans swam swiftly southward.' },
+  { type: 'association', prompt: 'Name 3 common adjectives that collocate with: WEATHER.', answer: 'sunny, rainy, cold, stormy, mild' },
+  { type: 'association', prompt: 'Name 3 things you can see in the night sky.', answer: 'stars, moon, planets, satellites' },
+  { type: 'grammar', prompt: 'Correct the error: She don\'t like eating vegetables.', answer: 'She doesn\'t like eating vegetables.' },
+  { type: 'grammar', prompt: 'Correct the error: The moon is more small than Earth.', answer: 'The moon is smaller than Earth.' },
+  { type: 'speed', prompt: 'Name 4 ball sports in 15 seconds.', answer: 'Football, Basketball, Tennis, Volleyball' },
+  { type: 'speed', prompt: 'Name 3 action verbs related to kitchen cooking.', answer: 'chop, boil, fry, stir, slice' },
+  { type: 'speed', prompt: 'Name 3 planets in our solar system in 15 seconds.', answer: 'Mars, Venus, Jupiter, Saturn' },
+  { type: 'roleplay', prompt: 'Narrate a mission log: you are ordering food but you have an allergy. Speak it out loud.' },
+  { type: 'roleplay', prompt: 'You are an astronaut reporting a strange object in space to mission control.' },
+  { type: 'roleplay', prompt: 'Narrate a mission log: describe your daily routine aboard the space station.' },
+  { type: 'roleplay', prompt: 'You just discovered a new star. Announce your discovery to mission control with excitement!' },
+
+  // --- True/False A1-A2 ---
+  { type: 'truefalse', prompt: '"Went" is the past tense of "go".', answer: true },
+  { type: 'truefalse', prompt: '"Sheeps" is the correct plural of "sheep".', answer: false },
+  { type: 'truefalse', prompt: 'The word "beautiful" is an adverb.', answer: false },
+  { type: 'truefalse', prompt: '"I am" can be shortened to "I\'m" in English.', answer: true },
 
   // --- B1 / B2 Intermediate ---
-  { type: 'riddle', prompt: 'The more of this you take, the more you leave behind. What am I?', answer: 'Footsteps', coins: 15 },
-  { type: 'riddle', prompt: 'I have cities, but no houses. I have mountains, but no trees. What am I?', answer: 'A map', coins: 15 },
-  { type: 'scramble', scrambledWord: 'I-T-B-R-O', targetWord: 'ORBIT', clue: 'Path taken by a planet or satellite.', coins: 15 },
-  { type: 'scramble', scrambledWord: 'Y-X-A-L-A-G', targetWord: 'GALAXY', clue: 'Huge system of millions of stars.', coins: 15 },
-  { type: 'pronunciation', prompt: 'Thirty-three thousand feathers flutter in the freezing breeze.', coins: 15 },
-  { type: 'association', prompt: 'Name 3 phrasal verbs that use the word: LOOK.', answer: 'look after, look for, look up, look forward to', coins: 10 },
-  { type: 'association', prompt: 'Name 3 nouns that collocate with: HEAVY.', answer: 'heavy rain, heavy traffic, heavy smoker, heavy workload', coins: 10 },
-  { type: 'grammar', prompt: 'Correct the error: If I would be rich, I will buy a spacecraft.', answer: 'If I were rich, I would buy a spacecraft.', coins: 15 },
-  { type: 'grammar', prompt: 'Correct the error: He suggested me to go to the doctor.', answer: 'He suggested that I go to the doctor.', coins: 15 },
-  { type: 'speed', prompt: 'Name 3 adjectives to describe a movie in 15 seconds.', answer: 'thrilling, boring, emotional, hilarious', coins: 10 },
-  { type: 'roleplay', prompt: 'You missed your flight to London. Explain your emergency situation to the airline manager.', coins: 20 },
-  { type: 'taboo', word: 'GRAVITY', forbidden: ['Fall', 'Earth', 'Pull', 'Weight', 'Physics'], coins: 15 },
+  { type: 'riddle', prompt: 'The more of this you take, the more you leave behind. What am I?', answer: 'Footsteps' },
+  { type: 'riddle', prompt: 'I have cities, but no houses. I have mountains, but no trees. What am I?', answer: 'A map' },
+  { type: 'scramble', scrambledWord: 'I-T-B-R-O', targetWord: 'ORBIT', clue: 'Path taken by a planet or satellite.' },
+  { type: 'scramble', scrambledWord: 'Y-X-A-L-A-G', targetWord: 'GALAXY', clue: 'Huge system of millions of stars.' },
+  { type: 'pronunciation', prompt: 'Thirty-three thousand feathers flutter in the freezing breeze.' },
+  { type: 'association', prompt: 'Name 3 phrasal verbs that use the word: LOOK.', answer: 'look after, look for, look up, look forward to' },
+  { type: 'association', prompt: 'Name 3 nouns that collocate with: HEAVY.', answer: 'heavy rain, heavy traffic, heavy smoker, heavy workload' },
+  { type: 'grammar', prompt: 'Correct the error: If I would be rich, I will buy a spacecraft.', answer: 'If I were rich, I would buy a spacecraft.' },
+  { type: 'grammar', prompt: 'Correct the error: He suggested me to go to the doctor.', answer: 'He suggested that I go to the doctor.' },
+  { type: 'speed', prompt: 'Name 3 adjectives to describe a movie in 15 seconds.', answer: 'thrilling, boring, emotional, hilarious' },
+  { type: 'speed', prompt: 'Name 3 emotions you might feel during a long space mission.', answer: 'anxious, excited, homesick, curious' },
+  { type: 'roleplay', prompt: 'Narrate a mission log: you missed your flight to London. Explain your emergency situation out loud.' },
+  { type: 'roleplay', prompt: 'Narrate a mission log: convince mission control to let you extend your spacewalk by 10 minutes.' },
+
+  // --- True/False B1-B2 ---
+  { type: 'truefalse', prompt: 'In English, adjectives come AFTER the noun they describe.', answer: false },
+  { type: 'truefalse', prompt: 'The present perfect tense uses "have/has" + past participle.', answer: true },
+  { type: 'truefalse', prompt: '"Despite" is always followed by a noun or gerund, never a clause with a subject and verb.', answer: true },
 
   // --- C1 Advanced ---
-  { type: 'riddle', prompt: 'I exist only where there is light, but direct light kills me. What am I?', answer: 'A shadow', coins: 15 },
-  { type: 'scramble', scrambledWord: 'N-O-I-T-A-L-L-E-T-S-N-O-C', targetWord: 'CONSTELLATION', clue: 'A group of stars forming a pattern.', coins: 15 },
-  { type: 'pronunciation', prompt: 'Specific statistics show systematic scientific breakthroughs.', coins: 15 },
-  { type: 'association', prompt: 'Give 2 idioms that mean: to be extremely happy.', answer: 'on cloud nine, over the moon, in seventh heaven', coins: 10 },
-  { type: 'grammar', prompt: 'Correct the error: Hardly had he entered the room than the alarm rang.', answer: 'Hardly had he entered the room WHEN the alarm rang.', coins: 15 },
-  { type: 'speed', prompt: 'Name 3 synonyms for: EXTREMELY IMPORTANT in 15 seconds.', answer: 'crucial, vital, essential, imperative, paramount', coins: 10 },
-  { type: 'roleplay', prompt: 'Debate with a colleague on whether AI will replace human teachers in the next decade.', coins: 20 },
-  { type: 'taboo', word: 'ATMOSPHERE', forbidden: ['Air', 'Gas', 'Oxygen', 'Layer', 'Earth'], coins: 15 }
+  { type: 'riddle', prompt: 'I exist only where there is light, but direct light kills me. What am I?', answer: 'A shadow' },
+  { type: 'scramble', scrambledWord: 'N-O-I-T-A-L-L-E-T-S-N-O-C', targetWord: 'CONSTELLATION', clue: 'A group of stars forming a pattern.' },
+  { type: 'pronunciation', prompt: 'Specific statistics show systematic scientific breakthroughs.' },
+  { type: 'association', prompt: 'Give 2 idioms that mean: to be extremely happy.', answer: 'on cloud nine, over the moon, in seventh heaven' },
+  { type: 'grammar', prompt: 'Correct the error: Hardly had he entered the room than the alarm rang.', answer: 'Hardly had he entered the room WHEN the alarm rang.' },
+  { type: 'speed', prompt: 'Name 3 synonyms for: EXTREMELY IMPORTANT in 15 seconds.', answer: 'crucial, vital, essential, imperative, paramount' },
+  { type: 'roleplay', prompt: 'Narrate a mission log debating whether AI will replace human teachers in the next decade.' },
+  { type: 'roleplay', prompt: 'Narrate a mission log persuading the crew to change course and investigate a mysterious signal.' },
+
+  // --- True/False C1 ---
+  { type: 'truefalse', prompt: '"Whom" is used as a subject pronoun in formal English.', answer: false },
+  { type: 'truefalse', prompt: 'A dangling modifier is a grammatical error where the modifier doesn\'t clearly refer to the intended word.', answer: true }
 ];
 
 const PAWN_CHOICES = ['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬'];
@@ -72,8 +90,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
       name: customNames[i] && customNames[i].trim() ? customNames[i].trim() : `${DEFAULT_NAMES[i % DEFAULT_NAMES.length]}`,
       pawn: PAWN_CHOICES[i % PAWN_CHOICES.length],
       position: 0,
-      coins: 20,
-      trophies: 0,
+      trophies: 1,
       items: []
     }));
 
@@ -117,7 +134,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
               value={teamCount}
               onChange={e => setTeamCount(Number(e.target.value))}
             >
-              {[2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} Crews</option>)}
+              {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Crew' : 'Crews'}</option>)}
             </select>
           </div>
 

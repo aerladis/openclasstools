@@ -172,6 +172,10 @@ h1 {
     border-color: var(--accent-1);
 }
 
+#card-lingoparty:hover::before {
+    background: radial-gradient(circle, rgba(168, 85, 247, .25) 0%, transparent 55%);
+}
+
 #card-who:hover::before {
     background: radial-gradient(circle, rgba(168, 85, 247, .18) 0%, transparent 55%);
 }
@@ -184,17 +188,32 @@ h1 {
     background: radial-gradient(circle, rgba(99, 102, 241, .18) 0%, transparent 55%);
 }
 
-#card-kelime:hover::before {
-    background: radial-gradient(circle, rgba(14, 165, 233, .18) 0%, transparent 55%);
-    /* Sky blue for Kelime */
-}
-
 #card-bottle:hover::before {
     background: radial-gradient(circle, rgba(34, 197, 94, .18) 0%, transparent 55%);
 }
 
 #card-wheel:hover::before {
     background: radial-gradient(circle, rgba(245, 158, 11, .18) 0%, transparent 55%);
+}
+
+#card-kelime:hover::before {
+    background: radial-gradient(circle, rgba(14, 165, 233, .18) 0%, transparent 55%);
+}
+
+#card-flashcards:hover::before {
+    background: radial-gradient(circle, rgba(236, 72, 153, .18) 0%, transparent 55%);
+}
+
+#card-millionaire:hover::before {
+    background: radial-gradient(circle, rgba(245, 158, 11, .2) 0%, transparent 55%);
+}
+
+#card-hats:hover::before {
+    background: radial-gradient(circle, rgba(168, 85, 247, .18) 0%, transparent 55%);
+}
+
+#card-flappy:hover::before {
+    background: radial-gradient(circle, rgba(16, 185, 129, .18) 0%, transparent 55%);
 }
 
 

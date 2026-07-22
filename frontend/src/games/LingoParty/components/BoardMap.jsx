@@ -49,6 +49,7 @@ const TILE_CONFIG = {
   grammar:       { color: '#f43f5e', glow: 'rgba(244,63,94,0.5)',  icon: '✍️',  label: 'Grammar' },
   speed:         { color: '#eab308', glow: 'rgba(234,179,8,0.5)',  icon: '☄️',  label: 'Speed' },
   roleplay:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '💬',  label: 'Roleplay' },
+  blackhole:     { color: '#1e1b2e', glow: 'rgba(139,92,246,0.9)', icon: '🕳️', label: 'VOID', cssClass: 'tileBlackhole' },
 };
 
 const DEFAULT_CONF = { color: '#64748b', glow: 'rgba(100,116,139,0.5)', icon: '🌑', label: '???' };
@@ -101,7 +102,7 @@ function generateStars(count = 80) {
 /* ═══════════════════════════════════════════════════════════════
    BoardMap Component — Space Odyssey
    ═══════════════════════════════════════════════════════════════ */
-export default function BoardMap({ tiles = [], teams = [], onTileClick }) {
+export default function BoardMap({ tiles = [], teams = [], onTileClick, onHoverPlanet }) {
   const stars = useMemo(() => generateStars(90), []);
 
   // Pre-compute SVG coordinates for each tile
@@ -186,6 +187,8 @@ export default function BoardMap({ tiles = [], teams = [], onTileClick }) {
               className={`${styles.tileNode} ${styles[cssClass] || ''}`}
               transform={`translate(${tp.sx}, ${tp.sy})`}
               onClick={() => onTileClick && onTileClick(tp, tp.idx)}
+              onMouseEnter={() => onHoverPlanet && onHoverPlanet(tp)}
+              onMouseLeave={() => onHoverPlanet && onHoverPlanet(null)}
               style={{ '--tile-glow': conf.glow }}
             >
               {/* Outer glow halo */}

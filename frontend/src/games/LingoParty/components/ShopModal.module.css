@@ -20,8 +20,10 @@
 }
 
 .shopCard {
-  max-width: 640px;
+  max-width: 880px;
   width: 92%;
+  max-height: 90vh;
+  overflow-y: auto !important;
   padding: 2rem 2.2rem;
   display: flex;
   flex-direction: column;
@@ -87,7 +89,7 @@
 /* ── Items Grid ── */
 .itemsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.8rem;
 }
 

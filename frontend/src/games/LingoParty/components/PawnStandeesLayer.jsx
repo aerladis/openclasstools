@@ -16,7 +16,7 @@ export default function PawnStandeesLayer({ tiles = [], teams = [] }) {
     positionsMap[safePos].push({ ...team, index: teamIdx });
   });
 
-  const ORBIT_RADIUS = 72; // Orbital offset radius from planet center in pixels
+  const ORBIT_RADIUS = 34; // Orbital offset radius from planet center in pixels when multiple pawns share a tile
 
   const renderedPawns = [];
 
@@ -26,13 +26,18 @@ export default function PawnStandeesLayer({ tiles = [], teams = [] }) {
     const N = teamList.length;
 
     teamList.forEach((team, i) => {
-      // Calculate distinct angle around planet (start at top -90deg)
-      const startAngle = -90;
-      const angleDeg = N === 1 ? startAngle : startAngle + (i * (360 / N));
-      const angleRad = (angleDeg * Math.PI) / 180;
+      let dx = 0;
+      let dy = 0;
 
-      const dx = Math.round(Math.cos(angleRad) * ORBIT_RADIUS);
-      const dy = Math.round(Math.sin(angleRad) * ORBIT_RADIUS);
+      if (N > 1) {
+        // Calculate distinct angle around planet (start at top -90deg)
+        const startAngle = -90;
+        const angleDeg = startAngle + (i * (360 / N));
+        const angleRad = (angleDeg * Math.PI) / 180;
+
+        dx = Math.round(Math.cos(angleRad) * ORBIT_RADIUS);
+        dy = Math.round(Math.sin(angleRad) * ORBIT_RADIUS);
+      }
 
       renderedPawns.push({
         ...team,
@@ -55,7 +60,7 @@ export default function PawnStandeesLayer({ tiles = [], teams = [] }) {
             '--dx': `${team.dx}px`,
             '--dy': `${team.dy}px`
           }}
-          title={`${team.name} — Coins: ${team.coins}, Trophies: ${team.trophies}`}
+          title={`${team.name} — Trophies: ${team.trophies}`}
         >
           <div className={styles.emojiStandee}>
             {team.pawn || '🐉'}

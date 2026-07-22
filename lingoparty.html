@@ -162,10 +162,18 @@
 
                 <!-- Center: Winding Adventure Map -->
                 <div class="board-track-container glass-card">
-                    <div id="board-map-container" class="board-map-container">
+                    <div id="board-map-container" class="board-map-container" style="position: relative;">
+                        <div id="category-flash-banner" class="category-flash-banner hidden">
+                            <span class="banner-sparkle">⚡</span>
+                            <span id="category-banner-text" class="banner-text">RIDDLE CHALLENGE</span>
+                            <span class="banner-sparkle">⚡</span>
+                        </div>
                         <svg id="board-map-svg" class="board-map-svg"></svg>
                         <div id="board-map-nodes" class="board-map-nodes"></div>
                         <div id="board-pawn-layer" class="board-pawn-layer"></div>
+                    </div>
+                    <div id="planet-hover-info-bar" class="planet-hover-info-bar">
+                        <span id="planet-hover-text">🪐 Hover over any planet on the board to view its name & mission details</span>
                     </div>
                 </div>
 
@@ -174,7 +182,10 @@
                     <div class="dice-section">
                         <div class="dice-display" id="dice-display">🎲</div>
                         <button id="btn-roll-dice" class="btn-primary dice-btn">
-                            🎲 Roll Dice
+                            🎲 Throw the Die!
+                        </button>
+                        <button id="btn-show-question" class="show-question-btn hidden">
+                            ❓ Show Question
                         </button>
                         <p class="dice-hint" id="dice-hint">Click or roll via mobile controller!</p>
                     </div>

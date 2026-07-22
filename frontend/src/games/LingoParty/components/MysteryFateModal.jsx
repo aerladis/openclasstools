@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import styles from './MysteryFateModal.module.css';
 
 const MYSTERY_EVENTS = [
+  { icon: '🎲', title: 'Lucky Die Roll!', desc: 'Cosmic fortune shines on you! Throw the Die again immediately!', doubleRoll: true },
+  { icon: '⚡', title: 'Double Roll Battery!', desc: 'Supercharged warp engine! Get +1 Trophy and Throw the Die again immediately!', trophies: 1, doubleRoll: true },
+  { icon: '💫', title: 'Time Warp Extra Roll!', desc: 'A temporal anomaly opens up! Advance +1 Planet and Throw the Die again!', steps: 1, doubleRoll: true },
   { icon: '🌀', title: 'Spatial Wormhole!', desc: 'A sudden gravitational anomaly pulls your rocket backward! Move BACK -3 Planets!', steps: -3 },
-  { icon: '💥', title: 'Solar Flare Hazard!', desc: 'Solar radiation disables your shields! Pay 20 Coins to Mission Repair!', coins: -20 },
-  { icon: '🏴‍☠️', title: 'Cosmic Pirate Ambush!', desc: 'Space pirates raid your cargo bay! Lose 15 Coins!', coins: -15 },
+  { icon: '💥', title: 'Solar Flare Hazard!', desc: 'Solar radiation disables your shields! Pay 1 Trophy for Mission Repair!', trophies: -1 },
+  { icon: '🏴‍☠️', title: 'Cosmic Pirate Ambush!', desc: 'Space pirates raid your cargo bay! Lose 1 Trophy!', trophies: -1 },
   { icon: '🌌', title: 'Black Hole Slingshot!', desc: 'Gravitational pull hurls your ship backward! Move BACK -2 Planets!', steps: -2 },
-  { icon: '🧊', title: 'Asteroid Field Collision!', desc: 'Emergency maneuvers required! Lose 10 Coins and move BACK -1 Planet!', coins: -10, steps: -1 },
-  { icon: '🌟', title: 'AI Scholarship!', desc: 'The AI rewards your team for outstanding work! +25 Coins!', coins: 25 },
+  { icon: '🧊', title: 'Asteroid Field Collision!', desc: 'Emergency maneuvers required! Lose 1 Trophy and move BACK -1 Planet!', trophies: -1, steps: -1 },
+  { icon: '🌟', title: 'AI Scholarship!', desc: 'The AI rewards your team for outstanding work! +2 Trophies!', trophies: 2 },
   { icon: '🚀', title: 'Warp Speed Tailwind!', desc: 'You catch a favorable cosmic slipstream! Advance +3 Planets immediately!', steps: 3 },
-  { icon: '🎒', title: 'Mystery Gift Box!', desc: 'Secret cargo crate found! A Star Trophy or Item added to your inventory!', item: { name: 'Star Trophy', cost: 0, icon: '🏆', effect: '+1 Trophy' } },
-  { icon: '⚡', title: 'Double Roll Battery!', desc: 'Supercharged warp engine! Get +20 Coins and take ANOTHER dice roll immediately!', coins: 20, doubleRoll: true }
+  { icon: '🎒', title: 'Mystery Gift Box!', desc: 'Secret cargo crate found! +1 bonus Trophy added to your wallet!', trophies: 1 }
 ];
 
 export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSound }) {
@@ -85,7 +87,7 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
             className={`btn-primary ${styles.actionBtn}`}
             onClick={handleClose}
           >
-            {drawnEvent?.doubleRoll ? '⚡ Take Double Roll!' : '🚀 Continue Adventure!'}
+            {drawnEvent?.doubleRoll ? '🎲 Throw the Die Again!' : '🚀 Continue Adventure!'}
           </button>
         )}
       </div>

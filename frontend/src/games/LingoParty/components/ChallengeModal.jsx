@@ -54,16 +54,9 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
 
   if (!challenge || !activeTeam) return null;
 
-  const hasClueDecoder = (activeTeam?.items || []).some(i => i.id === 'clue_key');
-
   const handleUnlockClue = () => {
-    if (hasClueDecoder) {
-      const idx = activeTeam.items.findIndex(i => i.id === 'clue_key');
-      if (idx !== -1) activeTeam.items.splice(idx, 1);
-      setIsClueUnlocked(true);
-      if (playSound) playSound('trophy');
-    } else if (activeTeam.coins >= 5) {
-      activeTeam.coins -= 5;
+    if (activeTeam.trophies >= 1) {
+      activeTeam.trophies -= 1;
       setIsClueUnlocked(true);
       if (playSound) playSound('trophy');
     }
@@ -71,12 +64,12 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
 
   const handleCorrect = () => {
     if (playSound) playSound('correct');
-    onResolve({ result: 'correct', coins: challenge.coins || 15 });
+    onResolve({ result: 'correct', trophies: 1 });
   };
 
   const handleWrong = () => {
     if (playSound) playSound('wrong');
-    onResolve({ result: 'wrong', coins: 0 });
+    onResolve({ result: 'wrong', trophies: 0 });
   };
 
   const renderHighlightedAnswer = (prompt, targetAnswer) => {
@@ -123,27 +116,27 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     <div className={styles.modalOverlay}>
       <div className={`glass-card ${styles.challengeCard}`}>
         <div className={styles.headerRow}>
-          <span className={styles.typeBadge}>{challenge.type || 'Challenge'}</span>
-          <span className={styles.coinsBadge}>+{challenge.coins || 15} Coins</span>
+          <span className={styles.typeBadge}>
+            {challenge.type === 'roleplay' ? '🎭 ROLEPLAY SCENARIO' : challenge.type === 'truefalse' ? '🔄 TRUE OR FALSE' : (challenge.type || 'Challenge')}
+          </span>
+          <span className={styles.coinsBadge}>+1 🏆 Trophy</span>
         </div>
 
         <h2 className={styles.mainPrompt}>
           {challenge.type === 'scramble' ? (
             `🔤 Scrambled Word: ${getGuaranteedScramble(challenge.scrambledWord, challenge.targetWord || challenge.word)}`
-          ) : challenge.type === 'taboo' ? (
-            `🚫 Describe Word: "${challenge.word || 'Vocabulary'}"`
           ) : (
             challenge.prompt || challenge.question || challenge.word || 'Complete the language challenge!'
           )}
         </h2>
 
-        {challenge.type === 'taboo' && challenge.forbidden && (
-          <div className={styles.subcontentBox}>
-            <strong>🚫 Forbidden Words: </strong>{Array.isArray(challenge.forbidden) ? challenge.forbidden.join(' • ') : challenge.forbidden}
+        {challenge.type === 'roleplay' && (
+          <div className={styles.subcontentBox} style={{ background: 'rgba(168, 85, 247, 0.15)', borderColor: 'rgba(168, 85, 247, 0.4)' }}>
+            <strong>🎭 Speaking Task: </strong>Perform this out loud for 30 seconds — solo or with your crew! Use natural expressions & target vocabulary.
           </div>
         )}
 
-        {/* Clue Hint Box (Hidden by default, unlockable via Clue Decoder item or 5 coins) */}
+        {/* Clue Hint Box (Hidden by default, unlockable via Clue Decoder item or 1 trophy) */}
         {challenge.clue && (
           isClueUnlocked ? (
             <div className={styles.subcontentBox}>
@@ -153,19 +146,17 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
             <button
               className={styles.revealClueBtn}
               onClick={handleUnlockClue}
-              disabled={!hasClueDecoder && activeTeam.coins < 5}
+              disabled={activeTeam.trophies < 1}
             >
-              {hasClueDecoder
-                ? '💡 Use Clue Decoder (1 Owned in Inventory)'
-                : activeTeam.coins >= 5
-                  ? '💡 Unlock Hint Clue (Costs 5 🪙)'
-                  : '🔒 Hint Clue Locked (Needs Clue Decoder or 5 🪙)'}
+              {activeTeam.trophies >= 1
+                ? '💡 Unlock Hint Clue (Costs 1 🏆)'
+                : '🔒 Hint Clue Locked (Needs 1 🏆)'}
             </button>
           )
         )}
 
         {/* Target Answer / Error Correction Highlight */}
-        {(challenge.targetWord || challenge.answer) && (
+        {(challenge.targetWord != null || challenge.answer != null) && (
           !isAnswerRevealed ? (
             <button
               className={`btn-secondary ${styles.revealAnswerBtn}`}
@@ -177,7 +168,9 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
             <div className={styles.answerBox}>
               <div className={styles.answerLabel}>Target Answer</div>
               <div className={styles.answerText}>
-                {renderHighlightedAnswer(challenge.prompt || challenge.question, challenge.targetWord || challenge.answer)}
+                {challenge.type === 'truefalse'
+                  ? (challenge.answer ? '✅ TRUE' : '❌ FALSE')
+                  : renderHighlightedAnswer(challenge.prompt || challenge.question, challenge.targetWord || challenge.answer)}
               </div>
             </div>
           )
@@ -197,7 +190,7 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
         {/* Grading Actions */}
         <div className={styles.actionRow}>
           <button className={styles.btnCorrect} onClick={handleCorrect}>
-            ✅ Correct (+{challenge.coins || 15})
+            ✅ Correct (+1 🏆)
           </button>
           <button className={styles.btnWrong} onClick={handleWrong}>
             ❌ Incorrect

@@ -33,15 +33,20 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 8090;
 
 // ============================================
-// AI Provider: auto-detect Gemini (free) or OpenAI
+// AI Provider: auto-detect Anthropic, Gemini (free), or OpenAI
 // ============================================
 
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 function getProvider() {
+    if (ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.length > 10 && ANTHROPIC_API_KEY !== 'your-api-key-here') {
+        return 'anthropic';
+    }
     if (GEMINI_API_KEY && GEMINI_API_KEY.length > 10 && GEMINI_API_KEY !== 'your-api-key-here') {
         return 'gemini';
     }
@@ -455,16 +460,62 @@ const LINGOPARTY_SCHEMA = {
             targetWord: { type: 'string' },
             clue: { type: 'string' },
             prompt: { type: 'string' },
-            answer: { type: 'string' },
-            coins: {
-                type: 'integer',
-                minimum: 5,
-                maximum: 50
-            }
+            answer: { type: 'string' }
         },
-        required: ['type', 'coins']
+        required: ['type']
     }
 };
+
+async function callAnthropicProvider(prompt, options = {}) {
+    const apiUrl = 'https://api.anthropic.com/v1/messages';
+    const { temperature = 0.9, maxOutputTokens = 4096 } = options;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+                model: ANTHROPIC_MODEL,
+                max_tokens: maxOutputTokens,
+                temperature,
+                messages: [{ role: 'user', content: prompt }]
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('Anthropic API error:', errBody);
+
+            let errType;
+            try { errType = JSON.parse(errBody)?.error?.type; } catch { /* non-JSON error body */ }
+
+            const err = new Error('AI generation service unavailable');
+            // rate_limit_error is a short per-minute window and worth retrying;
+            // auth/permission/invalid-request/not-found errors won't fix themselves.
+            const permanentErrorTypes = ['authentication_error', 'permission_error', 'invalid_request_error', 'not_found_error'];
+            err.retryable = !permanentErrorTypes.includes(errType);
+            err.quotaExceeded = errType === 'rate_limit_error';
+            throw err;
+        }
+
+        const data = await response.json();
+        return data.content?.[0]?.text ?? '';
+    } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') throw new Error('AI generation timed out');
+        throw err;
+    }
+}
 
 function buildGeminiGenerationConfig(options = {}) {
     const {
@@ -514,7 +565,17 @@ async function callGemini(prompt, options = {}) {
         if (!response.ok) {
             const errBody = await response.text();
             console.error('Gemini API error:', errBody);
-            throw new Error('AI generation service unavailable');
+
+            let apiStatus;
+            try { apiStatus = JSON.parse(errBody)?.error?.status; } catch { /* non-JSON error body */ }
+
+            const err = new Error('AI generation service unavailable');
+            // A daily project-wide quota (RESOURCE_EXHAUSTED) won't clear up within
+            // a few seconds — retrying immediately just burns more of the same quota
+            // for no benefit, so mark it non-retryable and fall back right away.
+            err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED';
+            err.quotaExceeded = apiStatus === 'RESOURCE_EXHAUSTED';
+            throw err;
         }
 
         const data = await response.json();
@@ -562,7 +623,14 @@ async function callOpenAIProvider(prompt) {
         if (!response.ok) {
             const errBody = await response.text();
             console.error('OpenAI API error:', errBody);
-            throw new Error('AI generation service unavailable');
+
+            let errType;
+            try { errType = JSON.parse(errBody)?.error?.type; } catch { /* non-JSON error body */ }
+
+            const err = new Error('AI generation service unavailable');
+            err.retryable = response.status !== 429 && errType !== 'insufficient_quota';
+            err.quotaExceeded = response.status === 429 || errType === 'insufficient_quota';
+            throw err;
         }
 
         const data = await response.json();
@@ -575,22 +643,68 @@ async function callOpenAIProvider(prompt) {
 }
 
 async function callAI(prompt, options = {}) {
+    if (AI_PROVIDER === 'anthropic') return callAnthropicProvider(prompt, options);
     if (AI_PROVIDER === 'gemini') return callGemini(prompt, options);
     if (AI_PROVIDER === 'openai') return callOpenAIProvider(prompt);
-    throw new Error('No AI provider configured. Set GEMINI_API_KEY (free) or OPENAI_API_KEY in .env');
+    throw new Error('No AI provider configured. Set ANTHROPIC_API_KEY, GEMINI_API_KEY (free), or OPENAI_API_KEY in .env');
 }
 
 async function callTextAI(prompt, options = {}) {
-    return callAI(prompt, options);
+    const maxAttempts = 3;
+    let lastErr;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await callAI(prompt, options);
+        } catch (err) {
+            lastErr = err;
+            console.warn(`[AI Retry] callTextAI attempt ${attempt}/${maxAttempts} failed: ${err.message}`);
+            if (err.retryable === false) {
+                console.warn('[AI Retry] Non-retryable error (quota exhausted) — skipping remaining attempts');
+                break;
+            }
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, attempt * 600));
+            }
+        }
+    }
+
+    throw lastErr;
 }
 
 async function callJsonAI(prompt, responseJsonSchema, options = {}) {
-    const text = await callAI(prompt, {
-        ...options,
-        responseJsonSchema
-    });
+    const { validate, ...aiOptions } = options;
+    const maxAttempts = 3;
+    let lastErr;
 
-    return parseModelJson(text);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const text = await callAI(prompt, {
+                ...aiOptions,
+                responseJsonSchema
+            });
+            const parsed = parseModelJson(text);
+
+            if (validate) {
+                const validationError = validate(parsed);
+                if (validationError) throw new Error(validationError);
+            }
+
+            return parsed;
+        } catch (err) {
+            lastErr = err;
+            console.warn(`[AI Retry] callJsonAI attempt ${attempt}/${maxAttempts} failed: ${err.message}`);
+            if (err.retryable === false) {
+                console.warn('[AI Retry] Non-retryable error (quota exhausted) — skipping remaining attempts');
+                break;
+            }
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, attempt * 600));
+            }
+        }
+    }
+
+    throw lastErr;
 }
 
 function cleanModelJsonText(text) {
@@ -603,27 +717,69 @@ function cleanModelJsonText(text) {
         .trim();
 }
 
+// Finds the substring starting at the first `openChar` and ending at its
+// structurally-matching `closeChar`, tracking bracket depth and skipping
+// over string literals so brackets inside quoted text (or trailing model
+// commentary after the real JSON) can't throw off the match.
+function extractBalancedJson(text, openChar, closeChar) {
+    const start = text.indexOf(openChar);
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+
+        if (escapeNext) {
+            escapeNext = false;
+            continue;
+        }
+        if (ch === '\\') {
+            escapeNext = true;
+            continue;
+        }
+        if (ch === '"') {
+            inString = !inString;
+            continue;
+        }
+        if (inString) continue;
+
+        if (ch === openChar) {
+            depth++;
+        } else if (ch === closeChar) {
+            depth--;
+            if (depth === 0) {
+                return text.slice(start, i + 1);
+            }
+        }
+    }
+
+    return null;
+}
+
 function parseModelJson(text) {
     const cleaned = cleanModelJsonText(text);
 
     try {
         return JSON.parse(cleaned);
-    } catch {
-        const arrayStart = cleaned.indexOf('[');
-        const arrayEnd = cleaned.lastIndexOf(']');
-
-        if (arrayStart >= 0 && arrayEnd > arrayStart) {
-            return JSON.parse(cleaned.slice(arrayStart, arrayEnd + 1));
+    } catch (err) {
+        const arrayJson = extractBalancedJson(cleaned, '[', ']');
+        if (arrayJson) {
+            try {
+                return JSON.parse(arrayJson);
+            } catch { /* fall through to object attempt */ }
         }
 
-        const objectStart = cleaned.indexOf('{');
-        const objectEnd = cleaned.lastIndexOf('}');
-
-        if (objectStart >= 0 && objectEnd > objectStart) {
-            return JSON.parse(cleaned.slice(objectStart, objectEnd + 1));
+        const objectJson = extractBalancedJson(cleaned, '{', '}');
+        if (objectJson) {
+            try {
+                return JSON.parse(objectJson);
+            } catch { /* fall through to throw below */ }
         }
 
-        throw new Error('Invalid JSON response from model');
+        throw new Error(`Invalid JSON response from model: ${err.message}`);
     }
 }
 
@@ -726,6 +882,233 @@ function loadPrompt(key, replacements = {}) {
 }
 
 // ============================================
+// Offline JSON Fallback Template Generator
+// ============================================
+function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 20, options = {}) {
+    const cleanTheme = theme || 'General English';
+
+    if (gameType === 'lingoparty') {
+        const templates = [
+            {
+                type: 'roleplay',
+                prompt: `🎭 Roleplay Scenario: Narrate a 30-second mission log about "${cleanTheme}" as if reporting to mission control. Use at least 3 key vocabulary words!`,
+                answer: `Key phrases: "Could you tell me...", "In my opinion...", "I suggest that..."`
+            },
+            {
+                type: 'roleplay',
+                prompt: `🎭 Roleplay Scenario: You are ordering or requesting assistance regarding "${cleanTheme}". Express your request clearly in English!`,
+                answer: `Key phrases: "Excuse me, I need help with...", "How much does it cost?"`
+            },
+            {
+                type: 'roleplay',
+                prompt: `🎭 Roleplay Scenario: Narrate a mission log describing what you would do if you were an expert in "${cleanTheme}" for a day.`,
+                answer: `Key phrases: "If I were...", "The first thing I would do is...", "I'd also..."`
+            },
+            {
+                type: 'riddle',
+                prompt: `🧩 Linguistic Riddle: I have keys but no locks. I have space but no room. You can enter, but you can't go outside. What am I?`,
+                answer: 'A Keyboard'
+            },
+            {
+                type: 'riddle',
+                prompt: `🧩 Riddle: What gets wetter and wetter the more it dries?`,
+                answer: 'A Towel'
+            },
+            {
+                type: 'riddle',
+                prompt: `🧩 Riddle: The more you take away from me, the bigger I become. What am I?`,
+                answer: 'A Hole'
+            },
+            {
+                type: 'scramble',
+                scrambledWord: 'C-H-A-L-L-E-N-G-E',
+                targetWord: 'CHALLENGE',
+                clue: `A test of your abilities or skills related to ${cleanTheme}.`
+            },
+            {
+                type: 'scramble',
+                scrambledWord: 'V-O-C-A-B-U-L-A-R-Y',
+                targetWord: 'VOCABULARY',
+                clue: 'All the words known and used in a language.'
+            },
+            {
+                type: 'scramble',
+                scrambledWord: 'A-D-V-E-N-T-U-R-E',
+                targetWord: 'ADVENTURE',
+                clue: `An exciting or unusual experience related to ${cleanTheme}.`
+            },
+            {
+                type: 'pronunciation',
+                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear accent: "The enthusiastic explorers discovered mysterious cosmic anomalies!"`
+            },
+            {
+                type: 'pronunciation',
+                prompt: `🗣️ Pronunciation Challenge: Read out loud clearly: "Thirty-three thrifty thinkers thought thoroughly about ${cleanTheme}."`
+            },
+            {
+                type: 'pronunciation',
+                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear stress: "She carefully considered several unusual solutions."`
+            },
+            {
+                type: 'association',
+                prompt: `🔗 Word Association: Name 4 key vocabulary collocations associated with "${cleanTheme}".`,
+                answer: `Valid collocations related to ${cleanTheme}`
+            },
+            {
+                type: 'association',
+                prompt: `🔗 Word Association: Name 3 adjectives that could describe "${cleanTheme}".`,
+                answer: `Any 3 valid descriptive adjectives`
+            },
+            {
+                type: 'association',
+                prompt: `🔗 Word Association: Name 3 verbs commonly used when talking about "${cleanTheme}".`,
+                answer: `Any 3 valid related verbs`
+            },
+            {
+                type: 'grammar',
+                prompt: `✍️ Grammar Trap: Correct the mistake: "She don't like to study grammar during the weekend."`,
+                answer: 'She DOES NOT like to study grammar during the weekend.'
+            },
+            {
+                type: 'grammar',
+                prompt: `✍️ Grammar Trap: Fix the error: "If I was you, I will practice every day."`,
+                answer: 'If I WERE you, I WOULD practice every day.'
+            },
+            {
+                type: 'grammar',
+                prompt: `✍️ Grammar Trap: Correct the mistake: "He have been study English for three years."`,
+                answer: 'He HAS BEEN STUDYING English for three years.'
+            },
+            {
+                type: 'speed',
+                prompt: `☄️ Speed Relay: Name 3 items or verbs related to "${cleanTheme}" in under 15 seconds!`,
+                answer: `Any 3 valid items for ${cleanTheme}`
+            },
+            {
+                type: 'speed',
+                prompt: `☄️ Speed Relay: Name 3 adjectives that describe "${cleanTheme}" in under 15 seconds!`,
+                answer: `Any 3 valid adjectives for ${cleanTheme}`
+            },
+            {
+                type: 'speed',
+                prompt: `☄️ Speed Relay: Name 3 places associated with "${cleanTheme}" in under 15 seconds!`,
+                answer: `Any 3 valid places related to ${cleanTheme}`
+            }
+        ];
+
+        const shuffled = [...templates].sort(() => Math.random() - 0.5);
+        const cards = [];
+        for (let i = 0; i < count; i++) {
+            const tmpl = shuffled[i % shuffled.length];
+            cards.push({ ...tmpl });
+        }
+        return cards;
+    }
+
+    if (gameType === 'taboo') {
+        const sampleTaboo = [
+            { word: 'ASTRONAUT', forbidden: ['Space', 'Rocket', 'NASA', 'Suit', 'Moon'] },
+            { word: 'TELESCOPE', forbidden: ['Look', 'Stars', 'Lens', 'Sky', 'Night'] },
+            { word: 'DICTIONARY', forbidden: ['Book', 'Word', 'Meaning', 'Language', 'Define'] },
+            { word: 'GUITAR', forbidden: ['Instrument', 'Music', 'Strings', 'Play', 'Song'] },
+            { word: 'AIRPORT', forbidden: ['Plane', 'Fly', 'Luggage', 'Travel', 'Ticket'] },
+            { word: 'SUMMER', forbidden: ['Hot', 'Sun', 'Season', 'Vacation', 'Beach'] },
+            { word: 'COMPUTER', forbidden: ['Screen', 'Keyboard', 'Internet', 'Mouse', 'Code'] },
+            { word: 'PYRAMID', forbidden: ['Egypt', 'Pharaoh', 'Ancient', 'Triangle', 'Tomb'] },
+            { word: 'BICYCLE', forbidden: ['Pedal', 'Ride', 'Wheels', 'Helmet', 'Bike'] },
+            { word: 'DOCTOR', forbidden: ['Hospital', 'Sick', 'Medicine', 'Patient', 'Cure'] }
+        ];
+        const cards = [];
+        for (let i = 0; i < count; i++) {
+            cards.push({ ...sampleTaboo[i % sampleTaboo.length] });
+        }
+        return cards;
+    }
+
+    if (gameType === 'hangman') {
+        const wordsList = [
+            'ASTRONAUT', 'EXPLORER', 'CHALLENGE', 'VICTORY', 'LANGUAGE',
+            'COMMUNICATE', 'VOCABULARY', 'ADVENTURE', 'SUPERSTAR', 'KNOWLEDGE',
+            'DISCOVERY', 'JOURNEY', 'CULTURE', 'HORIZON', 'PARTNER'
+        ];
+        const words = [];
+        for (let i = 0; i < count; i++) {
+            words.push(wordsList[i % wordsList.length]);
+        }
+        return words;
+    }
+
+    if (gameType === 'kelime') {
+        const kelimeSamples = [
+            { question: 'Dünyamızın etrafında dönen tek doğal uydu', answer: 'AY' },
+            { question: 'Geceleri gökyüzünü aydınlatan parlak gök cismi', answer: 'YILDIZ' },
+            { question: 'Farklı diller arasında iletişim sağlayan sözcük dizgesi', answer: 'LİSAN' },
+            { question: 'Öğrenme ve bilgi edinme yeri veya kurumu', answer: 'OKUL' },
+            { question: 'Bir işi başarma sonucunda kazanılan ödül ve simge', answer: 'KUPA' },
+            { question: 'Birlikte mücadele eden oyuncular grubu', answer: 'TAKIM' },
+            { question: 'Yeni yerler görme ve bilgi edinme yolculuğu', answer: 'MACERA' },
+            { question: 'Hedefe ulaşma ve zorlukları aşma durumu', answer: 'BAŞARI' },
+            { question: 'Uzaya gönderilen insanlı veya insansız araç', answer: 'ROKET' },
+            { question: 'Evrendeki milyarlarca yıldızın oluşturduğu sistem', answer: 'GALAKSİ' }
+        ];
+        const questions = [];
+        for (let i = 0; i < count; i++) {
+            questions.push({ ...kelimeSamples[i % kelimeSamples.length] });
+        }
+        return sortWordGameQuestionsByAnswerLength(questions);
+    }
+
+    if (gameType === 'millionaire') {
+        const questions = [];
+        for (let i = 1; i <= 15; i++) {
+            questions.push({
+                question: `[Level ${i}] Quiz Question about ${cleanTheme}: What is a primary concept of level ${i}?`,
+                options: [`Correct Option ${i}`, `Distractor A`, `Distractor B`, `Distractor C`],
+                correct: 0
+            });
+        }
+        return questions;
+    }
+
+    if (gameType === 'who') {
+        const characters = [
+            'Albert Einstein', 'Cleopatra', 'Sherlock Holmes', 'Marie Curie', 'Leonardo da Vinci',
+            'Harry Potter', 'Spider-Man', 'William Shakespeare', 'Taylor Swift', 'Elon Musk',
+            'Isaac Newton', 'Amelia Earhart', 'Batman', 'Mozart', 'Galileo Galilei'
+        ];
+        return characters.slice(0, count);
+    }
+
+    if (gameType === 'hats') {
+        return [
+            { color: 'white', questions: [`What data and facts do we know about "${cleanTheme}"?`], starters: ['The data shows that...', 'One fact is...'] },
+            { color: 'red', questions: [`How do you feel emotionally about "${cleanTheme}"?`], starters: ['I feel that...', 'My gut reaction is...'] },
+            { color: 'black', questions: [`What risks or challenges could happen with "${cleanTheme}"?`], starters: ['The main risk is...', 'A potential problem is...'] },
+            { color: 'yellow', questions: [`What are the positive benefits of "${cleanTheme}"?`], starters: ['One big benefit is...', 'This is good because...'] },
+            { color: 'green', questions: [`What creative ideas can we invent for "${cleanTheme}"?`], starters: ['What if we...', 'A creative solution is...'] },
+            { color: 'blue', questions: [`How can we summarize our learning on "${cleanTheme}"?`], starters: ['To summarize our findings...', 'Our next step is...'] }
+        ];
+    }
+
+    if (gameType === 'flashcards') {
+        const cards = [];
+        const samples = [
+            { word: 'adventure', meaning: 'macera' },
+            { word: 'challenge', meaning: 'meydan okuma' },
+            { word: 'discovery', meaning: 'keşif' },
+            { word: 'knowledge', meaning: 'bilgi' },
+            { word: 'victory', meaning: 'zafer' }
+        ];
+        for (let i = 0; i < count; i++) {
+            cards.push({ ...samples[i % samples.length] });
+        }
+        return cards;
+    }
+
+    return [];
+}
+
+// ============================================
 // API Endpoints
 // ============================================
 
@@ -734,9 +1117,8 @@ app.post('/api/generate', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'iconic characters';
     const count = sanitizeCount(req.body.count, 50);
 
-    const prompt = loadPrompt('who_am_i', { count, theme });
-
     try {
+        const prompt = loadPrompt('who_am_i', { count, theme });
         const text = await callTextAI(prompt);
 
         const names = text
@@ -744,13 +1126,18 @@ app.post('/api/generate', apiRateLimit, async (req, res) => {
             .map(l => l.replace(/^\d+[\.\)\-]\s*/, '').trim())
             .filter(l => l && !l.startsWith('---') && !l.startsWith('**'));
 
+        if (names.length === 0) throw new Error('Empty list returned from AI');
+
         const listContent = names.join('\n') + '\n';
         fs.writeFileSync(path.join(__dirname, 'list.txt'), listContent, 'utf-8');
 
         res.json({ success: true, count: names.length, characters: names });
     } catch (err) {
-        console.error('Generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate fallback for theme "${theme}":`, err.message);
+        const fallbackNames = createFallbackQuestions('who', theme, count);
+        const listContent = fallbackNames.join('\n') + '\n';
+        try { fs.writeFileSync(path.join(__dirname, 'list.txt'), listContent, 'utf-8'); } catch {}
+        res.json({ success: true, count: fallbackNames.length, characters: fallbackNames, isFallback: true });
     }
 });
 
@@ -759,24 +1146,24 @@ app.post('/api/generate-taboo', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
     const count = sanitizeCount(req.body.count, 30);
 
-    const prompt = loadPrompt('taboo', { count, theme });
-
     try {
-        const cards = await callJsonAI(prompt, TABOO_CARD_SCHEMA, { temperature: 0.7 });
+        const prompt = loadPrompt('taboo', { count, theme });
+        const cards = await callJsonAI(prompt, TABOO_CARD_SCHEMA, {
+            temperature: 0.7,
+            validate: (result) => (!Array.isArray(result) || result.length === 0) ? 'Invalid response format' : null
+        });
 
-        if (!Array.isArray(cards) || cards.length === 0) {
-            throw new Error('Invalid response format');
-        }
-
-        // Validate structure
         const validCards = cards.filter(c =>
             c.word && Array.isArray(c.forbidden) && c.forbidden.length >= 3
         );
 
+        if (validCards.length === 0) throw new Error('No valid Taboo cards parsed');
+
         res.json({ success: true, count: validCards.length, cards: validCards });
     } catch (err) {
-        console.error('Taboo generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-taboo fallback for theme "${theme}":`, err.message);
+        const fallbackCards = createFallbackQuestions('taboo', theme, count);
+        res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
     }
 });
 
@@ -785,9 +1172,8 @@ app.post('/api/generate-hangman', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'common words';
     const count = sanitizeCount(req.body.count, 20);
 
-    const prompt = loadPrompt('hangman', { count, theme });
-
     try {
+        const prompt = loadPrompt('hangman', { count, theme });
         const text = await callTextAI(prompt);
 
         const words = text
@@ -795,10 +1181,13 @@ app.post('/api/generate-hangman', apiRateLimit, async (req, res) => {
             .map(l => l.trim().toUpperCase())
             .filter(l => l.length >= 4 && l.length <= 10 && /^[A-Z]+$/.test(l));
 
+        if (words.length === 0) throw new Error('No valid Hangman words parsed');
+
         res.json({ success: true, count: words.length, words: words });
     } catch (err) {
-        console.error('Hangman generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-hangman fallback for theme "${theme}":`, err.message);
+        const fallbackWords = createFallbackQuestions('hangman', theme, count);
+        res.json({ success: true, count: fallbackWords.length, words: fallbackWords, isFallback: true });
     }
 });
 
@@ -809,16 +1198,13 @@ app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
     const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
     const cefrInstruction = buildWordGameCefrInstruction(cefrLevel);
 
-    const prompt = loadPrompt('kelime', { count, theme, cefrInstruction: cefrInstruction || '' });
-
     try {
-        const questions = await callJsonAI(prompt, WORD_GAME_SCHEMA, { temperature: 0.7 });
+        const prompt = loadPrompt('kelime', { count, theme, cefrInstruction: cefrInstruction || '' });
+        const questions = await callJsonAI(prompt, WORD_GAME_SCHEMA, {
+            temperature: 0.7,
+            validate: (result) => !Array.isArray(result) ? 'Invalid response format' : null
+        });
 
-        if (!Array.isArray(questions)) {
-            throw new Error('Invalid response format');
-        }
-
-        // Validate and clean
         const validQuestions = sortWordGameQuestionsByAnswerLength(questions.filter(q =>
             q.question && 
             q.answer && 
@@ -829,10 +1215,13 @@ app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
             answer: q.answer.toUpperCase().trim()
         })).slice(0, count));
 
+        if (validQuestions.length === 0) throw new Error('No valid Word Game questions parsed');
+
         res.json({ success: true, count: validQuestions.length, questions: validQuestions });
     } catch (err) {
-        console.error('Kelime generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-kelime fallback for theme "${theme}":`, err.message);
+        const fallbackQuestions = createFallbackQuestions('kelime', theme, count);
+        res.json({ success: true, count: fallbackQuestions.length, questions: fallbackQuestions, isFallback: true });
     }
 });
 
@@ -840,16 +1229,15 @@ app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
 app.post('/api/generate-millionaire', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
 
-    const prompt = loadPrompt('millionaire', { theme });
-
     try {
-        const questions = await callJsonAI(prompt, MILLIONAIRE_SCHEMA, { temperature: 0.6 });
+        const prompt = loadPrompt('millionaire', { theme });
+        const questions = await callJsonAI(prompt, MILLIONAIRE_SCHEMA, {
+            temperature: 0.6,
+            validate: (result) => (!Array.isArray(result) || result.length < 10)
+                ? 'Invalid response format - expected at least 10 questions'
+                : null
+        });
 
-        if (!Array.isArray(questions) || questions.length < 10) {
-            throw new Error('Invalid response format - expected at least 10 questions');
-        }
-
-        // Validate structure
         const validQuestions = questions.filter(q =>
             q.question && 
             Array.isArray(q.options) && 
@@ -865,8 +1253,9 @@ app.post('/api/generate-millionaire', apiRateLimit, async (req, res) => {
 
         res.json({ success: true, count: validQuestions.length, questions: validQuestions });
     } catch (err) {
-        console.error('Millionaire generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-millionaire fallback for theme "${theme}":`, err.message);
+        const fallbackQuestions = createFallbackQuestions('millionaire', theme, 15);
+        res.json({ success: true, count: fallbackQuestions.length, questions: fallbackQuestions, isFallback: true });
     }
 });
 
@@ -875,88 +1264,35 @@ app.post('/api/generate-hats', apiRateLimit, async (req, res) => {
     const topic = sanitizeTheme(req.body.topic) || 'general topic';
     const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
 
-    let cefrInstruction = '';
-    if (cefrLevel) {
-        const levelGuides = {
-            'A1': 'Use very simple words and very short sentences. Use present simple tense. Example starters: "I think...", "It is...", "I feel..."',
-            'A2': 'Use simple everyday English. Short clear sentences. Basic connectors (and, but, because). Example starters: "I believe that...", "The problem is...", "One good thing is..."',
-            'B1': 'Use clear, standard English. Moderate sentence length. Common academic words. Example starters: "In my opinion...", "One advantage is...", "We should consider..."',
-            'B1+': 'Use intermediate English with some complexity. Natural paraphrasing. Example starters: "From my perspective...", "It could be argued that...", "An alternative would be..."',
-            'B2': 'Use richer vocabulary and more complex sentences. Academic register is acceptable. Example starters: "Taking into account...", "One significant concern is...", "Evidence suggests that..."',
-            'C1': 'Use precise, nuanced language. Abstract concepts are fine. Sophisticated connectors. Example starters: "One could argue that...", "A critical consideration is...", "This raises the question of..."'
-        };
-        cefrInstruction = `
-CEFR Level: ${cefrLevel}
-Language guidance: ${levelGuides[cefrLevel] || levelGuides['B1']}
-- ALL questions and sentence starters MUST match this CEFR level
-- Do NOT use vocabulary or grammar structures above this level
-- Sentence starters should scaffold student output at this level`;
-    } else {
-        cefrInstruction = `
-- Use broadly accessible English suitable for mixed-level ELT classrooms
-- Keep questions clear and direct
-- Provide simple but varied sentence starters`;
-    }
-
-    const prompt = `You are an ELT (English Language Teaching) specialist. Generate discussion content for a "6 Thinking Hats" classroom activity about "${topic}".
-${cefrInstruction}
-
-For EACH of the 6 hats below, generate:
-- 2-3 discussion questions specific to "${topic}" that match the hat's thinking style
-- 3-4 sentence starters that students can use to begin their responses
-
-The 6 hats are:
-1. WHITE (Facts & Data) – objective information, statistics, what we know
-2. RED (Feelings & Emotions) – gut reactions, feelings, no justification needed
-3. BLACK (Caution & Risks) – dangers, problems, what could go wrong
-4. YELLOW (Benefits & Optimism) – advantages, positive outcomes, why it works
-5. GREEN (Creativity & Ideas) – new ideas, alternatives, creative solutions
-6. BLUE (Process & Summary) – organize discussion, summarize, next steps
-
-Return ONLY valid JSON in this exact format:
-[
-  {
-    "color": "white",
-    "questions": ["Question 1?", "Question 2?"],
-    "starters": ["I know that...", "The data shows...", "One fact is..."]
-  },
-  {
-    "color": "red",
-    "questions": ["Question 1?", "Question 2?"],
-    "starters": ["I feel...", "My reaction is...", "This makes me feel..."]
-  },
-  {
-    "color": "black",
-    "questions": ["Question 1?", "Question 2?"],
-    "starters": ["The risk is...", "One problem is...", "I am worried that..."]
-  },
-  {
-    "color": "yellow",
-    "questions": ["Question 1?", "Question 2?"],
-    "starters": ["One benefit is...", "This is good because...", "The advantage is..."]
-  },
-  {
-    "color": "green",
-    "questions": ["Question 1?", "Question 2?"],
-    "starters": ["What if we...", "A new idea is...", "We could try..."]
-  },
-  {
-    "color": "blue",
-    "questions": ["Question 1?", "Question 2?"],
-    "starters": ["To summarize...", "Our next step is...", "We have learned that..."]
-  }
-]
-
-No markdown, no explanation, just the JSON array with exactly 6 objects.`;
-
     try {
-        const parsed = await callJsonAI(prompt, THINKING_HATS_SCHEMA, { temperature: 0.7 });
-
-        if (!Array.isArray(parsed) || parsed.length < 6) {
-            throw new Error('Invalid response format — expected 6 hat objects');
+        let cefrInstruction = '';
+        if (cefrLevel) {
+            const levelGuides = {
+                'A1': 'Use very simple words and very short sentences.',
+                'A2': 'Use simple everyday English. Short clear sentences.',
+                'B1': 'Use clear, standard English. Moderate sentence length.',
+                'B1+': 'Use intermediate English with some complexity.',
+                'B2': 'Use richer vocabulary and more complex sentences.',
+                'C1': 'Use precise, nuanced language.'
+            };
+            cefrInstruction = `CEFR Level: ${cefrLevel}. Guidance: ${levelGuides[cefrLevel] || levelGuides['B1']}`;
         }
 
-        // Map by color to ensure correct order
+        const prompt = `You are an ELT specialist. Generate discussion content for a "6 Thinking Hats" activity about "${topic}".
+${cefrInstruction}
+
+Return ONLY valid JSON array with 6 objects for colors: white, red, black, yellow, green, blue. Format:
+[
+  { "color": "white", "questions": ["Question 1?"], "starters": ["I know that..."] }
+]`;
+
+        const parsed = await callJsonAI(prompt, THINKING_HATS_SCHEMA, {
+            temperature: 0.7,
+            validate: (result) => (!Array.isArray(result) || result.length < 6)
+                ? 'Invalid response format — expected 6 hat objects'
+                : null
+        });
+
         const colorOrder = ['white', 'red', 'black', 'yellow', 'green', 'blue'];
         const colorMap = {};
         for (const item of parsed) {
@@ -968,7 +1304,6 @@ No markdown, no explanation, just the JSON array with exactly 6 objects.`;
             }
         }
 
-        // Build ordered array (fallback to empty if a color is missing)
         const hats = colorOrder.map(color => ({
             color,
             questions: colorMap[color]?.questions || [],
@@ -977,8 +1312,9 @@ No markdown, no explanation, just the JSON array with exactly 6 objects.`;
 
         res.json({ success: true, topic, hats });
     } catch (err) {
-        console.error('Hats generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-hats fallback for topic "${topic}":`, err.message);
+        const fallbackHats = createFallbackQuestions('hats', topic, 6);
+        res.json({ success: true, topic, hats: fallbackHats, isFallback: true });
     }
 });
 
@@ -987,9 +1323,8 @@ app.post('/api/generate-flashcards', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'daily vocabulary';
     const count = sanitizeCount(req.body.count, 20);
 
-    const prompt = loadPrompt('flashcards', { count, theme });
-
     try {
+        const prompt = loadPrompt('flashcards', { count, theme });
         const cards = parseModelJson(await callGemini(prompt));
 
         if (!Array.isArray(cards)) {
@@ -1004,10 +1339,13 @@ app.post('/api/generate-flashcards', apiRateLimit, async (req, res) => {
             meaning: c.meaning.trim()
         })).slice(0, count);
 
+        if (validCards.length === 0) throw new Error('No valid flashcards parsed');
+
         res.json({ success: true, count: validCards.length, cards: validCards });
     } catch (err) {
-        console.error('Flashcards generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-flashcards fallback for theme "${theme}":`, err.message);
+        const fallbackCards = createFallbackQuestions('flashcards', theme, count);
+        res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
     }
 });
 
@@ -1018,23 +1356,22 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
     const cefr = sanitizeCEFR(req.body.cefr);
     const cefrInstruction = getCEFRInstruction(cefr);
 
-    const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
-
     try {
-        const cards = await callJsonAI(prompt, LINGOPARTY_SCHEMA, { temperature: 0.7 });
+        const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
+        const cards = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
+            temperature: 0.7,
+            validate: (result) => (!Array.isArray(result) || result.length === 0)
+                ? 'Invalid response format - expected array of challenge objects'
+                : null
+        });
 
-        if (!Array.isArray(cards) || cards.length === 0) {
-            throw new Error('Invalid response format - expected array of challenge objects');
-        }
-
-        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'taboo'];
+        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'];
         const validCards = cards.filter(c => c && typeof c === 'object' && c.type && validTypes.includes(c.type)).map(c => {
             if (c.type === 'riddle') {
                 return {
                     type: 'riddle',
                     prompt: String(c.prompt || 'Solve the linguistic riddle.').trim(),
-                    answer: String(c.answer || 'Answer').trim(),
-                    coins: Number(c.coins) || 15
+                    answer: String(c.answer || 'Answer').trim()
                 };
             } else if (c.type === 'scramble') {
                 const targetWord = String(c.targetWord || c.word || 'WORD').toUpperCase().trim();
@@ -1043,56 +1380,47 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
                     type: 'scramble',
                     scrambledWord,
                     targetWord,
-                    clue: String(c.clue || c.prompt || 'Unscramble the letters to reveal the target word.').trim(),
-                    coins: Number(c.coins) || 15
+                    clue: String(c.clue || c.prompt || 'Unscramble the letters to reveal the target word.').trim()
                 };
             } else if (c.type === 'pronunciation') {
                 return {
                     type: 'pronunciation',
-                    prompt: String(c.prompt || 'Read this sentence out loud clearly.').trim(),
-                    coins: Number(c.coins) || 15
+                    prompt: String(c.prompt || 'Read this sentence out loud clearly.').trim()
                 };
             } else if (c.type === 'association') {
                 return {
                     type: 'association',
                     prompt: String(c.prompt || 'Name 3 words associated with the topic.').trim(),
-                    answer: String(c.answer || 'Valid collocations').trim(),
-                    coins: Number(c.coins) || 10
+                    answer: String(c.answer || 'Valid collocations').trim()
                 };
             } else if (c.type === 'grammar') {
                 return {
                     type: 'grammar',
                     prompt: String(c.prompt || 'Correct the error in the sentence.').trim(),
-                    answer: String(c.answer || 'Correct sentence.').trim(),
-                    coins: Number(c.coins) || 15
+                    answer: String(c.answer || 'Correct sentence.').trim()
                 };
             } else if (c.type === 'speed') {
                 return {
                     type: 'speed',
                     prompt: String(c.prompt || 'Name 3 words related to the topic in 15 seconds.').trim(),
-                    answer: String(c.answer || 'Any 3 valid words').trim(),
-                    coins: Number(c.coins) || 10
-                };
-            } else if (c.type === 'roleplay') {
-                return {
-                    type: 'roleplay',
-                    prompt: String(c.prompt || 'Have a short 30-second dialogue about the topic.').trim(),
-                    coins: Number(c.coins) || 20
+                    answer: String(c.answer || 'Any 3 valid words').trim()
                 };
             } else {
                 return {
-                    type: 'taboo',
-                    word: String(c.word || 'Vocabulary').trim(),
-                    forbidden: Array.isArray(c.forbidden) ? c.forbidden.slice(0, 3).map(w => String(w).trim()) : ['Word 1', 'Word 2', 'Word 3'],
-                    coins: Number(c.coins) || 15
+                    type: 'roleplay',
+                    prompt: String(c.prompt || 'Have a short 30-second dialogue about the topic.').trim(),
+                    answer: String(c.answer || 'Key dialogue phrases').trim()
                 };
             }
         });
 
+        if (validCards.length === 0) throw new Error('No valid LingoParty cards parsed');
+
         res.json({ success: true, count: validCards.length, cards: validCards });
     } catch (err) {
-        console.error('LingoParty generation error:', err);
-        res.status(500).json({ error: err.message });
+        console.warn(`[AI Fallback] /api/generate-lingoparty fallback for theme "${theme}":`, err.message);
+        const fallbackCards = createFallbackQuestions('lingoparty', theme, count, { cefr });
+        res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
     }
 });
 
@@ -1145,11 +1473,13 @@ server.listen(PORT, () => {
     console.log(`🎮 BerkAI Game Hub running → http://localhost:${PORT}`);
     console.log(`🔒 Security: Rate limiting enabled, CORS configured`);
     console.log(`📊 Max concurrent games: ${MAX_GAMES}`);
-    if (AI_PROVIDER === 'gemini') {
+    if (AI_PROVIDER === 'anthropic') {
+        console.log(`🤖 AI Provider: Anthropic (${ANTHROPIC_MODEL}) — paid`);
+    } else if (AI_PROVIDER === 'gemini') {
         console.log(`🤖 AI Provider: Gemini (${GEMINI_MODEL}) — FREE`);
     } else if (AI_PROVIDER === 'openai') {
         console.log(`🤖 AI Provider: OpenAI (${OPENAI_MODEL}) — paid`);
     } else {
-        console.log(`⚠️  No AI key configured! Set GEMINI_API_KEY (free) or OPENAI_API_KEY in .env`);
+        console.log(`⚠️  No AI key configured! Set ANTHROPIC_API_KEY, GEMINI_API_KEY (free), or OPENAI_API_KEY in .env`);
     }
 });
