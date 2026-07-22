@@ -32,10 +32,10 @@ export default function GuideModal({ onClose }) {
                 <strong style={{ color: '#a78bfa' }}>🛡️ Free Shield:</strong> Grants a Grammar Shield item directly into inventory.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#f43f5e' }}>⛈️ Solar Storm:</strong> Intercepted by cosmic waves! Lose 15 coins (blocked by Shield).
+                <strong style={{ color: '#f43f5e' }}>⛈️ Solar Flare:</strong> Intercepted by cosmic waves! Lose 1 Trophy (blocked by Shield).
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#eab308' }}>💸 Coin Tax:</strong> Donate 10 coins to help the team in last place.
+                <strong style={{ color: '#eab308' }}>💸 Energy Sharing:</strong> Transfer 1 Trophy to assist the team in last place.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
                 <strong style={{ color: '#ec4899' }}>🔄 Orbital Swap:</strong> Swap board tile positions with the leader.
@@ -46,26 +46,20 @@ export default function GuideModal({ onClose }) {
           {/* Section 2: Space Shop Items */}
           <div style={{ background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: '14px', padding: '1rem' }}>
             <h3 style={{ color: '#fef08a', marginBottom: '0.8rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>🛒</span> Sanctuary Shop Power-Ups
+              <span>🛒</span> Sanctuary Armory Power-Ups
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.6rem' }}>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#f59e0b' }}>🏆 Star Trophy (30 💰):</strong> Purchase +1 Trophy towards victory.
+                <strong style={{ color: '#f59e0b' }}>🚀 Warp Boost (Cost: 2 🏆):</strong> Advance +3 extra planets immediately.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#38bdf8' }}>🎲 Extra Roll (10 💰):</strong> Roll the die again immediately.
+                <strong style={{ color: '#a78bfa' }}>🛡️ Grammar Shield (Cost: 2 🏆):</strong> Protects against hazard & attack penalties.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#10b981' }}>🚀 +2 Movement Boost (10 💰):</strong> Add +2 steps to your next move.
+                <strong style={{ color: '#ec4899' }}>☄️ Meteor Robbery (Cost: 3 🏆):</strong> Steal 2 Trophies from a rival crew.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#a78bfa' }}>🛡️ Grammar Shield (12 💰):</strong> Protects against hazard penalties.
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#ec4899' }}>💰 Coin Magnet (15 💰):</strong> Steal 8 coins from the leading crew.
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#c084fc' }}>🔄 Orbital Swap (25 💰):</strong> Trade positions with any chosen crew.
+                <strong style={{ color: '#38bdf8' }}>🛸 UFO Zap Ray (Cost: 4 🏆):</strong> Zap a rival crew back -3 Planets.
               </div>
             </div>
           </div>
@@ -83,7 +77,7 @@ export default function GuideModal({ onClose }) {
                 <strong style={{ color: '#6366f1' }}>🌀 Cosmic Vortex:</strong> Teleports crew to a surprise position.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#f59e0b' }}>☄️ Asteroid Belt:</strong> Speed penalty! Lose 10 coins.
+                <strong style={{ color: '#f59e0b' }}>☄️ Asteroid Belt:</strong> Speed penalty! Pulls ship back 2 spaces.
               </div>
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.6rem 0.8rem', borderRadius: '10px', fontSize: '0.85rem' }}>
                 <strong style={{ color: '#10b981' }}>🏁 Start Base & 🏆 Goal Sanctuary:</strong> Safe bases where trophies are earned!

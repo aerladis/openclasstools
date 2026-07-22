@@ -71,7 +71,6 @@ export default function BoardStage({
       if (playSound) playSound('trophy');
       triggerConfetti();
       team.trophies += 2;
-      team.coins += 50;
       setActiveModal('victory');
     } else if (tile.type === 'chance') {
       setActiveModal('mystery');
@@ -88,7 +87,7 @@ export default function BoardStage({
       advanceTurn(teamsList);
     } else if (tile.type === 'asteroid') {
       if (playSound) playSound('damage');
-      team.coins = Math.max(0, team.coins - 10);
+      team.position = Math.max(0, team.position - 2);
       advanceTurn(teamsList);
     } else {
       // Language challenge tile (riddle, scramble, speed, pronunciation, association, grammar, roleplay)

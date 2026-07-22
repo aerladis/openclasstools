@@ -81,26 +81,26 @@ let gameState = {
 
 // Default Fallback Deck
 const DEFAULT_DECK = [
-    { type: 'riddle', prompt: 'I have keys but no locks. I have space but no room. You can enter, but you can\'t go outside. What am I?', answer: 'A keyboard', coins: 15 },
-    { type: 'riddle', prompt: 'I speak without a mouth and hear without ears. I have nobody, but I come alive with wind. What am I?', answer: 'An echo', coins: 15 },
-    { type: 'scramble', scrambledWord: 'T-A-E-W-R', targetWord: 'WATER', clue: 'You drink this essential liquid every day.', coins: 15 },
-    { type: 'scramble', scrambledWord: 'L-E-P-P-A', targetWord: 'APPLE', clue: 'A sweet red or green fruit.', coins: 15 },
-    { type: 'pronunciation', prompt: 'She sells seashells by the seashore.', coins: 15 },
-    { type: 'pronunciation', prompt: 'How much wood would a woodchuck chuck if a woodchuck could chuck wood?', coins: 15 },
-    { type: 'association', prompt: 'Name 3 common adjectives that naturally collocate with the noun: WEATHER.', answer: 'e.g. sunny, rainy, cold, stormy, mild', coins: 10 },
-    { type: 'association', prompt: 'Complete the English proverb: Actions speak louder than ___.', answer: 'words', coins: 10 },
-    { type: 'grammar', prompt: 'Correct the error: She don\'t like eating vegetables.', answer: 'She doesn\'t like eating vegetables.', coins: 15 },
-    { type: 'grammar', prompt: 'Correct the error: Yesterday we go to the cinema.', answer: 'Yesterday we went to the cinema.', coins: 15 },
-    { type: 'speed', prompt: 'Name 4 different sports played with a ball in 15 seconds.', answer: 'e.g. Football, Basketball, Tennis, Volleyball', coins: 10 },
-    { type: 'speed', prompt: 'Name 3 things you can find inside a kitchen fridge.', answer: 'e.g. Milk, Cheese, Butter, Eggs', coins: 10 },
-    { type: 'roleplay', prompt: 'You are at a clothes shop and bought a shirt yesterday, but it is too small. Speak to the cashier to exchange it.', coins: 20 },
-    { type: 'roleplay', prompt: 'You are ordering dinner at a fancy restaurant. Ask the waiter for recommendations and order a three-course meal.', coins: 20 },
-    { type: 'roleplay', prompt: 'You are at the airport and your flight gate just changed. Ask the airline agent where the new gate is located and if your flight is delayed.', coins: 20 },
-    { type: 'roleplay', prompt: 'You arrived at your hotel room, but the air conditioning is broken and there are no towels. Call the hotel front desk politely to request assistance.', coins: 20 },
-    { type: 'roleplay', prompt: 'You are in a job interview. Give a 30-second introduction explaining your background, skills, and why you are excited for this role.', coins: 20 },
-    { type: 'roleplay', prompt: 'Order a custom coffee drink and a snack at a busy cafe. Ask about milk options and pay with a card.', coins: 20 },
-    { type: 'roleplay', prompt: 'You lost your backpack at a train station. Describe your bag (color, size, contents) to station security.', coins: 20 },
-    { type: 'roleplay', prompt: 'You feel sick with a fever and sore throat. Describe your symptoms to the doctor and ask for medical advice.', coins: 20 }
+    { type: 'riddle', prompt: 'I have keys but no locks. I have space but no room. You can enter, but you can\'t go outside. What am I?', answer: 'A keyboard', trophies: 1 },
+    { type: 'riddle', prompt: 'I speak without a mouth and hear without ears. I have nobody, but I come alive with wind. What am I?', answer: 'An echo', trophies: 1 },
+    { type: 'scramble', scrambledWord: 'T-A-E-W-R', targetWord: 'WATER', clue: 'You drink this essential liquid every day.', trophies: 1 },
+    { type: 'scramble', scrambledWord: 'L-E-P-P-A', targetWord: 'APPLE', clue: 'A sweet red or green fruit.', trophies: 1 },
+    { type: 'pronunciation', prompt: 'She sells seashells by the seashore.', trophies: 1 },
+    { type: 'pronunciation', prompt: 'How much wood would a woodchuck chuck if a woodchuck could chuck wood?', trophies: 1 },
+    { type: 'association', prompt: 'Name 3 common adjectives that naturally collocate with the noun: WEATHER.', answer: 'e.g. sunny, rainy, cold, stormy, mild', trophies: 1 },
+    { type: 'association', prompt: 'Complete the English proverb: Actions speak louder than ___.', answer: 'words', trophies: 1 },
+    { type: 'grammar', prompt: 'Correct the error: She don\'t like eating vegetables.', answer: 'She doesn\'t like eating vegetables.', trophies: 1 },
+    { type: 'grammar', prompt: 'Correct the error: Yesterday we go to the cinema.', answer: 'Yesterday we went to the cinema.', trophies: 1 },
+    { type: 'speed', prompt: 'Name 4 different sports played with a ball in 15 seconds.', answer: 'e.g. Football, Basketball, Tennis, Volleyball', trophies: 1 },
+    { type: 'speed', prompt: 'Name 3 things you can find inside a kitchen fridge.', answer: 'e.g. Milk, Cheese, Butter, Eggs', trophies: 1 },
+    { type: 'roleplay', prompt: 'You are at a clothes shop and bought a shirt yesterday, but it is too small. Speak to the cashier to exchange it.', trophies: 1 },
+    { type: 'roleplay', prompt: 'You are ordering dinner at a fancy restaurant. Ask the waiter for recommendations and order a three-course meal.', trophies: 1 },
+    { type: 'roleplay', prompt: 'You are at the airport and your flight gate just changed. Ask the airline agent where the new gate is located and if your flight is delayed.', trophies: 1 },
+    { type: 'roleplay', prompt: 'You arrived at your hotel room, but the air conditioning is broken and there are no towels. Call the hotel front desk politely to request assistance.', trophies: 1 },
+    { type: 'roleplay', prompt: 'You are in a job interview. Give a 30-second introduction explaining your background, skills, and why you are excited for this role.', trophies: 1 },
+    { type: 'roleplay', prompt: 'Order a custom coffee drink and a snack at a busy cafe. Ask about milk options and pay with a card.', trophies: 1 },
+    { type: 'roleplay', prompt: 'You lost your backpack at a train station. Describe your bag (color, size, contents) to station security.', trophies: 1 },
+    { type: 'roleplay', prompt: 'You feel sick with a fever and sore throat. Describe your symptoms to the doctor and ask for medical advice.', trophies: 1 }
 ];
 
 /* === Section: DOM Elements === */

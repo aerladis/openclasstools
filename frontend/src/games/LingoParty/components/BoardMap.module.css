@@ -198,7 +198,48 @@
 
 @keyframes chancePulse {
   0%, 100% { filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.5)); }
-  50% { filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.9)); }
+  50% { filter: drop-shadow(0 0 22px rgba(236, 72, 153, 0.9)); }
+}
+
+/* ── 3D Rings & Hazard Animations ── */
+.planetRings {
+  transform-origin: center;
+  animation: ringPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes ringPulse {
+  0% { opacity: 0.5; }
+  100% { opacity: 0.9; }
+}
+
+.blackholeSwirl {
+  transform-origin: center;
+  animation: blackholeRotate 8s linear infinite;
+}
+
+@keyframes blackholeRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.vortexSpiral {
+  transform-origin: center;
+  animation: vortexSpin 6s linear infinite;
+}
+
+@keyframes vortexSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.asteroidBelt {
+  transform-origin: center;
+  animation: asteroidSpin 12s linear infinite;
+}
+
+@keyframes asteroidSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .tileBlackhole .tilePlanet {
