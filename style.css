@@ -36,6 +36,16 @@ body {
   /* 2 * π * 54 */
 }
 
+/* Universal Emoji Color Rendering Fix */
+.emoji, [class*="emoji"], [class*="icon"] {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif !important;
+  color: initial !important;
+  -webkit-text-fill-color: initial !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+}
+
 html {
   font-size: 16px;
 }

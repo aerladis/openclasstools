@@ -1,5 +1,5 @@
 /* ============================================
-   BERKAI GAME HUB – Landing Page
+   BERKAI GAME HUB – Landing Page Redesign
    ============================================ */
 *,
 *::before,
@@ -17,13 +17,13 @@ body {
 
 :root {
     --bg-dark: #0a0a1a;
-    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.12);
     --accent-1: #a855f7;
     --accent-2: #6366f1;
     --accent-3: #ec4899;
     --text-primary: #f1f5f9;
-    --text-secondary: rgba(241, 245, 249, 0.6);
+    --text-secondary: rgba(241, 245, 249, 0.65);
     --font: 'Outfit', system-ui, sans-serif;
 }
 
@@ -36,7 +36,7 @@ body {
     align-items: center;
     justify-content: center;
     overflow-y: auto;
-    padding: 2rem 0;
+    padding: 2.5rem 0;
 }
 
 #particles {
@@ -46,24 +46,38 @@ body {
     pointer-events: none;
 }
 
-/* Hub */
+/* Universal Emoji Color Rendering Fix */
+.emoji,
+.game-emoji,
+.hub-icon,
+.tab-emoji {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif !important;
+    color: initial !important;
+    -webkit-text-fill-color: initial !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    display: inline-block;
+}
+
+/* Hub Container */
 .hub-container {
     position: relative;
     z-index: 1;
     text-align: center;
-    width: 94%;
-    max-width: 900px;
+    width: 92%;
+    max-width: 1040px;
 }
 
 .hub-header {
-    margin-bottom: 2rem;
+    margin-bottom: 1.8rem;
 }
 
 .hub-icon {
-    font-size: 3.5rem;
+    font-size: 3.6rem;
     display: block;
-    margin-bottom: .4rem;
-    filter: drop-shadow(0 0 18px rgba(168, 85, 247, .5));
+    margin-bottom: .3rem;
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, .5));
     animation: float 3s ease-in-out infinite;
 }
 
@@ -82,11 +96,11 @@ h1 {
     color: var(--text-secondary);
     font-size: .95rem;
     margin-top: .4rem;
-    font-weight: 300;
-    letter-spacing: .5px;
+    font-weight: 400;
+    letter-spacing: .3px;
 }
 
-/* Category tabs */
+/* Category Tabs */
 .category-tabs {
     display: flex;
     justify-content: center;
@@ -112,6 +126,10 @@ h1 {
     gap: 0.5rem;
 }
 
+.cat-tab .tab-emoji {
+    font-size: 1.1rem;
+}
+
 .cat-tab:hover {
     transform: translateY(-2px);
     border-color: var(--accent-1);
@@ -125,35 +143,38 @@ h1 {
     box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
 }
 
-/* Game grid */
+/* Game Grid Redesign (4 columns on desktop) */
 .game-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
 }
 
 .game-card {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: space-between;
     text-decoration: none;
     color: var(--text-primary);
-    background: var(--glass-bg);
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--glass-border);
-    border-radius: 1.6rem;
-    padding: 2rem 1.2rem 1.6rem;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    border-radius: 1.5rem;
+    padding: 1.6rem 1rem 1.2rem;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     position: relative;
     overflow: hidden;
-    transition: transform .25s, box-shadow .25s, border-color .25s, opacity .25s;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .08);
+    min-height: 190px;
+    transition: transform .28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow .28s, border-color .28s, background .28s;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .08);
 }
 
 .game-card.hidden {
     display: none !important;
 }
 
+/* Radial Glow on Hover */
 .game-card::before {
     content: '';
     position: absolute;
@@ -161,119 +182,118 @@ h1 {
     left: -30%;
     width: 160%;
     height: 160%;
-    background: radial-gradient(circle, rgba(168, 85, 247, .1) 0%, transparent 55%);
+    background: radial-gradient(circle, rgba(168, 85, 247, .12) 0%, transparent 60%);
     pointer-events: none;
-    transition: opacity .3s;
+    opacity: 0;
+    transition: opacity .3s ease;
+}
+
+.game-card:hover::before {
+    opacity: 1;
 }
 
 .game-card:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, .4);
-    border-color: var(--accent-1);
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .45), 0 0 20px rgba(168, 85, 247, 0.2);
+    border-color: rgba(168, 85, 247, 0.5);
+    background: rgba(255, 255, 255, 0.07);
 }
 
-#card-lingoparty:hover::before {
-    background: radial-gradient(circle, rgba(168, 85, 247, .25) 0%, transparent 55%);
+/* Emoji Wrapper Circle */
+.emoji-wrapper {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.7rem;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s;
 }
 
-#card-who:hover::before {
-    background: radial-gradient(circle, rgba(168, 85, 247, .18) 0%, transparent 55%);
+.game-card:hover .emoji-wrapper {
+    transform: scale(1.12);
+    background: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.3);
 }
-
-#card-taboo:hover::before {
-    background: radial-gradient(circle, rgba(236, 72, 153, .18) 0%, transparent 55%);
-}
-
-#card-hangman:hover::before {
-    background: radial-gradient(circle, rgba(99, 102, 241, .18) 0%, transparent 55%);
-}
-
-#card-bottle:hover::before {
-    background: radial-gradient(circle, rgba(34, 197, 94, .18) 0%, transparent 55%);
-}
-
-#card-wheel:hover::before {
-    background: radial-gradient(circle, rgba(245, 158, 11, .18) 0%, transparent 55%);
-}
-
-#card-kelime:hover::before {
-    background: radial-gradient(circle, rgba(14, 165, 233, .18) 0%, transparent 55%);
-}
-
-#card-flashcards:hover::before {
-    background: radial-gradient(circle, rgba(236, 72, 153, .18) 0%, transparent 55%);
-}
-
-#card-millionaire:hover::before {
-    background: radial-gradient(circle, rgba(245, 158, 11, .2) 0%, transparent 55%);
-}
-
-#card-hats:hover::before {
-    background: radial-gradient(circle, rgba(168, 85, 247, .18) 0%, transparent 55%);
-}
-
-#card-flappy:hover::before {
-    background: radial-gradient(circle, rgba(16, 185, 129, .18) 0%, transparent 55%);
-}
-
-
 
 .game-emoji {
-    font-size: 3rem;
-    margin-bottom: .6rem;
-    filter: drop-shadow(0 0 12px rgba(168, 85, 247, .4));
+    font-size: 2.5rem;
+    line-height: 1;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
 }
 
 .game-card h2 {
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     font-weight: 800;
-    margin-bottom: .4rem;
-    background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    text-align: center;
+    margin-bottom: 0.9rem;
+    color: var(--text-primary);
+    transition: color 0.25s;
+    letter-spacing: -0.2px;
 }
 
-.game-desc {
-    font-size: .78rem;
-    color: var(--text-secondary);
-    line-height: 1.4;
-    margin-bottom: .8rem;
-    flex: 1;
+.game-card:hover h2 {
+    color: #fff;
 }
 
 .play-badge {
     display: inline-block;
-    padding: .4rem 1.2rem;
-    font-size: .8rem;
+    padding: 0.38rem 1.1rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: #fff;
     background: linear-gradient(135deg, var(--accent-2), var(--accent-1));
     border-radius: 100px;
-    transition: transform .2s;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    transition: transform .2s, box-shadow .2s;
 }
 
 .game-card:hover .play-badge {
-    transform: translateX(4px);
+    transform: translateX(3px);
+    box-shadow: 0 6px 18px rgba(168, 85, 247, 0.5);
+}
+
+/* Card Badge (e.g. NEW ✨) */
+.card-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 900;
+    padding: 0.22rem 0.55rem;
+    border-radius: 99px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Animations */
 @keyframes float {
-
-    0%,
-    100% {
+    0%, 100% {
         transform: translateY(0);
     }
-
     50% {
-        transform: translateY(-8px);
+        transform: translateY(-7px);
     }
 }
 
-/* Responsive */
-@media (max-width: 700px) {
+/* Responsive Grid */
+@media (max-width: 960px) {
+    .game-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 680px) {
     .hub-container {
-        max-width: 500px;
+        width: 94%;
     }
 
     .hub-icon {
@@ -284,49 +304,34 @@ h1 {
         font-size: 2rem;
     }
 
-    .hub-header {
-        margin-bottom: 1.4rem;
-    }
-
     .game-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: .7rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
     }
 
     .game-card {
-        padding: 1.5rem 1rem 1.2rem;
+        padding: 1.3rem 0.8rem 1rem;
+        min-height: 170px;
         border-radius: 1.2rem;
     }
 
+    .emoji-wrapper {
+        width: 58px;
+        height: 58px;
+        margin-bottom: 0.5rem;
+    }
+
     .game-emoji {
-        font-size: 2.4rem;
-        margin-bottom: .4rem;
+        font-size: 2.1rem;
     }
 
     .game-card h2 {
-        font-size: 1.2rem;
-    }
-
-    .game-desc {
-        font-size: .72rem;
+        font-size: 1.02rem;
+        margin-bottom: 0.7rem;
     }
 
     .play-badge {
-        padding: .35rem 1rem;
-        font-size: .75rem;
-    }
-}
-
-@media (max-width: 360px) {
-    h1 {
-        font-size: 1.7rem;
-    }
-
-    .game-card {
-        padding: 1.2rem .8rem 1rem;
-    }
-
-    .game-card h2 {
-        font-size: 1.05rem;
+        padding: 0.32rem 0.9rem;
+        font-size: 0.72rem;
     }
 }

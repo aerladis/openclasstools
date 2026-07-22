@@ -21,93 +21,83 @@
     <canvas id="particles"></canvas>
 
     <div class="hub-container">
-        <div class="hub-header">
-            <span class="hub-icon">🎮</span>
+        <header class="hub-header">
+            <span class="hub-icon emoji">🎮</span>
             <h1>BerkAI Game Hub</h1>
-            <p class="hub-tagline">Hand-crafted games for EFL classrooms</p>
-        </div>
+            <p class="hub-tagline">Hand-crafted interactive games for classrooms & groups</p>
+        </header>
 
         <div class="category-tabs">
-            <button class="cat-tab active" data-filter="all">All Games 🎮</button>
-            <button class="cat-tab" data-filter="solo">Solo Games 👤</button>
-            <button class="cat-tab" data-filter="multi">Multiplayer 👥</button>
+            <button class="cat-tab active" data-filter="all"><span class="tab-emoji emoji">🎮</span> All Games</button>
+            <button class="cat-tab" data-filter="solo"><span class="tab-emoji emoji">👤</span> Solo Games</button>
+            <button class="cat-tab" data-filter="multi"><span class="tab-emoji emoji">👥</span> Multiplayer</button>
         </div>
 
         <div class="game-grid">
-            <a href="lingoparty.html" class="game-card" id="card-lingoparty" data-category="multi">
-                <span class="game-emoji">🎲</span>
+            <a href="lingoparty.html" class="game-card badge-card" id="card-lingoparty" data-category="multi">
+                <span class="card-badge">NEW ✨</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🎲</span></div>
                 <h2>LingoParty</h2>
-                <p class="game-desc">Mario Party-style board game! Roll dice, battle in AI language mini-challenges, earn coins, and buy star trophies.</p>
-                <span class="play-badge" style="background: linear-gradient(135deg, #a855f7, #ec4899);">NEW ✨ →</span>
+                <span class="play-badge">Play →</span>
             </a>
 
             <a href="who.html" class="game-card" id="card-who" data-category="multi">
-                <span class="game-emoji">🎭</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🎭</span></div>
                 <h2>Who Am I?</h2>
-                <p class="game-desc">A character is assigned to you. Ask yes/no questions to guess who.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="taboo.html" class="game-card" id="card-taboo" data-category="multi">
-                <span class="game-emoji">🃏</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🃏</span></div>
                 <h2>Taboo</h2>
-                <p class="game-desc">Describe the word without saying the forbidden ones and race against the clock.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="hangman.html" class="game-card" id="card-hangman" data-category="solo multi">
-                <span class="game-emoji">💀</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">💀</span></div>
                 <h2>Hangman</h2>
-                <p class="game-desc">Guess the hidden word letter by letter before the stick figure is complete.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="bottle.html" class="game-card" id="card-bottle" data-category="multi">
-                <span class="game-emoji">🍾</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🍾</span></div>
                 <h2>Spin the Bottle</h2>
-                <p class="game-desc">Add players, spin the bottle, and see who it picks.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="wheel.html" class="game-card" id="card-wheel" data-category="multi">
-                <span class="game-emoji">🎡</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🎡</span></div>
                 <h2>Wheel of Names</h2>
-                <p class="game-desc">Enter names and let the colorful wheel decide who is next.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="kelime.html" class="game-card" id="card-kelime" data-category="solo multi">
-                <span class="game-emoji">🔤</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🔤</span></div>
                 <h2>Word Game</h2>
-                <p class="game-desc">Reveal letters, solve clues, and stack the highest score on the board.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="flashcards.html" class="game-card" id="card-flashcards" data-category="solo multi">
-                <span class="game-emoji">🃏</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">📇</span></div>
                 <h2>Flashcards</h2>
-                <p class="game-desc">Study English vocabulary with interactive 3D flip cards, pronunciation, and AI topics.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="millionaire.html" class="game-card" id="card-millionaire" data-category="solo multi">
-                <span class="game-emoji">💰</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">💰</span></div>
                 <h2>Millionaire</h2>
-                <p class="game-desc">Answer 15 questions to win $1,000,000. Use lifelines wisely.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="hats.html" class="game-card" id="card-hats" data-category="solo multi">
-                <span class="game-emoji">🎩</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🎩</span></div>
                 <h2>6 Thinking Hats</h2>
-                <p class="game-desc">Explore topics from 6 perspectives with De Bono's critical thinking method.</p>
                 <span class="play-badge">Play →</span>
             </a>
 
             <a href="FlappyCrocodile/index.html" class="game-card" id="card-flappy" data-category="solo">
-                <span class="game-emoji">🐊</span>
+                <div class="emoji-wrapper"><span class="game-emoji emoji">🐊</span></div>
                 <h2>Flappy Crocodile</h2>
-                <p class="game-desc">Navigate the tricky obstacles by tapping to flap.</p>
                 <span class="play-badge">Play →</span>
             </a>
         </div>
