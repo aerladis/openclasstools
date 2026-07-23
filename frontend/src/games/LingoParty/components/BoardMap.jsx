@@ -57,7 +57,6 @@ const TILE_CONFIG = {
   grammar:       { color: '#f43f5e', glow: 'rgba(244,63,94,0.5)',  icon: '✍️',  label: 'Grammar' },
   speed:         { color: '#eab308', glow: 'rgba(234,179,8,0.5)',  icon: '☄️',  label: 'Speed' },
   roleplay:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '💬',  label: 'Roleplay' },
-  blackhole:     { color: '#1e1b2e', glow: 'rgba(139,92,246,0.9)', icon: '🕳️', label: 'VOID', cssClass: 'tileBlackhole' },
   vortex:        { color: '#312e81', glow: 'rgba(99,102,241,0.9)', icon: '🌀', label: 'VORTEX', cssClass: 'tileVortex' },
   asteroid:      { color: '#451a03', glow: 'rgba(245,158,11,0.9)', icon: '☄️', label: 'ASTEROID', cssClass: 'tileAsteroid' },
 };
@@ -222,7 +221,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
         {tilePoints.map((tp) => {
           const conf = TILE_CONFIG[tp.type] || DEFAULT_CONF;
           const isSpecial = tp.type === 'start' || tp.type === 'trophy';
-          const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'blackhole', 'vortex', 'asteroid'].includes(tp.type);
+          const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'vortex', 'asteroid'].includes(tp.type);
           const tileColor = isIconicTile ? conf.color : currentOrbitTheme.color;
           const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
 
@@ -269,12 +268,8 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                   <polygon points={getHexPoints(hexRadius + 2)} fill={tileColor} opacity="0.08" className={styles.tileGlowOuter} />
                   <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2.5" />
                   <polygon points={getHexPoints(hexRadius * 0.88)} fill="none" stroke={tileColor} strokeWidth="1.5" opacity="0.7" />
-                  {isIconicTile ? (
+                  {isIconicTile && (
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
-                  ) : (
-                    <text y="1" textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={hexRadius * 0.38} fontWeight="900" style={{ textShadow: '0 0 6px rgba(0,0,0,0.9)' }}>
-                      #{tp.idx + 1}
-                    </text>
                   )}
                 </>
               )}
@@ -289,8 +284,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                     <rect x={-capW / 2} y={-capH / 2} width={capW} height={capH} rx="24" fill="rgba(15, 12, 35, 0.88)" stroke={tileColor} strokeWidth="2.5" />
                     <circle cx={-capW / 2 + 24} cy={0} r="19" fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                     {isIconicTile && <text x={-capW / 2 + 24} y="1" textAnchor="middle" dominantBaseline="central" fontSize="18">{conf.icon}</text>}
-                    <text x={-capW / 2 + 50} y="-2" textAnchor="start" fill="#ffffff" fontSize="12" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
-                    <text x={-capW / 2 + 50} y="12" textAnchor="start" fill={tileColor} fontSize="11" fontWeight="900">#{tp.idx + 1}</text>
+                    <text x={-capW / 2 + 50} y="1" textAnchor="start" fill="#ffffff" fontSize="12" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
                   </>
                 );
               })()}

@@ -133,37 +133,6 @@ export default function BoardStage({
       setActiveModal('mystery');
     } else if (tile.type === 'shop') {
       setActiveModal('shop');
-    } else if (tile.type === 'blackhole') {
-      if (playSound) playSound('damage');
-      const isReset25 = Math.random() < 0.25;
-
-      if (isReset25) {
-        const prevRound = Math.max(1, gameState.round - 1);
-        const shuffled = shuffleTiles(gameState.tiles);
-        const updatedTeams = teamsList.map(t => ({
-          ...t,
-          position: Math.max(0, t.position - 3)
-        }));
-
-        setCategoryAnnouncement({
-          text: `💥 25% SPACETIME COLLAPSE! Map Reset to Orbit ${prevRound} Galaxy Layout & Palette!`,
-          color: '#ec4899'
-        });
-        setTimeout(() => setCategoryAnnouncement(null), 5000);
-
-        const updatedState = {
-          ...gameState,
-          teams: updatedTeams,
-          tiles: shuffled,
-          round: prevRound,
-          currentTeamIndex: (gameState.currentTeamIndex + 1) % updatedTeams.length
-        };
-        setGameState(updatedState);
-        broadcastGameState(updatedState);
-      } else {
-        team.position = Math.max(0, team.position - 4);
-        advanceTurn(teamsList);
-      }
     } else if (tile.type === 'vortex') {
       if (playSound) playSound('damage');
       const randOffset = Math.random() < 0.5 ? -3 : 3;
@@ -265,8 +234,7 @@ export default function BoardStage({
         shop: { text: '🛒 TROPHY STATION LANDED!', color: '#eab308' },
         chance: { text: '🎁 MYSTERY BOX LANDED!', color: '#ec4899' },
         start: { text: '🌍 LAUNCHPAD STATION LANDED!', color: '#10b981' },
-        trophy: { text: '⭐ GOAL SANCTUARY REACHED!', color: '#f59e0b' },
-        blackhole: { text: '🕳️ BLACK HOLE! GETTING PULLED BACK!', color: '#8b5cf6' }
+        trophy: { text: '⭐ GOAL SANCTUARY REACHED!', color: '#f59e0b' }
       };
 
       const info = tileLabels[landedTile.type] || { text: `🎯 ${(landedTile.label || landedTile.type).toUpperCase()} TILE LANDED!`, color: '#a855f7' };
@@ -490,7 +458,7 @@ export default function BoardStage({
                 {({
                   start: '🌍', trophy: '⭐', chance: '🪐', shop: '🛸', riddle: '🧩',
                   scramble: '🔤', pronunciation: '🗣️', association: '🔗', grammar: '✍️',
-                  speed: '☄️', roleplay: '💬', blackhole: '🕳️'
+                  speed: '☄️', roleplay: '💬'
                 })[hoveredPlanet.type] || '🌑'}
               </span>
               <span className={styles.planetHoverTitle}>
@@ -509,7 +477,6 @@ export default function BoardStage({
                   grammar: 'Grammar Trap — Correct sentence structures & grammar rules',
                   speed: 'Speed Challenge — Fast-paced rapid-reaction trivia question',
                   roleplay: 'Roleplay Scenario — Act out practical English conversation scenarios',
-                  blackhole: 'Black Hole — Hazard! 25% Spacetime Collapse anomaly or gravitational setback',
                   asteroid: 'Asteroid Belt — Gravitational collision field! Knockback maneuver pushes ship back -2 spaces',
                   vortex: 'Cosmic Vortex — Anomaly teleport! Warps your crew to a surprise position'
                 })[hoveredPlanet.type] || 'Language mission challenge planet'}

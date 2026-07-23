@@ -108,17 +108,10 @@ export default function LingoPartyGame() {
       .map((t, idx) => idx)
       .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
 
-    // 10% random Black Hole spawn probability on eligible tiles anywhere on the map
-    eligibleIdx.forEach((tileIdx) => {
-      if (Math.random() < 0.10) {
-        tiles[tileIdx] = { id: tileIdx, type: 'blackhole', label: 'Black Hole' };
-      }
-    });
-
     // Sprinkle remaining hazard planets (Cosmic Vortex, Asteroid Belt) on challenge tiles
     const remainingEligible = tiles
       .map((t, idx) => idx)
-      .filter(idx => !['start', 'trophy', 'chance', 'shop', 'blackhole'].includes(tiles[idx].type));
+      .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
 
     const hazardTypes = ['vortex', 'asteroid'];
     let hazardCount = Math.min(Math.floor(length / 7), 4);
