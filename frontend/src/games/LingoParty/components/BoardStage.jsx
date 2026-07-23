@@ -152,43 +152,29 @@ export default function BoardStage({
     const teamsCopy = gameState.teams.map(t => ({ ...t }));
     const curTeam = teamsCopy[gameState.currentTeamIndex];
 
-    if (winner.type === 'bonus') {
-      curTeam.trophies = (curTeam.trophies || 0) + 2;
-      setCategoryAnnouncement({ text: `🎁 BONUS REWARD! +2 Trophies Awarded to ${curTeam.name}!`, color: '#f59e0b' });
-      setTimeout(() => setCategoryAnnouncement(null), 4000);
-      setActiveModal(null);
-      advanceTurn(teamsCopy);
-    } else if (winner.type === 'warp') {
-      curTeam.position = Math.min(gameState.tiles.length - 1, curTeam.position + 2);
-      setCategoryAnnouncement({ text: `🚀 WARP BOOST! ${curTeam.name} advanced +2 planets!`, color: '#3b82f6' });
-      setTimeout(() => setCategoryAnnouncement(null), 4000);
-      setActiveModal(null);
-      advanceTurn(teamsCopy);
+    const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
+    const cardKey = c => c.prompt || c.word || c.scrambledWord || c.targetWord;
+    const matchingCards = deck.filter(c => c.type === winner.type);
+    const unusedCards = matchingCards.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
+
+    let pool;
+    if (unusedCards.length > 0) {
+      pool = unusedCards;
+    } else if (matchingCards.length > 0) {
+      matchingCards.forEach(c => usedChallengeKeysRef.current.delete(cardKey(c)));
+      pool = matchingCards;
     } else {
-      const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
-      const cardKey = c => c.prompt || c.word || c.scrambledWord || c.targetWord;
-      const matchingCards = deck.filter(c => c.type === winner.type);
-      const unusedCards = matchingCards.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
-
-      let pool;
-      if (unusedCards.length > 0) {
-        pool = unusedCards;
-      } else if (matchingCards.length > 0) {
-        matchingCards.forEach(c => usedChallengeKeysRef.current.delete(cardKey(c)));
-        pool = matchingCards;
-      } else {
-        const unusedAny = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
-        pool = unusedAny.length > 0 ? unusedAny : deck;
-      }
-
-      const chosen = pool[Math.floor(Math.random() * pool.length)];
-      if (chosen) {
-        usedChallengeKeysRef.current.add(cardKey(chosen));
-      }
-
-      setCurrentChallenge(chosen || { type: winner.type, prompt: `Answer a ${winner.type} question!` });
-      setActiveModal('challenge');
+      const unusedAny = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
+      pool = unusedAny.length > 0 ? unusedAny : deck;
     }
+
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    if (chosen) {
+      usedChallengeKeysRef.current.add(cardKey(chosen));
+    }
+
+    setCurrentChallenge(chosen || { type: winner.type, prompt: `Answer a ${winner.type} question!` });
+    setActiveModal('challenge');
   };
 
   const handleRollDice = async () => {

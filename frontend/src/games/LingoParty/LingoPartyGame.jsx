@@ -93,7 +93,7 @@ export default function LingoPartyGame() {
         tiles.push({ id: i, type: 'trophy', label: 'Goal Sanctuary' });
       } else if (i % 6 === 0) {
         tiles.push({ id: i, type: 'chance', label: 'Cosmic Fate' });
-      } else if (i % 5 === 0) {
+      } else if (i === Math.floor(length / 2)) {
         tiles.push({ id: i, type: 'shop', label: 'Space Station' });
       } else {
         // Assign challenge card type from deck or cycling types

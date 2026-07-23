@@ -8,9 +8,7 @@ const WHEEL_SEGMENTS = [
   { type: 'pronunciation', label: 'Speech', color: '#14b8a6', icon: '🗣️' },
   { type: 'grammar', label: 'Grammar', color: '#f43f5e', icon: '✍️' },
   { type: 'speed', label: 'Speed Trivia', color: '#eab308', icon: '⚡' },
-  { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬' },
-  { type: 'bonus', label: '+2 Trophies', color: '#f59e0b', icon: '🎁' },
-  { type: 'warp', label: 'Warp +2', color: '#3b82f6', icon: '🚀' }
+  { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬' }
 ];
 
 export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, playSound }) {
