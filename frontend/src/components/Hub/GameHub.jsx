@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './GameHub.module.css';
 import ApiKeyModal from '../Common/ApiKeyModal';
+import { getTeacherContext } from '../../services/platformApi';
 
 export default function GameHub() {
   const [serverHealth, setServerHealth] = useState({ status: 'checking', activeGames: 0 });
@@ -21,7 +22,10 @@ export default function GameHub() {
         setServerHealth({ status: 'offline', activeGames: 0 });
       });
 
-    setHasCustomKey(!!localStorage.getItem('berkai_gemini_api_key'));
+    const teacherContext = getTeacherContext();
+    setHasCustomKey(
+      teacherContext.keySource === 'teacher' && Boolean(teacherContext.geminiApiKey)
+    );
   }, [isApiKeyModalOpen]);
 
   const games = [
