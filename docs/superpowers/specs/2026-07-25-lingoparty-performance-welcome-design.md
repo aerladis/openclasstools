@@ -10,7 +10,7 @@ The wheel canvas will allocate its bitmap only when its displayed size or device
 
 ## Board Styling
 
-Capsule tiles and the style-cycle control are removed. The board will use the existing hex tile style as its single supported presentation.
+Capsule tiles are removed. Sphere and hex remain available through the style control. Each supports lightweight texture variants rather than new tile geometries: sphere variants use gas-giant swirl and cratered-moon surfaces; hex variants use nebula crystal, lunar-metal panel, and star-map circuit surfaces. Hexes use a 60-degree rotation (one sixth of a full turn) from the existing flat-top presentation.
 
 ## Welcome Screen
 
@@ -31,4 +31,4 @@ The selected mode travels with the generation request and saved-deck metadata. A
 
 ## Verification
 
-Verify wheel canvas dimensions stay stable while spinning, the board retains no capsule option, the welcome screen renders compact per-team emoji controls, saved decks are available from a fresh browser session, and generated roleplay wording matches Solo, Duo, and Crew modes. Run frontend lint/build and exercise the API endpoints.
+Verify wheel canvas dimensions stay stable while spinning, the board retains sphere and rotated-hex style options but no capsule option, the welcome screen renders compact per-team emoji controls, saved decks are available from a fresh browser session, and generated roleplay wording matches Solo, Duo, and Crew modes. Run frontend lint/build and exercise the API endpoints.
