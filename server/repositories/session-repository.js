@@ -167,6 +167,27 @@ function mapSession(row) {
     };
 }
 
+function mapAdminSession(row) {
+    const session = mapSession(row);
+    const deck = Array.isArray(row.deck) ? row.deck[0] : row.deck;
+    const version = Array.isArray(row.deck_version)
+        ? row.deck_version[0]
+        : row.deck_version;
+    return {
+        ...session,
+        deckName: deck?.name ?? null,
+        deckVersion: version ? {
+            id: version.id,
+            versionNumber: version.version_number,
+            source: version.source,
+            theme: version.theme ?? null,
+            cefrLevel: version.cefr_level ?? null,
+            teacherKeyUsed: Boolean(version.teacher_key_used),
+            createdAt: version.created_at
+        } : null
+    };
+}
+
 function translateDatabaseError(error) {
     switch (error?.databaseMessage) {
         case 'DECK_VERSION_MISMATCH':
@@ -244,6 +265,50 @@ export function createSessionRepository(client) {
             } catch (error) {
                 translateDatabaseError(error);
             }
+        },
+
+        async listAdmin({ limit, gameType } = {}) {
+            const pageSize = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
+            if (gameType && !isGameType(gameType)) {
+                throw new SessionValidationError('Game type is invalid', 'INVALID_GAME_TYPE');
+            }
+            const rows = await client.select('game_sessions', {
+                select: [
+                    'id',
+                    'room_code',
+                    'game_type',
+                    'teacher_display_name',
+                    'participant_names',
+                    'deck_id',
+                    'deck_version_id',
+                    'status',
+                    'result',
+                    'legacy_source_id',
+                    'started_at',
+                    'ended_at',
+                    'last_activity_at',
+                    'deck:decks(name)',
+                    'deck_version:deck_versions(id,version_number,source,theme,cefr_level,teacher_key_used,created_at)'
+                ].join(','),
+                filters: gameType ? { game_type: `eq.${gameType}` } : {},
+                order: 'started_at.desc',
+                limit: pageSize
+            });
+            const items = (rows || []).map(mapAdminSession);
+            return {
+                items,
+                nextCursor: null,
+                summary: {
+                    totalSessions: items.length,
+                    completedSessions: items.filter(item => item.status === 'completed').length,
+                    abandonedSessions: items.filter(item => item.status === 'abandoned').length,
+                    teacherKeyUsagePercent: items.length === 0
+                        ? 0
+                        : Math.round(
+                            (items.filter(item => item.deckVersion?.teacherKeyUsed).length / items.length) * 100
+                        )
+                }
+            };
         }
     });
 }

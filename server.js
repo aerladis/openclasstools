@@ -18,6 +18,13 @@ import { createGenerationService } from './server/services/generation-service.js
 import { createGenerationHandler } from './server/routes/generation-handler.js';
 import { createSessionRepository } from './server/repositories/session-repository.js';
 import { createSessionRouter } from './server/routes/sessions.js';
+import { createAdminSessionManager } from './server/security/admin-session.js';
+import {
+    attachAdminSocketAuthorization,
+    requireAuthorizedAdminSocket
+} from './server/security/admin-socket.js';
+import { createAdminAuthRouter } from './server/routes/admin-auth.js';
+import { createAdminDataRouter } from './server/routes/admin-data.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +47,11 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 8090;
 const platformConfig = loadConfig(process.env);
+const adminSessionManager = createAdminSessionManager({
+    passcode: platformConfig.adminPasscode,
+    secret: platformConfig.adminSessionSecret,
+    secure: platformConfig.cookieSecure
+});
 
 const platformDatabase = platformConfig.supabaseUrl && platformConfig.supabaseServiceRoleKey
     ? createSupabaseRestClient({
@@ -88,6 +100,12 @@ const sessionRepository = platformDatabase
         },
         async abandonStale() {
             return 0;
+        },
+        async listAdmin() {
+            const error = new Error('Session persistence is not configured');
+            error.status = 503;
+            error.code = 'SESSION_SERVICE_UNAVAILABLE';
+            throw error;
         }
     };
 
@@ -180,6 +198,13 @@ app.use(rateLimitMiddleware);
 // Request size limits
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use('/api/admin', createAdminAuthRouter({
+    sessionManager: adminSessionManager
+}));
+app.use('/api/admin', createAdminDataRouter({
+    sessionManager: adminSessionManager,
+    sessionRepository
+}));
 app.use('/api/decks', createDeckRouter({ repository: deckRepository }));
 app.use('/api/sessions', createSessionRouter({ repository: sessionRepository }));
 
@@ -222,6 +247,7 @@ setInterval(async () => {
 // ============================================
 
 io.on('connection', (socket) => {
+    attachAdminSocketAuthorization(socket, adminSessionManager);
     console.log('🔌 User connected:', socket.id);
 
     // Host joins a game room
@@ -270,6 +296,7 @@ io.on('connection', (socket) => {
 
     // Admin joins a game room
     socket.on('adminJoin', (gameId, callback) => {
+        if (!requireAuthorizedAdminSocket(socket, callback)) return;
         if (!gameId || typeof gameId !== 'string' || !/^[A-Z0-9]{4}$/i.test(gameId)) {
             if (callback) callback({ success: false, error: 'Invalid game ID format' });
             return;
@@ -343,6 +370,7 @@ io.on('connection', (socket) => {
 
     // Admin updates the word list on the host
     socket.on('updateWordListAdmin', (data) => {
+        if (!requireAuthorizedAdminSocket(socket)) return;
         if (!data || typeof data !== 'object') return;
         
         const gameId = data.gameId?.toUpperCase();
@@ -356,6 +384,7 @@ io.on('connection', (socket) => {
 
     // Admin sends commands to host (for Kelime Oyunu and similar games)
     socket.on('adminUpdateHost', (data) => {
+        if (!requireAuthorizedAdminSocket(socket)) return;
         if (!data || typeof data !== 'object') return;
         
         const gameId = data.gameId?.toUpperCase();
@@ -369,6 +398,7 @@ io.on('connection', (socket) => {
 
     // LingoParty real-time mobile classroom action (e.g., student rolling dice from phone or grading)
     socket.on('lingoAction', (data) => {
+        if (!requireAuthorizedAdminSocket(socket)) return;
         if (!data || typeof data !== 'object') return;
         const gameId = data.gameId?.toUpperCase();
         if (!gameId || !socket.gameId || socket.gameId !== gameId) return;
@@ -607,12 +637,6 @@ function buildGeminiGenerationConfig(options = {}) {
 
     return generationConfig;
 }
-
-// ============================================
-// Legacy admin telemetry reads (removed after dashboard migration)
-// ============================================
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 
 async function callGemini(prompt, options = {}) {
     const apiKey = options.apiKey || GEMINI_API_KEY;
@@ -1538,50 +1562,6 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     }
 }));
 
-// ---- Admin Telemetry API Endpoints ----
-app.get('/api/admin/telemetry', async (req, res) => {
-    try {
-        const sessionsRes = await fetch(`${SUPABASE_URL}/rest/v1/game_sessions?select=*&order=created_at.desc&limit=100`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        });
-        const sessions = await sessionsRes.json();
-
-        const totalSessions = Array.isArray(sessions) ? sessions.length : 0;
-        const customKeySessions = Array.isArray(sessions) ? sessions.filter(s => s.custom_api_key_used).length : 0;
-        const customKeyUsagePct = totalSessions > 0 ? Math.round((customKeySessions / totalSessions) * 100) : 0;
-        
-        const teacherNames = new Set(Array.isArray(sessions) ? sessions.map(s => s.teacher_name).filter(Boolean) : []);
-        const totalAIContentGenerated = Array.isArray(sessions) ? sessions.reduce((acc, s) => acc + (s.question_count || 0), 0) : 0;
-
-        res.json({
-            success: true,
-            sessions: Array.isArray(sessions) ? sessions : [],
-            overview: {
-                totalSessions,
-                totalAIContentGenerated,
-                activeTeachersCount: teacherNames.size,
-                customKeyUsagePct
-            }
-        });
-    } catch (err) {
-        console.error('Admin telemetry fetch error:', err);
-        res.status(500).json({ success: false, error: 'Failed to fetch telemetry data' });
-    }
-});
-
-app.get('/api/admin/session-logs/:gameId', async (req, res) => {
-    const { gameId } = req.params;
-    try {
-        const logsRes = await fetch(`${SUPABASE_URL}/rest/v1/game_activity_logs?game_id=eq.${gameId}&order=created_at.asc`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        });
-        const logs = await logsRes.json();
-        res.json({ success: true, logs: Array.isArray(logs) ? logs : [] });
-    } catch (err) {
-        res.status(500).json({ success: false, error: 'Failed to fetch session logs' });
-    }
-});
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -1591,9 +1571,8 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Redirect /admin to /admin.html for convenience
-app.get('/admin', (req, res) => {
-    res.redirect('/admin.html');
+app.get(['/admin', '/admin.html'], (_req, res) => {
+    res.redirect(302, '/control-center');
 });
 
 // ---- Serve static files (React + Vite build & legacy html) ----

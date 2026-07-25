@@ -107,11 +107,6 @@ export default function GameHub() {
     }
   ];
 
-  const isDevServer = typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  );
-
   return (
     <div className={styles.hubContainer}>
       <header className={styles.hubHeader}>
@@ -130,12 +125,6 @@ export default function GameHub() {
           >
             {hasCustomKey ? '🟢 Teacher Key Active' : '🔑 Teacher API Key'}
           </button>
-
-          {isDevServer && (
-            <Link to="/admin" className={styles.btnAdmin}>
-              🛡️ Admin Panel
-            </Link>
-          )}
 
           <div className={styles.statusBadge}>
             <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>

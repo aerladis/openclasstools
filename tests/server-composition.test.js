@@ -24,6 +24,24 @@ test('server mounts session lifecycle routes and stale cleanup before static fil
     assert.match(source, /sessionRepository\.abandonStale/);
 });
 
+test('server authenticates every privileged Socket.IO control path', async () => {
+    const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+
+    assert.match(source, /attachAdminSocketAuthorization\(socket, adminSessionManager\)/);
+    for (const eventName of [
+        'adminJoin',
+        'updateWordListAdmin',
+        'adminUpdateHost',
+        'lingoAction'
+    ]) {
+        const eventStart = source.indexOf(`socket.on('${eventName}'`);
+        const nextEvent = source.indexOf('socket.on(', eventStart + 1);
+        const handler = source.slice(eventStart, nextEvent > eventStart ? nextEvent : undefined);
+        assert.ok(eventStart >= 0, `${eventName} handler is missing`);
+        assert.match(handler, /requireAuthorizedAdminSocket\(socket/);
+    }
+});
+
 test('all content generators register named decks through the shared handler', async () => {
     const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
     const generationSection = source.slice(
