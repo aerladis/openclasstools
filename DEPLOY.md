@@ -1,47 +1,69 @@
-# Deployment Summary
+# Deployment
 
-## Date: 2026-03-07
+OpenClassTools requires the Node server, the built React frontend, and the Supabase schema. Do not expose the Supabase service-role key to browser code or commit it to Git.
 
-### Games Deployed
-1. **Who Am I?** - Character guessing game
-2. **Taboo** - Word description game  
-3. **Hangman** - Classic word guessing
-4. **Spin the Bottle** - Physics-based spinner
-5. **Wheel of Names** - Random selector
-6. **Kelime Oyunu** - Turkish word game with admin panel
-7. **Who Wants to Be a Millionaire** - Quiz show with lifelines
+## Required production environment
 
-### New Features
-- AI-powered question generation for all games
-- Admin panel with wordlist management
-- Improved security (rate limiting, CORS)
-- Session management for multiple games
-- Game ID collision prevention
+Create `/var/www/play.metrix.dpdns.org/.env` with:
 
-### API Endpoints
-- `POST /api/generate` - Who Am I characters
-- `POST /api/generate-taboo` - Taboo cards
-- `POST /api/generate-hangman` - Hangman words
-- `POST /api/generate-millionaire` - Millionaire questions
-- `POST /api/generate-kelime` - Kelime Oyunu questions
-- `GET /api/health` - Health check
+```env
+NODE_ENV=production
+PORT=8090
+ALLOWED_ORIGINS=https://play.metrix.dpdns.org
+GEMINI_API_KEY=your_platform_gemini_key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
+ADMIN_PASSCODE=your_long_administrator_passcode
+ADMIN_SESSION_SECRET=your_random_signing_secret
+```
 
-### Files Added
-- `millionaire.html/css/js` - New game
-- `MILLIONAIRE_PLAN.md` - Design documentation
-- `TEST_INSTRUCTIONS.md` - Testing guide
-- `deploy.sh` - Deployment script
-- `DEPLOY.md` - This file
+`SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSCODE`, and `ADMIN_SESSION_SECRET` are server-only secrets. Use a random signing secret of at least 32 characters.
 
-### Security Updates
-- Rate limiting: 100 req/min general, 10 req/15min AI
-- CORS configuration
-- Security headers
-- Input sanitization
+## Database rollout
 
-### Performance Optimizations
-- Debounced Socket.IO emits
-- Optimized particle animations
-- Batched DOM updates
-- GPU acceleration for animations
-- CSS containment
+1. Apply `supabase/migrations/20260725130600_persistent_platform_foundation.sql` to the intended Supabase project.
+2. Verify that `decks`, `deck_versions`, `game_sessions`, and `game_activity_logs` exist.
+3. Verify that `anon` and `authenticated` have no direct access to operational or legacy telemetry tables.
+4. With the production `.env` loaded, run `npm run seed:decks` once. The seed is idempotent.
+
+The migration retains recoverable legacy telemetry as explicitly marked legacy sessions. This repository intentionally includes no database dump or deployment archive.
+
+## VPS rollout
+
+From the project root on the VPS:
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The script preserves the server `.env`, refuses to start if the four persistent-platform secrets are missing, installs dependencies, builds React, configures Nginx/PM2, and restarts the app.
+
+For a manual update:
+
+```bash
+cd /var/www/play.metrix.dpdns.org
+git pull
+npm install
+npm run build
+npm run seed:decks
+pm2 restart openclasstools
+```
+
+## Post-deployment checks
+
+```bash
+pm2 status
+pm2 logs openclasstools
+curl -fsS https://play.metrix.dpdns.org/api/health
+```
+
+Then verify:
+
+- the canonical hub contains all ten games;
+- a registered deck can be selected;
+- a named generation creates a reusable deck;
+- a session appears at `/control-center`;
+- unauthenticated admin APIs return `401`;
+- `/admin` and `/admin.html` redirect to `/control-center`;
+- Socket.IO live controls work after administrator login.

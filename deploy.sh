@@ -2,7 +2,7 @@
 # OpenClassTools VPS Deployment Script
 # Deploys to: play.metrix.dpdns.org
 
-set -e
+set -euo pipefail
 
 echo "🚀 Starting deployment to play.metrix.dpdns.org..."
 
@@ -55,32 +55,45 @@ echo -e "${GREEN}✓ Application directory ready${NC}"
 echo -e "${YELLOW}Step 3: Copying application files...${NC}"
 
 # Copy all project files (excluding node_modules)
-rsync -av --exclude='node_modules' --exclude='.git' --exclude='deploy.tar.gz' ./ $APP_DIR/
+rsync -av \
+    --exclude='node_modules' \
+    --exclude='.git' \
+    --exclude='.env' \
+    --exclude='deploy.tar.gz' \
+    ./ "$APP_DIR/"
 
 echo -e "${GREEN}✓ Files copied${NC}"
 
-echo -e "${YELLOW}Step 4: Installing npm dependencies & building React frontend...${NC}"
+echo -e "${YELLOW}Step 4: Validating server environment...${NC}"
 
-cd $APP_DIR
+if [ ! -f "$APP_DIR/.env" ]; then
+    echo -e "${RED}Missing $APP_DIR/.env. Create it before deploying.${NC}"
+    exit 1
+fi
+
+required_vars=(
+    SUPABASE_URL
+    SUPABASE_SERVICE_ROLE_KEY
+    ADMIN_PASSCODE
+    ADMIN_SESSION_SECRET
+)
+
+for variable_name in "${required_vars[@]}"; do
+    if ! grep -Eq "^${variable_name}=.+" "$APP_DIR/.env"; then
+        echo -e "${RED}Missing required value ${variable_name} in $APP_DIR/.env${NC}"
+        exit 1
+    fi
+done
+
+echo -e "${GREEN}✓ Persistent-platform environment is present${NC}"
+
+echo -e "${YELLOW}Step 5: Installing npm dependencies & building React frontend...${NC}"
+
+cd "$APP_DIR"
 npm install
 npm run build
 
 echo -e "${GREEN}✓ Dependencies installed and React frontend built${NC}"
-
-echo -e "${YELLOW}Step 5: Setting up environment...${NC}"
-
-# Create .env if it doesn't exist
-if [ ! -f "$APP_DIR/.env" ]; then
-    if [ -f ".env" ]; then
-        cp .env $APP_DIR/.env
-        echo -e "${GREEN}✓ Environment file copied${NC}"
-    else
-        echo -e "${RED}⚠️  Warning: No .env file found. Please create one manually at $APP_DIR/.env${NC}"
-        echo "Required variables:"
-        echo "  GEMINI_API_KEY=your_api_key_here"
-        echo "  PORT=8090"
-    fi
-fi
 
 echo -e "${YELLOW}Step 6: Setting up Nginx configuration...${NC}"
 
