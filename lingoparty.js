@@ -57,8 +57,34 @@ function playSound(type) {
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
         osc.start(now);
         osc.stop(now + 0.7);
+    } else if (type === 'click' || type === 'button') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.08);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
     }
 }
+
+function logDebug(msg, type = 'info') {
+    const container = document.getElementById('ai-debug-container');
+    const logsList = document.getElementById('ai-debug-logs');
+    if (!container || !logsList) return;
+    container.classList.remove('hidden');
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = `debug-line ${type}`;
+    line.innerHTML = `<span class="debug-time">[${time}]</span> ${msg}`;
+    logsList.appendChild(line);
+    logsList.scrollTop = logsList.scrollHeight;
+}
+
+document.getElementById('btn-clear-debug')?.addEventListener('click', () => {
+    const logsList = document.getElementById('ai-debug-logs');
+    if (logsList) logsList.innerHTML = '';
+});
 
 /* === Section: Game State & Configuration === */
 const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -230,26 +256,54 @@ btnGenerateAi.addEventListener('click', async () => {
     const count = parseInt(boardLengthSelect.value, 10) || 22;
 
     btnGenerateAi.disabled = true;
-    btnGenerateAi.innerHTML = '✨ Generating Deck via Gemini...';
+    btnGenerateAi.innerHTML = '⚡ Generating AI Deck...';
+
+    const debugLogsEl = document.getElementById('ai-debug-logs');
+    if (debugLogsEl) debugLogsEl.innerHTML = '';
+
+    logDebug('🚀 Initializing Gemini AI Request...', 'info');
+    logDebug(`📌 Topic: "${topic}" | CEFR: ${cefr} | Target: 70 Challenges (10/type)`, 'info');
+
+    const startTime = Date.now();
 
     try {
+        logDebug('📡 Sending POST request to /api/generate-lingoparty...', 'info');
         const response = await fetch('/api/generate-lingoparty', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme: topic, count: count + 8, cefr })
+            body: JSON.stringify({ theme: topic, count: 70, cefr })
         });
 
+        logDebug(`📥 HTTP Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'warn');
         const data = await response.json();
+
         if (data.success && Array.isArray(data.cards) && data.cards.length > 0) {
-            startGameWithDeck(data.cards);
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+            logDebug(`✅ AI Success! Received ${data.cards.length} cards in ${elapsed}s`, 'success');
+
+            const counts = {};
+            data.cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
+            logDebug(`📊 Breakdown: ${JSON.stringify(counts)}`, 'info');
+
+            playSound('correct');
+            setTimeout(() => {
+                startGameWithDeck(data.cards);
+            }, 1200);
         } else {
-            alert('AI Generation returned limited cards. Using default deck mixed with generated cards!');
-            startGameWithDeck([...(data.cards || []), ...DEFAULT_DECK]);
+            logDebug(`⚠️ API returned error / fallback: ${data.error || 'Unknown error'}`, 'warn');
+            logDebug('🔄 Starting game with Default Deck mixed with generated cards', 'warn');
+            playSound('wrong');
+            setTimeout(() => {
+                startGameWithDeck([...(data.cards || []), ...DEFAULT_DECK]);
+            }, 1800);
         }
     } catch (err) {
-        console.error('AI Generation failed:', err);
-        alert('AI service error or timeout. Starting game with Default Deck!');
-        startGameWithDeck(DEFAULT_DECK);
+        logDebug(`❌ Fetch / Network Error: ${err.message}`, 'error');
+        logDebug('🔄 Starting game with Default Deck', 'warn');
+        playSound('wrong');
+        setTimeout(() => {
+            startGameWithDeck(DEFAULT_DECK);
+        }, 1800);
     } finally {
         btnGenerateAi.disabled = false;
         btnGenerateAi.innerHTML = '✨ AI Generate Deck';
@@ -303,8 +357,11 @@ function startGameWithDeck(deck) {
 
 /* === Section: Board Generation & Rendering === */
 function generateBoardTiles(totalLength) {
-    const tileTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'speed', 'grammar', 'roleplay'];
     gameState.tiles = [];
+
+    const chance1 = Math.floor(totalLength / 4);
+    const chance2 = Math.floor((3 * totalLength) / 4);
+    const shopIdx = Math.floor(totalLength / 2);
 
     for (let i = 0; i < totalLength; i++) {
         const coords = getMapCoordinates(i, totalLength);
@@ -312,51 +369,19 @@ function generateBoardTiles(totalLength) {
             gameState.tiles.push({ type: 'start', label: 'Start Base', icon: '🏁', x: coords.x, y: coords.y });
         } else if (i === totalLength - 1) {
             gameState.tiles.push({ type: 'finish', label: 'Trophy Goal', icon: '🏆', x: coords.x, y: coords.y });
-        } else if (i % 6 === 0) {
+        } else if (i === shopIdx) {
             gameState.tiles.push({ type: 'shop', label: 'Sanctuary', icon: '🛒', x: coords.x, y: coords.y });
-        } else if (i % 5 === 0) {
-            gameState.tiles.push({ type: 'chance', label: 'Mystery', icon: '🎁', x: coords.x, y: coords.y });
+        } else if (i === chance1 || i === chance2) {
+            gameState.tiles.push({ type: 'chance', label: 'Mystery Box', icon: '🎁', x: coords.x, y: coords.y });
         } else {
-            const randomType = tileTypes[i % tileTypes.length];
-            let icon = '🧩';
-            let label = 'Riddle';
-            if (randomType === 'scramble') { icon = '🔡'; label = 'Scramble'; }
-            if (randomType === 'pronunciation') { icon = '🗣️'; label = 'Speech'; }
-            if (randomType === 'association') { icon = '🔗'; label = 'Collocate'; }
-            if (randomType === 'speed') { icon = '⚡'; label = 'Speed Relay'; }
-            if (randomType === 'grammar') { icon = '🔍'; label = 'Grammar'; }
-            if (randomType === 'roleplay') { icon = '🎭'; label = 'Roleplay'; }
-
             gameState.tiles.push({
-                type: randomType,
-                label: label,
-                icon: icon,
+                type: 'challenge',
+                label: 'Challenge Tile',
+                icon: '🎯',
                 x: coords.x,
                 y: coords.y
             });
         }
-    }
-
-    // Sprinkle 1-2 Black Hole hazard planets on ordinary challenge tiles
-    const eligibleIndices = gameState.tiles
-        .map((t, idx) => idx)
-        .filter(idx => !['start', 'finish', 'shop', 'chance'].includes(gameState.tiles[idx].type));
-
-    let blackHoleCount = 0;
-    if (eligibleIndices.length > 0 && Math.random() < 0.65) blackHoleCount = 1;
-    if (eligibleIndices.length > 1 && blackHoleCount === 1 && Math.random() < 0.3) blackHoleCount = 2;
-
-    for (let n = 0; n < blackHoleCount && eligibleIndices.length > 0; n++) {
-        const pick = Math.floor(Math.random() * eligibleIndices.length);
-        const tileIdx = eligibleIndices.splice(pick, 1)[0];
-        const coords = gameState.tiles[tileIdx];
-        gameState.tiles[tileIdx] = {
-            type: 'blackhole',
-            label: 'Black Hole',
-            icon: '🕳️',
-            x: coords.x,
-            y: coords.y
-        };
     }
 }
 
@@ -428,6 +453,15 @@ function renderBoardTrack() {
         glowPath.setAttribute('class', 'map-path-glow');
         mapSvgEl.appendChild(glowPath);
 
+        const guidelinePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        guidelinePath.setAttribute('d', pathData);
+        guidelinePath.setAttribute('stroke', '#a855f7');
+        guidelinePath.setAttribute('stroke-width', '4');
+        guidelinePath.setAttribute('stroke-dasharray', '10 8');
+        guidelinePath.setAttribute('fill', 'none');
+        guidelinePath.setAttribute('opacity', '0.85');
+        mapSvgEl.appendChild(guidelinePath);
+
         const mainPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         mainPath.setAttribute('d', pathData);
         mainPath.setAttribute('class', 'map-path-main');
@@ -450,21 +484,18 @@ function renderBoardTrack() {
         nodeEl.addEventListener('mouseenter', () => {
             const hoverBarText = document.getElementById('planet-hover-text');
             if (hoverBarText) {
+                const isSpecial = ['start', 'finish', 'trophy', 'chance', 'shop'].includes(tile.type);
                 const descriptions = {
                     start: 'Launchpad Station — Starting origin for all space exploration crews',
-                    trophy: 'Victory Trophy Star — Claim a Star Trophy & +25 bonus coins!',
+                    finish: 'Victory Trophy Star — Land here to face the Final Boss and win!',
+                    trophy: 'Victory Trophy Star — Land here to face the Final Boss and win!',
                     chance: 'Mystery Box of Fate — Draw a cosmic fate card for rewards or hazards',
-                    shop: 'Space Station Shop — Purchase victory trophies, power-ups, and extra die rolls',
-                    riddle: 'Riddle Challenge — Solve brain-teaser riddles in English',
-                    scramble: 'Word Scramble — Unscramble letter tiles before time expires',
-                    pronunciation: 'Pronunciation Station — Read aloud with clear English pronunciation',
-                    association: 'Word Association — Connect related words & vocabulary concepts',
-                    grammar: 'Grammar Trap — Correct sentence structures & grammar rules',
-                    speed: 'Speed Challenge — Fast-paced rapid-reaction trivia question',
-                    roleplay: 'Roleplay Scenario — Act out practical English conversation scenarios'
+                    shop: 'Space Station Shop — Purchase victory trophies, power-ups, and extra die rolls'
                 };
-                const desc = descriptions[tile.type] || 'Language mission challenge planet';
-                hoverBarText.innerHTML = `<span style="font-size:1.2rem; margin-right:0.4rem;">${tile.icon || '🪐'}</span><strong style="color:#c4b5fd;">Planet #${index}: ${tile.label || tile.type.toUpperCase()}</strong> <span style="color:#94a3b8;">— ${desc}</span>`;
+                const desc = isSpecial ? (descriptions[tile.type] || 'Special planet') : 'Challenge Tile — Land here to spin the Wheel of Cosmic Fate!';
+                const label = isSpecial ? (tile.label || tile.type.toUpperCase()) : 'Challenge Tile';
+                const icon = isSpecial ? (tile.icon || '🪐') : '🎯';
+                hoverBarText.innerHTML = `<span style="font-size:1.2rem; margin-right:0.4rem;">${icon}</span><strong style="color:#c4b5fd;">Planet #${index}: ${label}</strong> <span style="color:#94a3b8;">— ${desc}</span>`;
             }
         });
         nodeEl.addEventListener('mouseleave', () => {
@@ -636,19 +667,13 @@ async function rollDice() {
 
         if (flashBanner && bannerText) {
             const tileLabels = {
-                riddle: '🧩 RIDDLE CHALLENGE LANDED!',
-                scramble: '🔤 WORD SCRAMBLE LANDED!',
-                pronunciation: '🗣️ PRONUNCIATION TRIAL LANDED!',
-                association: '🔗 WORD ASSOCIATION LANDED!',
-                grammar: '🔍 GRAMMAR TRAP LANDED!',
-                speed: '⚡ SPEED ROUND LANDED!',
-                roleplay: '🎭 ROLEPLAY ARENA LANDED!',
                 shop: '🛒 TROPHY STATION LANDED!',
                 chance: '🎁 MYSTERY BOX LANDED!',
                 start: '🌍 LAUNCHPAD STATION LANDED!',
-                finish: '⭐ GOAL SANCTUARY REACHED!'
+                finish: '⭐ GOAL SANCTUARY REACHED!',
+                trophy: '⭐ GOAL SANCTUARY REACHED!'
             };
-            bannerText.textContent = tileLabels[destinationTile.type] || `🎯 ${(destinationTile.type || 'CHALLENGE').toUpperCase()} TILE LANDED!`;
+            bannerText.textContent = tileLabels[destinationTile.type] || '🎯 CHALLENGE TILE LANDED!';
             flashBanner.classList.remove('hidden');
             playSound('correct');
         }
@@ -686,36 +711,21 @@ function handleTileAction(tileIndex, team) {
         openShopModal(team);
     } else if (tile.type === 'chance') {
         triggerMysteryBoxEvent(team);
-    } else if (tile.type === 'blackhole') {
-        playSound('damage');
-        team.position = Math.max(0, team.position - 4);
-        renderPawns();
-        setStatusMessage(`🕳️ BLACK HOLE HAZARD! ${team.name} got pulled back 4 spaces on the flight path!`, '#a78bfa');
-        advanceTurn();
-    } else if (tile.type === 'finish') {
-        playSound('trophy');
-        team.trophies += 1;
-        team.coins += 50;
-        alert(`🎉 CONGRATULATIONS! ${team.name} reached the Goal Sanctuary! They receive +1 Trophy 🏆 and +50 Coins!`);
-        advanceTurn();
-    } else if (['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'].includes(tile.type)) {
-        // Find a matching challenge card from deck
-        let matchingCardIndex = gameState.deck.findIndex(c => c.type === tile.type);
-        let card = matchingCardIndex !== -1 ? gameState.deck.splice(matchingCardIndex, 1)[0] : null;
-
-        if (!card) {
-            // Fallback if deck ran out of that exact type
-            card = DEFAULT_DECK.find(c => c.type === tile.type) || {
-                type: tile.type,
-                word: 'Surprise Challenge',
-                prompt: `Explain or complete any classroom English challenge!`,
-                coins: 15
-            };
-        }
-
+    } else if (tile.type === 'finish' || tile.type === 'trophy') {
+        // Boss challenge at end of board
+        let card = gameState.deck.length > 0 ? gameState.deck.shift() : null;
+        if (!card) card = { type: 'riddle', prompt: 'Solve the Boss Riddle to win!', answer: 'Victory' };
+        card.isBoss = true;
         openChallengeModal(card, team);
     } else {
-        advanceTurn();
+        // Standard challenge tile ➔ draw card from deck
+        let card = gameState.deck.length > 0 ? gameState.deck.shift() : null;
+        if (!card) {
+            const types = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'];
+            const randType = types[Math.floor(Math.random() * types.length)];
+            card = { type: randType, prompt: `Complete the ${randType} challenge!`, answer: 'Target' };
+        }
+        openChallengeModal(card, team);
     }
 }
 
@@ -837,7 +847,7 @@ function startTimer(seconds) {
             clearInterval(gameState.timerInterval);
             challengeTimeTextEl.textContent = '0s';
             challengeTimerFillEl.style.width = '0%';
-            playSound('wrong');
+            playSound('damage');
         } else {
             challengeTimeTextEl.textContent = `${gameState.timeLeft}s`;
             const percent = (gameState.timeLeft / totalTime) * 100;
@@ -858,12 +868,38 @@ function gradeChallenge(isCorrect) {
     const card = gameState.activeChallenge;
     const reward = card && card.coins ? card.coins : 15;
 
-    if (isCorrect) {
+    if (card && card.isBoss) {
+        if (isCorrect) {
+            playSound('trophy');
+            currentTeam.gibelCubes = (currentTeam.gibelCubes || 0) + 1;
+            currentTeam.trophies += 1;
+
+            if (currentTeam.gibelCubes >= 3) {
+                alert(`👑 VICTORY! ${currentTeam.name} defeated the Boss Challenge and acquired 3 Gibel Cubes!`);
+            } else {
+                // Reset ALL pawns to position 0 when board warps into next orbit!
+                gameState.teams.forEach(t => t.position = 0);
+                renderPawns();
+                setStatusMessage(`🧊 ${currentTeam.name} defeated the Boss Challenge & acquired Gibel Cube ${currentTeam.gibelCubes}/3! Board warped to Orbit ${gameState.round + 1}!`, '#38bdf8');
+            }
+        } else {
+            playSound('damage');
+            if (currentTeam.startPos !== undefined) {
+                currentTeam.position = currentTeam.startPos;
+            }
+            renderPawns();
+            setStatusMessage(`❌ ${currentTeam.name} failed the Boss Challenge and got pushed back!`, '#ef4444');
+        }
+    } else if (isCorrect) {
         playSound('correct');
         currentTeam.coins += reward;
+        currentTeam.trophies += 1;
     } else {
-        playSound('wrong');
-        // If grammar trap, losing penalty of 5 coins
+        playSound('damage');
+        if (currentTeam.startPos !== undefined) {
+            currentTeam.position = currentTeam.startPos;
+            renderPawns();
+        }
         if (card && card.type === 'grammar') {
             currentTeam.coins = Math.max(0, currentTeam.coins - 5);
         }

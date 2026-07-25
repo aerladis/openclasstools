@@ -65,16 +65,24 @@ const DEFAULT_DECK = [
   { type: 'truefalse', prompt: 'A dangling modifier is a grammatical error where the modifier doesn\'t clearly refer to the intended word.', answer: true }
 ];
 
-const PAWN_CHOICES = ['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬'];
-const DEFAULT_NAMES = ['Dragons', 'Rockets', 'Androids', 'Foxes', 'Bolts', 'Owls', 'Lions', 'Dolphins'];
+const EMOJI_PALETTE = ['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬', '👽', '🛸', '⭐', '🪐', '👾', '👑', '🔥', '💎', '🦄', '🐅', '🦅', '🦈'];
+const DEFAULT_NAMES = ['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H'];
 
 export default function SetupScreen({ onStartGame, playSound }) {
   const [teamCount, setTeamCount] = useState(3);
-  const [boardLength, setBoardLength] = useState(42);
+  const [boardLength, setBoardLength] = useState(30);
   const [cefr, setCefr] = useState('B1');
   const [topic, setTopic] = useState('General Classroom Vocabulary & Idioms');
-  const [customNames, setCustomNames] = useState(['Dragons', 'Rockets', 'Androids', 'Foxes', 'Bolts', 'Owls', 'Lions', 'Dolphins']);
+  const [baseColor, setBaseColor] = useState('#64748b');
+  const [customNames, setCustomNames] = useState(['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H']);
+  const [customPawns, setCustomPawns] = useState(['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬']);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [debugLogs, setDebugLogs] = useState([]);
+
+  const addLog = (msg, type = 'info') => {
+    const time = new Date().toLocaleTimeString();
+    setDebugLogs(prev => [...prev, { time, msg, type }]);
+  };
 
   const handleNameChange = (index, value) => {
     const next = [...customNames];
@@ -82,44 +90,85 @@ export default function SetupScreen({ onStartGame, playSound }) {
     setCustomNames(next);
   };
 
-  const handleStart = (useAi = false) => {
-    if (playSound) playSound('correct');
+  const handlePawnCycle = (index) => {
+    const nextPawns = [...customPawns];
+    const currentPawn = nextPawns[index] || EMOJI_PALETTE[index % EMOJI_PALETTE.length];
+    const currentIdx = EMOJI_PALETTE.indexOf(currentPawn);
+    nextPawns[index] = EMOJI_PALETTE[(currentIdx + 1) % EMOJI_PALETTE.length];
+    setCustomPawns(nextPawns);
+    if (playSound) playSound('roll');
+  };
 
+  const handleStart = async (useAi = false) => {
     const teams = Array.from({ length: teamCount }, (_, i) => ({
       id: `team-${i + 1}`,
       name: customNames[i] && customNames[i].trim() ? customNames[i].trim() : `${DEFAULT_NAMES[i % DEFAULT_NAMES.length]}`,
-      pawn: PAWN_CHOICES[i % PAWN_CHOICES.length],
+      pawn: customPawns[i] || EMOJI_PALETTE[i % EMOJI_PALETTE.length],
       position: 0,
       trophies: 1,
       items: []
     }));
 
     if (!useAi) {
-      onStartGame({ teams, boardLength, deck: DEFAULT_DECK });
+      if (playSound) playSound('correct');
+      onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK });
       return;
     }
 
     setIsGenerating(true);
-    fetch('/api/generate-lingoparty', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-gemini-api-key': localStorage.getItem('berkai_gemini_api_key') || '',
-        'x-teacher-name': localStorage.getItem('berkai_teacher_name') || ''
-      },
-      body: JSON.stringify({ theme: topic, cefr, count: 30 })
-    })
-      .then(res => res.json())
-      .then(data => {
-        setIsGenerating(false);
-        const generatedDeck = data?.success && data?.cards?.length > 0 ? data.cards : DEFAULT_DECK;
-        onStartGame({ teams, boardLength, deck: generatedDeck });
-      })
-      .catch(err => {
-        setIsGenerating(false);
-        console.error('AI Generation fallback:', err);
-        onStartGame({ teams, boardLength, deck: DEFAULT_DECK });
+    setDebugLogs([]);
+    addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
+    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Target: 30 Challenges`, 'info');
+
+    const startTime = Date.now();
+
+    try {
+      addLog('📡 Sending POST request to /api/generate-lingoparty...', 'info');
+      const res = await fetch('/api/generate-lingoparty', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-gemini-api-key': localStorage.getItem('berkai_gemini_api_key') || '',
+          'x-teacher-name': localStorage.getItem('berkai_teacher_name') || ''
+        },
+        body: JSON.stringify({ theme: topic, cefr, count: 30 })
       });
+
+      addLog(`📥 HTTP Status: ${res.status} ${res.statusText}`, res.ok ? 'success' : 'warn');
+      const data = await res.json();
+
+      if (data.success && !data.isFallback && data.cards && data.cards.length > 0) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        addLog(`✅ AI Success! ${data.cards.length} cards generated in ${elapsed}s`, 'success');
+
+        const counts = {};
+        data.cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
+        addLog(`📊 Category Breakdown: ${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(', ')}`, 'info');
+
+        if (playSound) playSound('correct');
+        setTimeout(() => {
+          setIsGenerating(false);
+          onStartGame({ teams, boardLength, baseColor, deck: data.cards });
+        }, 1200);
+      } else {
+        addLog(`⚠️ AI Error / Fallback: ${data.error || 'Gemini API key in .env is invalid or missing'}`, 'error');
+        addLog('💡 Click "🔑 Teacher Settings" in header to input a valid Gemini API Key!', 'warn');
+        addLog('🔄 Launching with Standard Offline Challenge Deck...', 'warn');
+        if (playSound) playSound('wrong');
+        setTimeout(() => {
+          setIsGenerating(false);
+          onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK });
+        }, 2200);
+      }
+    } catch (err) {
+      addLog(`❌ AI Generation Error: ${err.message}`, 'error');
+      addLog('🔄 Falling back to standard challenge deck', 'warn');
+      if (playSound) playSound('wrong');
+      setTimeout(() => {
+        setIsGenerating(false);
+        onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK });
+      }, 1800);
+    }
   };
 
   return (
@@ -149,11 +198,22 @@ export default function SetupScreen({ onStartGame, playSound }) {
               value={boardLength}
               onChange={e => setBoardLength(Number(e.target.value))}
             >
-              <option value={42}>42 Planets (Galactic Odyssey — Default)</option>
+              <option value={30}>30 Planets (Five-Row Voyage — Default)</option>
               <option value={24}>24 Planets (Quick Sprint ~20 min)</option>
               <option value={32}>32 Planets (Standard Voyage ~30 min)</option>
               <option value={54}>54 Planets (Deep Space Epic ~50 min)</option>
             </select>
+          </div>
+
+          <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+            <label>Standard Planet Color</label>
+            <input
+              type="color"
+              className={styles.inputField}
+              style={{ width: '100%', height: '50px', padding: '5px', cursor: 'pointer' }}
+              value={baseColor}
+              onChange={e => setBaseColor(e.target.value)}
+            />
           </div>
 
           {/* Custom Crew Naming Section */}
@@ -164,13 +224,28 @@ export default function SetupScreen({ onStartGame, playSound }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.8rem' }}>
               {Array.from({ length: teamCount }).map((_, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.6rem' }}>{PAWN_CHOICES[i % PAWN_CHOICES.length]}</span>
+                  <button
+                    type="button"
+                    onClick={() => handlePawnCycle(i)}
+                    title="Click to change crew emoji"
+                    style={{
+                      fontSize: '1.7rem',
+                      background: 'rgba(168, 85, 247, 0.2)',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      borderRadius: '12px',
+                      padding: '4px 10px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {customPawns[i] || EMOJI_PALETTE[i % EMOJI_PALETTE.length]}
+                  </button>
                   <input
                     type="text"
                     className={styles.inputField}
                     value={customNames[i] || ''}
                     onChange={e => handleNameChange(i, e.target.value)}
-                    placeholder={`Crew ${i + 1} Name`}
+                    placeholder={`Crew ${String.fromCharCode(65 + i)} Name`}
                   />
                 </div>
               ))}
@@ -217,6 +292,22 @@ export default function SetupScreen({ onStartGame, playSound }) {
               >
                 {isGenerating ? '⚡ Generating AI Challenge Deck & Charting Course...' : '✨ Generate AI Challenge Deck & Launch!'}
               </button>
+
+              {debugLogs.length > 0 && (
+                <div className={styles.debugBox}>
+                  <div className={styles.debugHeader}>
+                    <span>🛠️ AI Generation Live Debug Log</span>
+                    <button type="button" className={styles.debugClearBtn} onClick={() => setDebugLogs([])}>Clear</button>
+                  </div>
+                  <div className={styles.debugLogList}>
+                    {debugLogs.map((log, idx) => (
+                      <div key={idx} className={`${styles.debugLine} ${styles[log.type] || ''}`}>
+                        <span className={styles.debugTime}>[{log.time}]</span> {log.msg}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

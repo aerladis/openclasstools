@@ -116,10 +116,12 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     <div className={styles.modalOverlay}>
       <div className={`glass-card ${styles.challengeCard}`}>
         <div className={styles.headerRow}>
-          <span className={styles.typeBadge}>
-            {challenge.type === 'roleplay' ? '🎭 ROLEPLAY SCENARIO' : challenge.type === 'truefalse' ? '🔄 TRUE OR FALSE' : (challenge.type || 'Challenge')}
+          <span className={styles.typeBadge} style={challenge.isBoss ? { background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: '#fff', fontWeight: 'bold' } : {}}>
+            {challenge.isBoss ? '👑 BOSS CHALLENGE' : challenge.type === 'roleplay' ? '🎭 ROLEPLAY SCENARIO' : challenge.type === 'truefalse' ? '🔄 TRUE OR FALSE' : (challenge.type || 'Challenge').toUpperCase()}
           </span>
-          <span className={styles.coinsBadge}>+1 🏆 Trophy</span>
+          <span className={styles.coinsBadge} style={challenge.isBoss ? { background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38bdf8', color: '#38bdf8' } : {}}>
+            {challenge.isBoss ? '🧊 +1 Gibel Cube' : '+1 🏆 Trophy'}
+          </span>
         </div>
 
         <h2 className={styles.mainPrompt}>

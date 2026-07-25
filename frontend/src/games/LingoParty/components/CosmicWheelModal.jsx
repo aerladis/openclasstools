@@ -31,7 +31,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const size = 360;
+    const size = 520;
 
     canvas.width = size * dpr;
     canvas.height = size * dpr;
@@ -39,7 +39,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
 
     const cx = size / 2;
     const cy = size / 2;
-    const r = size / 2 - 12;
+    const r = size / 2 - 16;
     const n = WHEEL_SEGMENTS.length;
     const arc = (2 * Math.PI) / n;
 
@@ -61,8 +61,8 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       ctx.closePath();
       ctx.fillStyle = seg.color;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
       // Label text & icon
@@ -70,10 +70,10 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       ctx.rotate(startAngle + arc / 2);
       ctx.textAlign = 'right';
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 13px Outfit, sans-serif';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(`${seg.icon} ${seg.label}`, r - 16, 4);
+      ctx.font = '900 17px Outfit, sans-serif';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      ctx.shadowBlur = 6;
+      ctx.fillText(`${seg.icon} ${seg.label}`, r - 24, 6);
       ctx.restore();
     }
 
@@ -81,16 +81,16 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.strokeStyle = '#a855f7';
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 8;
     ctx.stroke();
 
     // Center hub cap
     ctx.beginPath();
-    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.arc(0, 0, 32, 0, Math.PI * 2);
     ctx.fillStyle = '#0f0c23';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 4;
     ctx.stroke();
 
     ctx.restore();
@@ -108,20 +108,19 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     const n = WHEEL_SEGMENTS.length;
     const arc = (2 * Math.PI) / n;
 
-    const minTurns = 6.5;
-    const extraTurns = Math.random() * 2.5;
+    const minTurns = 8.5;
+    const extraTurns = Math.random() * 3.5;
     const totalSpinDelta = -((minTurns + extraTurns) * Math.PI * 2 + Math.random() * Math.PI * 2);
 
     const startAngle = currentAngleRef.current;
-    const targetAngle = startAngle + totalSpinDelta;
-    const duration = 4500; // 4.5 seconds smooth physics spin
+    const duration = 7500; // 7.5 seconds long, dramatic slow-deceleration spin
     const startTime = performance.now();
     let lastSegmentIndex = -1;
 
     const animateSpin = (now) => {
       const elapsed = now - startTime;
       const t = Math.min(1, elapsed / duration);
-      const easeOut = 1 - Math.pow(1 - t, 4); // Quartic ease-out
+      const easeOut = 1 - Math.pow(1 - t, 5); // Quintic ease-out for ultra smooth slow stop
 
       const current = startAngle + totalSpinDelta * easeOut;
       currentAngleRef.current = current;
@@ -133,7 +132,6 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
 
       if (curSegIdx !== lastSegmentIndex) {
         lastSegmentIndex = curSegIdx;
-        if (playSound) playSound('correct');
       }
 
       if (t < 1) {
@@ -178,7 +176,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
           {selectedResult && (
             <div className={styles.resultBanner} style={{ '--res-color': selectedResult.color }}>
               <span className={styles.resIcon}>{selectedResult.icon}</span>
-              <span>{selectedResult.label} Selected!</span>
+              <span>{selectedResult.label}</span>
             </div>
           )}
         </div>

@@ -86,21 +86,20 @@ export default function LingoPartyGame() {
 
   const generateTiles = (length, deck) => {
     const tiles = [];
+    const chance1 = Math.floor(length / 4);
+    const chance2 = Math.floor((3 * length) / 4);
+
     for (let i = 0; i < length; i++) {
       if (i === 0) {
         tiles.push({ id: 0, type: 'start', label: 'Launch Pad' });
       } else if (i === length - 1) {
         tiles.push({ id: i, type: 'trophy', label: 'Goal Sanctuary' });
-      } else if (i % 6 === 0) {
+      } else if (i === chance1 || i === chance2) {
         tiles.push({ id: i, type: 'chance', label: 'Cosmic Fate' });
       } else if (i === Math.floor(length / 2)) {
         tiles.push({ id: i, type: 'shop', label: 'Space Station' });
       } else {
-        // Assign challenge card type from deck or cycling types
-        const types = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'];
-        const card = deck && deck[i % deck.length];
-        const assignedType = card?.type || types[i % types.length];
-        tiles.push({ id: i, type: assignedType, label: assignedType });
+        tiles.push({ id: i, type: 'challenge', label: 'Challenge Tile' });
       }
     }
 
@@ -128,7 +127,7 @@ export default function LingoPartyGame() {
     return tiles;
   };
 
-  const handleStartGame = useCallback(({ teams, boardLength, deck }) => {
+  const handleStartGame = useCallback(({ teams, boardLength, baseColor, deck }) => {
     const tiles = generateTiles(boardLength, deck);
     const initTeams = teams.map(t => ({
       ...t,
@@ -143,6 +142,7 @@ export default function LingoPartyGame() {
       activeScreen: 'board',
       teams: initTeams,
       boardLength,
+      baseColor,
       tiles,
       deck: deck || [],
       currentTeamIndex: 0,

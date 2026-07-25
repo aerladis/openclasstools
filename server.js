@@ -44,16 +44,16 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 function getProvider() {
-    if (ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.length > 10 && ANTHROPIC_API_KEY !== 'your-api-key-here') {
-        return 'anthropic';
-    }
     if (GEMINI_API_KEY && GEMINI_API_KEY.length > 10 && GEMINI_API_KEY !== 'your-api-key-here') {
         return 'gemini';
     }
     if (OPENAI_API_KEY && OPENAI_API_KEY.length > 10 && OPENAI_API_KEY !== 'your-api-key-here') {
         return 'openai';
     }
-    return null;
+    if (ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.length > 10 && ANTHROPIC_API_KEY !== 'your-api-key-here') {
+        return 'anthropic';
+    }
+    return 'gemini';
 }
 
 const AI_PROVIDER = getProvider();
@@ -519,8 +519,8 @@ async function callAnthropicProvider(prompt, options = {}) {
 
 function buildGeminiGenerationConfig(options = {}) {
     const {
-        temperature = 0.9,
-        maxOutputTokens = 4096,
+        temperature = 0.7,
+        maxOutputTokens = 8192,
         responseJsonSchema
     } = options;
 
@@ -545,7 +545,8 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || 'berkai2026';
 
 function extractTeacherContext(req) {
-    const customApiKey = req.headers['x-gemini-api-key'] || req.body?.apiKey || null;
+    const rawKey = req.headers['x-gemini-api-key'] || req.body?.apiKey || null;
+    const customApiKey = (rawKey && rawKey !== 'undefined' && rawKey.trim().length > 10) ? rawKey.trim() : null;
     const teacherName = req.headers['x-teacher-name'] || req.body?.teacherName || 'Anonymous Teacher';
     return {
         customApiKey,
@@ -592,6 +593,11 @@ async function logGameActivityToSupabase(logData) {
 }
 
 async function callGemini(prompt, options = {}) {
+    const apiKey = options.apiKey || GEMINI_API_KEY;
+    if (!apiKey || apiKey.length < 10 || apiKey.includes('your_api_key')) {
+        throw new Error('No valid Gemini API key provided. Set GEMINI_API_KEY in .env or enter your key in UI.');
+    }
+
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
     const generationConfig = buildGeminiGenerationConfig(options);
 
@@ -599,11 +605,12 @@ async function callGemini(prompt, options = {}) {
     const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
+        console.log(`🤖 [Gemini Request] Model: ${GEMINI_MODEL} | Prompt: ${prompt.slice(0, 80).replace(/\n/g, ' ')}... | KeyPrefix: ${apiKey.slice(0, 8)}...`);
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': options.apiKey || GEMINI_API_KEY
+                'x-goog-api-key': apiKey
             },
             body: JSON.stringify({
                 contents: [{
@@ -618,25 +625,28 @@ async function callGemini(prompt, options = {}) {
 
         if (!response.ok) {
             const errBody = await response.text();
-            console.error('Gemini API error:', errBody);
+            console.error('❌ [Gemini API Error Body]:', errBody);
 
-            let apiStatus;
-            try { apiStatus = JSON.parse(errBody)?.error?.status; } catch { /* non-JSON error body */ }
+            let apiStatus, apiMessage;
+            try {
+                const parsedErr = JSON.parse(errBody);
+                apiStatus = parsedErr?.error?.status;
+                apiMessage = parsedErr?.error?.message;
+            } catch { /* non-JSON error body */ }
 
-            const err = new Error('AI generation service unavailable');
-            // A daily project-wide quota (RESOURCE_EXHAUSTED) won't clear up within
-            // a few seconds — retrying immediately just burns more of the same quota
-            // for no benefit, so mark it non-retryable and fall back right away.
-            err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED';
+            const err = new Error(apiMessage || `Gemini API returned HTTP ${response.status} ${response.statusText}`);
+            err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400;
             err.quotaExceeded = apiStatus === 'RESOURCE_EXHAUSTED';
             throw err;
         }
 
         const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        console.log(`✨ [Gemini Response Success] Output length: ${textResult.length} characters`);
+        return textResult;
     } catch (err) {
         clearTimeout(timeout);
-        if (err.name === 'AbortError') throw new Error('AI generation timed out');
+        if (err.name === 'AbortError') throw new Error('Gemini API generation timed out (60s limit)');
         throw err;
     }
 }
@@ -697,10 +707,10 @@ async function callOpenAIProvider(prompt) {
 }
 
 async function callAI(prompt, options = {}) {
-    if (AI_PROVIDER === 'anthropic') return callAnthropicProvider(prompt, options);
-    if (AI_PROVIDER === 'gemini') return callGemini(prompt, options);
+    if (options.apiKey || AI_PROVIDER === 'gemini') return callGemini(prompt, options);
     if (AI_PROVIDER === 'openai') return callOpenAIProvider(prompt);
-    throw new Error('No AI provider configured. Set ANTHROPIC_API_KEY, GEMINI_API_KEY (free), or OPENAI_API_KEY in .env');
+    if (AI_PROVIDER === 'anthropic') return callAnthropicProvider(prompt, options);
+    return callGemini(prompt, options);
 }
 
 async function callTextAI(prompt, options = {}) {
@@ -813,6 +823,28 @@ function extractBalancedJson(text, openChar, closeChar) {
     return null;
 }
 
+function extractJsonObjects(text) {
+    const cleaned = cleanModelJsonText(text);
+    const results = [];
+    const objRegex = /\{\s*"type"\s*:\s*"[^"]+"\s*,[\s\S]*?\}/g;
+    let match;
+    while ((match = objRegex.exec(cleaned)) !== null) {
+        try {
+            const parsed = JSON.parse(match[0]);
+            if (parsed && parsed.type) {
+                results.push(parsed);
+            }
+        } catch {
+            try {
+                const repaired = match[0].replace(/,\s*}/g, '}');
+                const parsed = JSON.parse(repaired);
+                if (parsed && parsed.type) results.push(parsed);
+            } catch {}
+        }
+    }
+    return results;
+}
+
 function parseModelJson(text) {
     const cleaned = cleanModelJsonText(text);
 
@@ -823,7 +855,12 @@ function parseModelJson(text) {
         if (arrayJson) {
             try {
                 return JSON.parse(arrayJson);
-            } catch { /* fall through to object attempt */ }
+            } catch { /* fall through to object extraction */ }
+        }
+
+        const objects = extractJsonObjects(cleaned);
+        if (objects && objects.length > 0) {
+            return objects;
         }
 
         const objectJson = extractBalancedJson(cleaned, '{', '}');
@@ -1406,21 +1443,23 @@ app.post('/api/generate-flashcards', apiRateLimit, async (req, res) => {
 // ---- POST /api/generate-lingoparty (Interactive Board Game Deck) ----
 app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
     const theme = sanitizeTheme(req.body.theme) || 'General English';
-    const count = sanitizeCount(req.body.count, 24);
+    const count = sanitizeCount(req.body.count, 100);
     const cefr = sanitizeCEFR(req.body.cefr);
     const cefrInstruction = getCEFRInstruction(cefr);
     const { customApiKey, teacherName, options } = extractTeacherContext(req);
 
     try {
         const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
-        const cards = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
+        const rawResult = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
             ...options,
             temperature: 0.7,
-            validate: (result) => (!Array.isArray(result) || result.length === 0)
-                ? 'Invalid response format - expected array of challenge objects'
-                : null
+            validate: (result) => {
+                const list = Array.isArray(result) ? result : (result?.cards || result?.items || result?.challenges || []);
+                return (!list || list.length === 0) ? 'Invalid response format - expected non-empty array of challenge objects' : null;
+            }
         });
 
+        const cards = Array.isArray(rawResult) ? rawResult : (rawResult?.cards || rawResult?.items || rawResult?.challenges || []);
         const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'];
         const validCards = cards.filter(c => c && typeof c === 'object' && c.type && validTypes.includes(c.type)).map(c => {
             if (c.type === 'riddle') {
@@ -1489,7 +1528,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
     } catch (err) {
         console.warn(`[AI Fallback] /api/generate-lingoparty fallback for theme "${theme}":`, err.message);
         const fallbackCards = createFallbackQuestions('lingoparty', theme, count, { cefr });
-        res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
+        res.json({ success: false, error: err.message, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
     }
 });
 

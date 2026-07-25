@@ -45,7 +45,7 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
     setCurrentDesc(randomEvt.desc);
     setIsRevealed(true);
     setIsShuffling(false);
-    if (playSound) playSound(randomEvt.steps && randomEvt.steps < 0 ? 'wrong' : 'trophy');
+    if (playSound) playSound((randomEvt.steps && randomEvt.steps < 0) || (randomEvt.trophies && randomEvt.trophies < 0) ? 'damage' : 'trophy');
   };
 
   const handleClose = () => {

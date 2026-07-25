@@ -41,20 +41,20 @@
                         <h3>👥 Teams Setup</h3>
                         <div class="teams-list" id="teams-list">
                             <div class="team-setup-row" data-team="0">
-                                <span class="team-pawn red-pawn">🔴</span>
-                                <input type="text" class="theme-input team-name-input" value="Red Dragons" placeholder="Team 1 Name">
+                                <span class="team-pawn red-pawn" style="cursor:pointer;" title="Click to change emoji">🐉</span>
+                                <input type="text" class="theme-input team-name-input" value="Crew A" placeholder="Crew A Name">
                             </div>
                             <div class="team-setup-row" data-team="1">
-                                <span class="team-pawn blue-pawn">🔵</span>
-                                <input type="text" class="theme-input team-name-input" value="Blue Falcons" placeholder="Team 2 Name">
+                                <span class="team-pawn blue-pawn" style="cursor:pointer;" title="Click to change emoji">🚀</span>
+                                <input type="text" class="theme-input team-name-input" value="Crew B" placeholder="Crew B Name">
                             </div>
                             <div class="team-setup-row" data-team="2">
-                                <span class="team-pawn green-pawn">🟢</span>
-                                <input type="text" class="theme-input team-name-input" value="Green Vipers" placeholder="Team 3 Name">
+                                <span class="team-pawn green-pawn" style="cursor:pointer;" title="Click to change emoji">🤖</span>
+                                <input type="text" class="theme-input team-name-input" value="Crew C" placeholder="Crew C Name">
                             </div>
                             <div class="team-setup-row" data-team="3">
-                                <span class="team-pawn yellow-pawn">🟡</span>
-                                <input type="text" class="theme-input team-name-input" value="Yellow Lions" placeholder="Team 4 Name">
+                                <span class="team-pawn yellow-pawn" style="cursor:pointer;" title="Click to change emoji">🦊</span>
+                                <input type="text" class="theme-input team-name-input" value="Crew D" placeholder="Crew D Name">
                             </div>
                         </div>
                         <div class="team-count-controls">
@@ -103,6 +103,15 @@
                             <button id="btn-default-deck" class="btn-secondary">
                                 ▶️ Play Default Deck
                             </button>
+                        </div>
+
+                        <!-- AI Debug Log Console -->
+                        <div id="ai-debug-container" class="ai-debug-box hidden">
+                            <div class="debug-header">
+                                <span>🛠️ AI Generation Live Debug Log</span>
+                                <button type="button" id="btn-clear-debug" class="btn-debug-clear">Clear</button>
+                            </div>
+                            <div id="ai-debug-logs" class="debug-log-list"></div>
                         </div>
                     </div>
                 </div>

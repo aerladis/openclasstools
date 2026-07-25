@@ -13,12 +13,12 @@
 
 .wheelCard {
   width: 100%;
-  max-width: 480px;
-  background: rgba(22, 18, 48, 0.92);
+  max-width: 620px;
+  background: rgba(22, 18, 48, 0.94);
   border: 1px solid rgba(168, 85, 247, 0.35);
-  box-shadow: 0 0 40px rgba(168, 85, 247, 0.25);
-  border-radius: 24px;
-  padding: 1.8rem;
+  box-shadow: 0 0 50px rgba(168, 85, 247, 0.3);
+  border-radius: 28px;
+  padding: 2rem;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -26,7 +26,7 @@
 }
 
 .wheelHeader h2 {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   font-weight: 900;
   background: linear-gradient(135deg, #a855f7, #ec4899, #38bdf8);
   -webkit-background-clip: text;
@@ -36,14 +36,14 @@
 
 .turnSubtext {
   color: #94a3b8;
-  font-size: 0.92rem;
+  font-size: 1rem;
   margin-bottom: 1rem;
 }
 
 .canvasContainer {
   position: relative;
-  width: 360px;
-  height: 360px;
+  width: 520px;
+  height: 520px;
   margin: 0.5rem 0 1.2rem 0;
   display: flex;
   align-items: center;
@@ -52,13 +52,13 @@
 
 .pointer {
   position: absolute;
-  top: -12px;
+  top: -16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  font-size: 1.8rem;
+  font-size: 2.2rem;
   color: #f59e0b;
-  filter: drop-shadow(0 0 10px #f59e0b);
+  filter: drop-shadow(0 0 12px #f59e0b);
   animation: pulsePointer 1s infinite alternate;
 }
 
@@ -68,10 +68,10 @@
 }
 
 .wheelCanvas {
-  width: 360px;
-  height: 360px;
+  width: 520px;
+  height: 520px;
   border-radius: 50%;
-  filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.3));
+  filter: drop-shadow(0 0 24px rgba(168, 85, 247, 0.35));
 }
 
 .resultBanner {

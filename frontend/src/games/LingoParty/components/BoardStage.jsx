@@ -31,9 +31,7 @@ export default function BoardStage({
 
   const usedChallengeKeysRef = useRef(new Set());
 
-  const [tileStyle, setTileStyle] = useState(() => {
-    return localStorage.getItem('lingoparty_tile_style') || 'sphere';
-  });
+  const [tileStyle, setTileStyle] = useState('hex');
 
   const cycleTileStyle = () => {
     const STYLES = ['sphere', 'hex', 'capsule'];
@@ -101,34 +99,16 @@ export default function BoardStage({
       advanceTurn(teamsList);
     } else if (tile.type === 'trophy' || tile.type === 'finish') {
       if (playSound) playSound('trophy');
-      triggerConfetti();
 
-      if ((team.gibelCubes || 0) >= 3) {
-        setActiveModal('victory');
-      } else {
-        team.gibelCubes = (team.gibelCubes || 0) + 1;
-        team.trophies = (team.trophies || 0) + 1;
-        team.position = 0;
+      const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
+      const validCards = deck.filter(c => !usedChallengeKeysRef.current.has(c.prompt || c.word || c.scrambledWord || c.targetWord));
+      let pool = validCards.length > 0 ? validCards : deck;
+      let chosen = pool[Math.floor(Math.random() * pool.length)];
 
-        const nextRound = gameState.round + 1;
-        const shuffled = shuffleTiles(gameState.tiles);
+      if (!chosen) chosen = { type: 'riddle', prompt: 'Answer the Boss Riddle!', answer: 'Correct' };
 
-        setCategoryAnnouncement({
-          text: `🧊 +1 Gibel Cube Acquired! (${team.gibelCubes}/3) — Board Shuffled into Orbit ${nextRound}!`,
-          color: '#38bdf8'
-        });
-        setTimeout(() => setCategoryAnnouncement(null), 4500);
-
-        const updatedState = {
-          ...gameState,
-          teams: teamsList,
-          tiles: shuffled,
-          round: nextRound,
-          currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsList.length
-        };
-        setGameState(updatedState);
-        broadcastGameState(updatedState);
-      }
+      setCurrentChallenge({ ...chosen, isBoss: true });
+      setActiveModal('challenge');
     } else if (tile.type === 'chance') {
       setActiveModal('mystery');
     } else if (tile.type === 'shop') {
@@ -210,17 +190,18 @@ export default function BoardStage({
     const landedTile = gameState.tiles[curTeam.position];
     if (landedTile) {
       const tileLabels = {
-        riddle: { text: '🧩 RIDDLE CHALLENGE LANDED!', color: '#8b5cf6' },
-        scramble: { text: '🔤 WORD SCRAMBLE LANDED!', color: '#06b6d4' },
-        pronunciation: { text: '🗣️ PRONUNCIATION TRIAL LANDED!', color: '#14b8a6' },
-        association: { text: '🔗 WORD ASSOCIATION LANDED!', color: '#6366f1' },
-        grammar: { text: '🔍 GRAMMAR TRAP LANDED!', color: '#f43f5e' },
-        speed: { text: '⚡ SPEED ROUND LANDED!', color: '#eab308' },
-        roleplay: { text: '🎭 ROLEPLAY ARENA LANDED!', color: '#a855f7' },
+        riddle: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        scramble: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        pronunciation: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        association: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        grammar: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        speed: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        roleplay: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         shop: { text: '🛒 TROPHY STATION LANDED!', color: '#eab308' },
         chance: { text: '🎁 MYSTERY BOX LANDED!', color: '#ec4899' },
         start: { text: '🌍 LAUNCHPAD STATION LANDED!', color: '#10b981' },
-        trophy: { text: '⭐ GOAL SANCTUARY REACHED!', color: '#f59e0b' }
+        trophy: { text: '⭐ GOAL SANCTUARY REACHED!', color: '#f59e0b' },
+        challenge: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' }
       };
 
       const info = tileLabels[landedTile.type] || { text: `🎯 ${(landedTile.label || landedTile.type).toUpperCase()} TILE LANDED!`, color: '#a855f7' };
@@ -248,10 +229,52 @@ export default function BoardStage({
     const curTeam = teamsCopy[gameState.currentTeamIndex];
 
     if (result === 'correct') {
-      curTeam.trophies += trophies;
-      triggerConfetti();
+      if (currentChallenge?.isBoss) {
+        triggerConfetti();
+        curTeam.gibelCubes = (curTeam.gibelCubes || 0) + 1;
+        curTeam.trophies = (curTeam.trophies || 0) + 1;
+
+        if (curTeam.gibelCubes >= 3) {
+          setActiveModal('victory');
+          setCurrentChallenge(null);
+          return;
+        } else {
+          // Reset ALL teams back to start line when board warps into next orbit!
+          teamsCopy.forEach(t => {
+            t.position = 0;
+            t.startPos = 0;
+          });
+
+          const nextRound = gameState.round + 1;
+          const shuffled = shuffleTiles(gameState.tiles);
+
+          setCategoryAnnouncement({
+            text: `🧊 +1 Gibel Cube Acquired! (${curTeam.gibelCubes}/3) — Board Shuffled into Orbit ${nextRound}!`,
+            color: '#38bdf8'
+          });
+          setTimeout(() => setCategoryAnnouncement(null), 4500);
+
+          const updatedState = {
+            ...gameState,
+            teams: teamsCopy,
+            tiles: shuffled,
+            round: nextRound,
+            currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsCopy.length
+          };
+          setGameState(updatedState);
+          broadcastGameState(updatedState);
+
+          setActiveModal(null);
+          setCurrentChallenge(null);
+          return;
+        }
+      } else {
+        curTeam.trophies += trophies;
+        triggerConfetti();
+      }
     } else {
       // If answer is wrong or passed, pawn returns to pre-roll planet!
+      if (playSound) playSound('damage');
       if (curTeam.startPos !== undefined) {
         curTeam.position = curTeam.startPos;
       }
@@ -266,9 +289,13 @@ export default function BoardStage({
     const curTeam = teamsCopy[gameState.currentTeamIndex];
 
     if (eventResult) {
-      if (eventResult.trophies) curTeam.trophies = Math.max(0, curTeam.trophies + eventResult.trophies);
+      if (eventResult.trophies) {
+        if (eventResult.trophies < 0 && playSound) playSound('damage');
+        curTeam.trophies = Math.max(0, curTeam.trophies + eventResult.trophies);
+      }
       if (eventResult.steps) {
-        curTeam.position = Math.min(gameState.tiles.length - 1, curTeam.position + eventResult.steps);
+        if (eventResult.steps < 0 && playSound) playSound('damage');
+        curTeam.position = Math.min(gameState.tiles.length - 1, Math.max(0, curTeam.position + eventResult.steps));
       }
       if (eventResult.globalTrophies) {
         teamsCopy.forEach(t => t.trophies += eventResult.globalTrophies);
@@ -430,6 +457,7 @@ export default function BoardStage({
           teams={gameState.teams}
           tileStyle={tileStyle}
           round={gameState.round}
+          baseColor={gameState.baseColor}
           onTileClick={(tile) => {
             console.log('Tile inspection:', tile);
           }}
@@ -442,30 +470,22 @@ export default function BoardStage({
             <div className={styles.planetHoverContent}>
               <span className={styles.planetHoverIcon}>
                 {({
-                  start: '🌍', trophy: '⭐', chance: '🪐', shop: '🛸', riddle: '🧩',
-                  scramble: '🔤', pronunciation: '🗣️', association: '🔗', grammar: '✍️',
-                  speed: '☄️', roleplay: '💬'
-                })[hoveredPlanet.type] || '🌑'}
+                  start: '🌍', trophy: '⭐', chance: '🪐', shop: '🛸',
+                  asteroid: '☄️', vortex: '🌀'
+                })[hoveredPlanet.type] || '🎯'}
               </span>
               <span className={styles.planetHoverTitle}>
-                Planet #{hoveredPlanet.idx}: {hoveredPlanet.label || hoveredPlanet.type.toUpperCase()}
+                Planet #{hoveredPlanet.idx}: {['start', 'trophy', 'chance', 'shop', 'vortex', 'asteroid'].includes(hoveredPlanet.type) ? (hoveredPlanet.label || hoveredPlanet.type.toUpperCase()) : 'Challenge Tile'}
               </span>
               <span className={styles.planetHoverDesc}>
                 — {({
                   start: 'Launchpad Station — Starting origin for all space exploration crews',
-                  trophy: 'Victory Trophy Star — Land here for +2 bonus Trophies!',
+                  trophy: 'Victory Trophy Star — Land here to face the Final Boss and win!',
                   chance: 'Mystery Box of Fate — Draw a cosmic fate card for rewards or hazards',
                   shop: 'Space Station Shop — Spend Trophies on power-ups, attacks, and extra die rolls',
-                  riddle: 'Riddle Challenge — Solve brain-teaser riddles in English',
-                  scramble: 'Word Scramble — Unscramble letter tiles before time expires',
-                  pronunciation: 'Pronunciation Station — Read aloud with clear English pronunciation',
-                  association: 'Word Association — Connect related words & vocabulary concepts',
-                  grammar: 'Grammar Trap — Correct sentence structures & grammar rules',
-                  speed: 'Speed Challenge — Fast-paced rapid-reaction trivia question',
-                  roleplay: 'Roleplay Scenario — Act out practical English conversation scenarios',
                   asteroid: 'Asteroid Belt — Gravitational collision field! Knockback maneuver pushes ship back -2 spaces',
                   vortex: 'Cosmic Vortex — Anomaly teleport! Warps your crew to a surprise position'
-                })[hoveredPlanet.type] || 'Language mission challenge planet'}
+                })[hoveredPlanet.type] || 'Challenge Tile — Land here to spin the Wheel of Cosmic Fate!'}
               </span>
             </div>
           ) : (

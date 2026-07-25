@@ -21,8 +21,8 @@ export function getMapCoordinates(index, totalLength) {
 
   // Exact hexagonal honeycomb grid geometry
   const R = 120;
-  const Sx = R * Math.sqrt(3); // ~207.85px horizontal spacing between adjacent columns
-  const Sy = R * 1.5;          // 180px vertical center-to-center spacing between adjacent rows
+  const Sx = R * Math.sqrt(3); // ~207.85px horizontal spacing (hexes touch horizontally in same row)
+  const Sy = R * 1.5 + 22;     // 202px vertical spacing (creates clear vertical space between rows so hexes do NOT touch vertically)
 
   // Center the 6 columns + odd row stagger across 1600 width
   const totalGridWidth = (tilesPerRow - 1 + 0.5) * Sx; // 5.5 * 207.85 = 1143.15px
@@ -50,13 +50,14 @@ const TILE_CONFIG = {
   trophy:        { color: '#f59e0b', glow: 'rgba(245,158,11,0.5)', icon: '⭐',  label: 'GOAL',   cssClass: 'tileTrophy' },
   chance:        { color: '#ec4899', glow: 'rgba(236,72,153,0.5)', icon: '🪐',  label: 'FATE',   cssClass: 'tileChance' },
   shop:          { color: '#3b82f6', glow: 'rgba(59,130,246,0.5)', icon: '🛸',  label: 'SHOP',   cssClass: 'tileShop' },
-  riddle:        { color: '#8b5cf6', glow: 'rgba(139,92,246,0.5)', icon: '🧩',  label: 'Riddle' },
-  scramble:      { color: '#06b6d4', glow: 'rgba(6,182,212,0.5)',  icon: '🔤',  label: 'Scramble' },
-  pronunciation: { color: '#14b8a6', glow: 'rgba(20,184,166,0.5)', icon: '🗣️', label: 'Pronounce' },
-  association:   { color: '#6366f1', glow: 'rgba(99,102,241,0.5)', icon: '🔗',  label: 'Associate' },
-  grammar:       { color: '#f43f5e', glow: 'rgba(244,63,94,0.5)',  icon: '✍️',  label: 'Grammar' },
-  speed:         { color: '#eab308', glow: 'rgba(234,179,8,0.5)',  icon: '☄️',  label: 'Speed' },
-  roleplay:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '💬',  label: 'Roleplay' },
+  challenge:     { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  riddle:        { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  scramble:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  pronunciation: { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  association:   { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  grammar:       { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  speed:         { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
+  roleplay:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
   vortex:        { color: '#312e81', glow: 'rgba(99,102,241,0.9)', icon: '🌀', label: 'VORTEX', cssClass: 'tileVortex' },
   asteroid:      { color: '#451a03', glow: 'rgba(245,158,11,0.9)', icon: '☄️', label: 'ASTEROID', cssClass: 'tileAsteroid' },
 };
@@ -141,7 +142,7 @@ export function getOrbitTheme(orbitNumber = 1) {
 /* ═══════════════════════════════════════════════════════════════
    BoardMap Component — Space Odyssey Multi-Shape Widescreen Board
    ═══════════════════════════════════════════════════════════════ */
-export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere', round = 1, onTileClick, onHoverPlanet }) {
+export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', round = 1, baseColor, onTileClick, onHoverPlanet }) {
   const stars = useMemo(() => generateStars(90), []);
   const currentOrbitTheme = useMemo(() => getOrbitTheme(round), [round]);
 
@@ -208,26 +209,23 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
           </filter>
         </defs>
 
-        {/* ── Render connecting path lines ONLY for sphere & capsule modes (hidden for Honeycomb Hex mode) ── */}
-        {tileStyle !== 'hex' && (
-          <>
-            <path d={smoothPath} className={styles.mapPathGlow} />
-            <path d={smoothPath} className={styles.mapPathStardust} />
-            <path d={smoothPath} className={styles.mapPath} />
-          </>
-        )}
+        {/* ── Background Path Glow ── */}
+        <path d={smoothPath} className={styles.mapGuidelineGlow} />
+        <path d={smoothPath} className={styles.mapPathGlow} />
 
         {/* ── Planet Tile Nodes ── */}
         {tilePoints.map((tp) => {
           const conf = TILE_CONFIG[tp.type] || DEFAULT_CONF;
           const isSpecial = tp.type === 'start' || tp.type === 'trophy';
           const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'vortex', 'asteroid'].includes(tp.type);
-          const tileColor = isIconicTile ? conf.color : currentOrbitTheme.color;
-          const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
+
+          const defaultColor = baseColor || currentOrbitTheme.color;
+          const tileColor = isIconicTile ? conf.color : defaultColor;
+          const tileGlow = isIconicTile ? conf.glow : defaultColor;
 
           const total = tiles.length;
-          // Honeycomb grid scaling — exact radius 118 leaves 2px crisp grout border between adjacent touching hexagons of R=120
-          const hexRadius = 118;
+          // Hexagon radius 120 ensures adjacent horizontal hexes touch edge-to-edge
+          const hexRadius = 120;
 
           const baseRadius = total > 36 ? 56 : (total > 24 ? 64 : 72);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
@@ -262,11 +260,10 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
                 </>
               )}
 
-              {/* ── STYLE 2: HONEYCOMB SURFACE (Picture 2 Hex Floor Grid) ── */}
+              {/* ── STYLE 2: HONEYCOMB SURFACE (Hex Floor Grid) ── */}
               {tileStyle === 'hex' && (
                 <>
-                  <polygon points={getHexPoints(hexRadius + 2)} fill={tileColor} opacity="0.08" className={styles.tileGlowOuter} />
-                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2.5" />
+                  <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
                   <polygon points={getHexPoints(hexRadius * 0.88)} fill="none" stroke={tileColor} strokeWidth="1.5" opacity="0.7" />
                   {isIconicTile && (
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
@@ -291,6 +288,13 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'sphere',
             </g>
           );
         })}
+
+        {/* ── Overlay Animated Dashed Guideline & Stardust Flow ON TOP of hexes ── */}
+        <g style={{ pointerEvents: 'none' }}>
+          <path d={smoothPath} className={styles.mapGuidelineFlow} />
+          <path d={smoothPath} className={styles.mapPathStardust} />
+          <path d={smoothPath} className={styles.mapPath} />
+        </g>
 
         {/* ── ForeignObject overlay so pawn standees live right inside the exact SVG coordinate grid ── */}
         <foreignObject x="0" y="0" width="1600" height={svgHeight} style={{ overflow: 'visible', pointerEvents: 'none' }}>
