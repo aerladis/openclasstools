@@ -10,7 +10,7 @@ The wheel canvas will allocate its bitmap only when its displayed size or device
 
 ## Board Styling
 
-Capsule tiles are removed. Sphere and hex remain available through the style control. Each supports lightweight texture variants rather than new tile geometries: sphere variants use gas-giant swirl and cratered-moon surfaces; hex variants use nebula crystal, lunar-metal panel, and star-map circuit surfaces. Hexes use a 60-degree rotation (one sixth of a full turn) from the existing flat-top presentation.
+Capsule tiles are removed. Sphere and hex remain available through the style control. Hexes use the selected lunar-metal panel texture and a 60-degree rotation (one sixth of a full turn) from the existing flat-top presentation. Sphere tiles use varied planet textures per tile, including gas-giant swirl, cratered moon, ice world, lava world, and nebula planet surfaces. Fate Box tiles use an animated luminous gift-crate treatment; vortex hazards use a compact gravitational swirl; asteroid hazards use a fractured-rock treatment. These special tiles maintain high contrast against standard tiles and do not rely on heavy continuous filters.
 
 ## Welcome Screen
 
