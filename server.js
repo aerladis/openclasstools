@@ -14,6 +14,8 @@ import { loadConfig } from './server/config.js';
 import { createSupabaseRestClient } from './server/db/supabase-rest.js';
 import { createDeckRepository } from './server/repositories/deck-repository.js';
 import { createDeckRouter } from './server/routes/decks.js';
+import { createGenerationService } from './server/services/generation-service.js';
+import { createGenerationHandler } from './server/routes/generation-handler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,8 +60,15 @@ const deckRepository = platformDatabase
             error.status = 503;
             error.code = 'DECK_SERVICE_UNAVAILABLE';
             throw error;
+        },
+        async createGenerated() {
+            const error = new Error('Deck persistence is not configured');
+            error.status = 503;
+            error.code = 'DECK_SERVICE_UNAVAILABLE';
+            throw error;
         }
     };
+const generationService = createGenerationService({ deckRepository });
 
 // ============================================
 // AI Provider: auto-detect Anthropic, Gemini (free), or OpenAI
@@ -568,59 +577,10 @@ function buildGeminiGenerationConfig(options = {}) {
 }
 
 // ============================================
-// Supabase Telemetry & Custom Teacher Key Support
+// Legacy admin telemetry reads (removed after dashboard migration)
 // ============================================
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tomgxxgkhfviwbbvxzsl.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
-const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || 'berkai2026';
-
-function extractTeacherContext(req) {
-    const rawKey = req.headers['x-gemini-api-key'] || req.body?.apiKey || null;
-    const customApiKey = (rawKey && rawKey !== 'undefined' && rawKey.trim().length > 10) ? rawKey.trim() : null;
-    const teacherName = req.headers['x-teacher-name'] || req.body?.teacherName || 'Anonymous Teacher';
-    return {
-        customApiKey,
-        teacherName,
-        options: customApiKey ? { apiKey: customApiKey } : {}
-    };
-}
-
-async function logGameSessionToSupabase(sessionData) {
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/game_sessions`, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(sessionData)
-        });
-        if (!response.ok) return null;
-        const data = await response.json();
-        return data?.[0] || null;
-    } catch (err) {
-        console.warn('[Supabase Telemetry] Session log skipped:', err.message);
-        return null;
-    }
-}
-
-async function logGameActivityToSupabase(logData) {
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/game_activity_logs`, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(logData)
-        });
-    } catch (err) {
-        console.warn('[Supabase Telemetry] Activity log skipped:', err.message);
-    }
-}
 
 async function callGemini(prompt, options = {}) {
     const apiKey = options.apiKey || GEMINI_API_KEY;
@@ -635,7 +595,7 @@ async function callGemini(prompt, options = {}) {
     const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
-        console.log(`🤖 [Gemini Request] Model: ${GEMINI_MODEL} | Prompt: ${prompt.slice(0, 80).replace(/\n/g, ' ')}... | KeyPrefix: ${apiKey.slice(0, 8)}...`);
+        console.log(`🤖 [Gemini Request] Model: ${GEMINI_MODEL} | Prompt length: ${prompt.length}`);
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -655,7 +615,7 @@ async function callGemini(prompt, options = {}) {
 
         if (!response.ok) {
             const errBody = await response.text();
-            console.error('❌ [Gemini API Error Body]:', errBody);
+            console.error(`❌ [Gemini API Error] HTTP ${response.status} ${response.statusText}`);
 
             let apiStatus, apiMessage;
             try {
@@ -1234,99 +1194,96 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
 // ============================================
 
 // ---- POST /api/generate (Who Am I? characters) ----
-app.post('/api/generate', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'iconic characters';
-    const count = sanitizeCount(req.body.count, 50);
-
-    try {
+app.post('/api/generate', apiRateLimit, createGenerationHandler({
+    gameType: 'who',
+    contentKey: 'characters',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'iconic characters',
+        count: sanitizeCount(body.count, 50)
+    }),
+    generate: async ({ theme, count }, { apiKey }) => {
         const prompt = loadPrompt('who_am_i', { count, theme });
-        const text = await callTextAI(prompt);
-
+        const text = await callTextAI(prompt, { apiKey });
         const names = text
             .split('\n')
-            .map(l => l.replace(/^\d+[\.\)\-]\s*/, '').trim())
-            .filter(l => l && !l.startsWith('---') && !l.startsWith('**'));
-
-        if (names.length === 0) throw new Error('Empty list returned from AI');
-
-        const listContent = names.join('\n') + '\n';
-        fs.writeFileSync(path.join(__dirname, 'list.txt'), listContent, 'utf-8');
-
-        res.json({ success: true, count: names.length, characters: names });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate fallback for theme "${theme}":`, err.message);
-        const fallbackNames = createFallbackQuestions('who', theme, count);
-        const listContent = fallbackNames.join('\n') + '\n';
-        try { fs.writeFileSync(path.join(__dirname, 'list.txt'), listContent, 'utf-8'); } catch {}
-        res.json({ success: true, count: fallbackNames.length, characters: fallbackNames, isFallback: true });
+            .map(line => line.replace(/^\d+[\.\)\-]\s*/, '').trim())
+            .filter(line => line && !line.startsWith('---') && !line.startsWith('**'))
+            .slice(0, count);
+        if (names.length === 0) throw new Error('Empty AI result');
+        return names;
     }
-});
+}));
 
 // ---- POST /api/generate-taboo (Taboo cards) ----
-app.post('/api/generate-taboo', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
-    const count = sanitizeCount(req.body.count, 30);
-
-    try {
+app.post('/api/generate-taboo', apiRateLimit, createGenerationHandler({
+    gameType: 'taboo',
+    contentKey: 'cards',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'general knowledge',
+        count: sanitizeCount(body.count, 30)
+    }),
+    generate: async ({ theme, count }, { apiKey }) => {
         const prompt = loadPrompt('taboo', { count, theme });
         const cards = await callJsonAI(prompt, TABOO_CARD_SCHEMA, {
+            apiKey,
             temperature: 0.7,
             validate: (result) => (!Array.isArray(result) || result.length === 0) ? 'Invalid response format' : null
         });
-
-        const validCards = cards.filter(c =>
-            c.word && Array.isArray(c.forbidden) && c.forbidden.length >= 3
-        );
-
-        if (validCards.length === 0) throw new Error('No valid Taboo cards parsed');
-
-        res.json({ success: true, count: validCards.length, cards: validCards });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-taboo fallback for theme "${theme}":`, err.message);
-        const fallbackCards = createFallbackQuestions('taboo', theme, count);
-        res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
+        return cards.slice(0, count);
     }
-});
+}));
 
 // ---- POST /api/generate-hangman (Hangman words) ----
-app.post('/api/generate-hangman', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'common words';
-    const count = sanitizeCount(req.body.count, 20);
-
-    try {
+app.post('/api/generate-hangman', apiRateLimit, createGenerationHandler({
+    gameType: 'hangman',
+    contentKey: 'words',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'common words',
+        count: sanitizeCount(body.count, 20)
+    }),
+    generate: async ({ theme, count }, { apiKey }) => {
         const prompt = loadPrompt('hangman', { count, theme });
-        const text = await callTextAI(prompt);
-
+        const text = await callTextAI(prompt, { apiKey });
         const words = text
             .split('\n')
-            .map(l => l.trim().toUpperCase())
-            .filter(l => l.length >= 4 && l.length <= 10 && /^[A-Z]+$/.test(l));
-
-        if (words.length === 0) throw new Error('No valid Hangman words parsed');
-
-        res.json({ success: true, count: words.length, words: words });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-hangman fallback for theme "${theme}":`, err.message);
-        const fallbackWords = createFallbackQuestions('hangman', theme, count);
-        res.json({ success: true, count: fallbackWords.length, words: fallbackWords, isFallback: true });
+            .map(line => line.trim().toUpperCase())
+            .filter(line => line.length >= 3 && line.length <= 60 && /^[A-ZÀ-ÖØ-ÝÇĞİÖŞÜ\s'-]+$/u.test(line))
+            .slice(0, count);
+        if (words.length === 0) throw new Error('Empty AI result');
+        return words;
     }
-});
+}));
 
 // ---- POST /api/generate-kelime (Word Game questions) ----
-app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
-    const count = sanitizeCount(req.body.count, 30);
-    const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
-    const cefrInstruction = buildWordGameCefrInstruction(cefrLevel);
-
-    try {
+app.post('/api/generate-kelime', apiRateLimit, createGenerationHandler({
+    gameType: 'kelime',
+    contentKey: 'questions',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'general knowledge',
+        count: sanitizeCount(body.count, 30),
+        cefrLevel: sanitizeCefrLevel(body.cefrLevel)
+    }),
+    generate: async ({ theme, count, cefrLevel }, { apiKey }) => {
+        const cefrInstruction = buildWordGameCefrInstruction(cefrLevel);
         const prompt = loadPrompt('kelime', { count, theme, cefrInstruction: cefrInstruction || '' });
         const questions = await callJsonAI(prompt, WORD_GAME_SCHEMA, {
+            apiKey,
             temperature: 0.7,
             validate: (result) => !Array.isArray(result) ? 'Invalid response format' : null
         });
-
-        const validQuestions = sortWordGameQuestionsByAnswerLength(questions.filter(q =>
+        return sortWordGameQuestionsByAnswerLength(questions.filter(q =>
             q.question && 
             q.answer && 
             q.answer.length >= 3 && 
@@ -1335,24 +1292,24 @@ app.post('/api/generate-kelime', apiRateLimit, async (req, res) => {
             question: q.question,
             answer: q.answer.toUpperCase().trim()
         })).slice(0, count));
-
-        if (validQuestions.length === 0) throw new Error('No valid Word Game questions parsed');
-
-        res.json({ success: true, count: validQuestions.length, questions: validQuestions });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-kelime fallback for theme "${theme}":`, err.message);
-        const fallbackQuestions = createFallbackQuestions('kelime', theme, count);
-        res.json({ success: true, count: fallbackQuestions.length, questions: fallbackQuestions, isFallback: true });
     }
-});
+}));
 
 // ---- POST /api/generate-millionaire (Millionaire questions) ----
-app.post('/api/generate-millionaire', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'general knowledge';
-
-    try {
+app.post('/api/generate-millionaire', apiRateLimit, createGenerationHandler({
+    gameType: 'millionaire',
+    contentKey: 'questions',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'general knowledge',
+        count: 15
+    }),
+    generate: async ({ theme }, { apiKey }) => {
         const prompt = loadPrompt('millionaire', { theme });
         const questions = await callJsonAI(prompt, MILLIONAIRE_SCHEMA, {
+            apiKey,
             temperature: 0.6,
             validate: (result) => (!Array.isArray(result) || result.length < 10)
                 ? 'Invalid response format - expected at least 10 questions'
@@ -1367,25 +1324,25 @@ app.post('/api/generate-millionaire', apiRateLimit, async (req, res) => {
             q.correct >= 0 && 
             q.correct <= 3
         ).slice(0, 15);
-
         if (validQuestions.length < 10) {
             throw new Error('Not enough valid questions');
         }
-
-        res.json({ success: true, count: validQuestions.length, questions: validQuestions });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-millionaire fallback for theme "${theme}":`, err.message);
-        const fallbackQuestions = createFallbackQuestions('millionaire', theme, 15);
-        res.json({ success: true, count: fallbackQuestions.length, questions: fallbackQuestions, isFallback: true });
+        return validQuestions;
     }
-});
+}));
 
 // ---- POST /api/generate-hats (6 Thinking Hats prompts) ----
-app.post('/api/generate-hats', apiRateLimit, async (req, res) => {
-    const topic = sanitizeTheme(req.body.topic) || 'general topic';
-    const cefrLevel = sanitizeCefrLevel(req.body.cefrLevel);
-
-    try {
+app.post('/api/generate-hats', apiRateLimit, createGenerationHandler({
+    gameType: 'hats',
+    contentKey: 'hats',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        topic: sanitizeTheme(body.topic) || 'general topic',
+        cefrLevel: sanitizeCefrLevel(body.cefrLevel)
+    }),
+    generate: async ({ topic, cefrLevel }, { apiKey }) => {
         let cefrInstruction = '';
         if (cefrLevel) {
             const levelGuides = {
@@ -1408,6 +1365,7 @@ Return ONLY valid JSON array with 6 objects for colors: white, red, black, yello
 ]`;
 
         const parsed = await callJsonAI(prompt, THINKING_HATS_SCHEMA, {
+            apiKey,
             temperature: 0.7,
             validate: (result) => (!Array.isArray(result) || result.length < 6)
                 ? 'Invalid response format — expected 6 hat objects'
@@ -1431,57 +1389,56 @@ Return ONLY valid JSON array with 6 objects for colors: white, red, black, yello
             starters: colorMap[color]?.starters || []
         }));
 
-        res.json({ success: true, topic, hats });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-hats fallback for topic "${topic}":`, err.message);
-        const fallbackHats = createFallbackQuestions('hats', topic, 6);
-        res.json({ success: true, topic, hats: fallbackHats, isFallback: true });
+        return hats;
     }
-});
+}));
 
 // ---- POST /api/generate-flashcards (Vocabulary Flashcards) ----
-app.post('/api/generate-flashcards', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'daily vocabulary';
-    const count = sanitizeCount(req.body.count, 20);
-
-    try {
+app.post('/api/generate-flashcards', apiRateLimit, createGenerationHandler({
+    gameType: 'flashcards',
+    contentKey: 'cards',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'daily vocabulary',
+        count: sanitizeCount(body.count, 20)
+    }),
+    generate: async ({ theme, count }, { apiKey }) => {
         const prompt = loadPrompt('flashcards', { count, theme });
-        const cards = parseModelJson(await callGemini(prompt));
+        const cards = parseModelJson(await callGemini(prompt, { apiKey }));
 
         if (!Array.isArray(cards)) {
             throw new Error('Invalid response format - expected array of cards');
         }
 
-        const validCards = cards.filter(c =>
+        return cards.filter(c =>
             c.word && typeof c.word === 'string' && c.word.trim().length > 0 &&
             c.meaning && typeof c.meaning === 'string' && c.meaning.trim().length > 0
         ).map(c => ({
             word: c.word.trim(),
             meaning: c.meaning.trim()
         })).slice(0, count);
-
-        if (validCards.length === 0) throw new Error('No valid flashcards parsed');
-
-        res.json({ success: true, count: validCards.length, cards: validCards });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-flashcards fallback for theme "${theme}":`, err.message);
-        const fallbackCards = createFallbackQuestions('flashcards', theme, count);
-        res.json({ success: true, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
     }
-});
+}));
 
 // ---- POST /api/generate-lingoparty (Interactive Board Game Deck) ----
-app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
-    const theme = sanitizeTheme(req.body.theme) || 'General English';
-    const count = sanitizeCount(req.body.count, 100);
-    const cefr = sanitizeCEFR(req.body.cefr);
-    const cefrInstruction = getCEFRInstruction(cefr);
-    const { customApiKey, teacherName, options } = extractTeacherContext(req);
-
-    try {
+app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
+    gameType: 'lingoparty',
+    contentKey: 'cards',
+    geminiApiKey: GEMINI_API_KEY,
+    generationService,
+    aiModel: GEMINI_MODEL,
+    parseInput: body => ({
+        theme: sanitizeTheme(body.theme) || 'General English',
+        count: sanitizeCount(body.count, 100),
+        cefr: sanitizeCEFR(body.cefr)
+    }),
+    generate: async ({ theme, count, cefr }, { apiKey }) => {
+        const cefrInstruction = getCEFRInstruction(cefr);
         const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
         const rawResult = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
-            ...options,
+            apiKey,
             temperature: 0.7,
             validate: (result) => {
                 const list = Array.isArray(result) ? result : (result?.cards || result?.items || result?.challenges || []);
@@ -1490,7 +1447,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
         });
 
         const cards = Array.isArray(rawResult) ? rawResult : (rawResult?.cards || rawResult?.items || rawResult?.challenges || []);
-        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'];
+        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'truefalse'];
         const validCards = cards.filter(c => c && typeof c === 'object' && c.type && validTypes.includes(c.type)).map(c => {
             if (c.type === 'riddle') {
                 return {
@@ -1530,6 +1487,12 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
                     prompt: String(c.prompt || 'Name 3 words related to the topic in 15 seconds.').trim(),
                     answer: String(c.answer || 'Any 3 valid words').trim()
                 };
+            } else if (c.type === 'truefalse') {
+                return {
+                    type: 'truefalse',
+                    prompt: String(c.prompt || 'Decide whether the statement is true or false.').trim(),
+                    answer: Boolean(c.answer)
+                };
             } else {
                 return {
                     type: 'roleplay',
@@ -1539,28 +1502,9 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
             }
         });
 
-        if (validCards.length === 0) throw new Error('No valid LingoParty cards parsed');
-
-        const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-        logGameSessionToSupabase({
-            game_type: 'lingoparty',
-            game_id: gameId,
-            teacher_name: teacherName,
-            theme,
-            cefr_level: cefr,
-            teams_count: 3,
-            team_names: ['Dragons', 'Rockets', 'Androids'],
-            question_count: validCards.length,
-            custom_api_key_used: !!customApiKey
-        });
-
-        res.json({ success: true, gameId, count: validCards.length, cards: validCards });
-    } catch (err) {
-        console.warn(`[AI Fallback] /api/generate-lingoparty fallback for theme "${theme}":`, err.message);
-        const fallbackCards = createFallbackQuestions('lingoparty', theme, count, { cefr });
-        res.json({ success: false, error: err.message, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
+        return validCards.slice(0, count);
     }
-});
+}));
 
 // ---- Admin Telemetry API Endpoints ----
 app.get('/api/admin/telemetry', async (req, res) => {

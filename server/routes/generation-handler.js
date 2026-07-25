@@ -1,0 +1,73 @@
+import { extractTeacherContext } from '../http/teacher-context.js';
+
+const SAFE_ERROR_MESSAGES = Object.freeze({
+    DECK_NAME_REQUIRED: 'Deck name is required',
+    INVALID_DECK_NAME: 'Deck name is invalid',
+    DECK_NAME_CONFLICT: 'A deck with this name already exists for the selected game',
+    TEACHER_NAME_REQUIRED: 'Teacher name is required',
+    INVALID_TEACHER_NAME: 'Teacher name is invalid',
+    AI_KEY_SOURCE_REQUIRED: 'Choose either the teacher key or the platform key',
+    TEACHER_AI_KEY_REQUIRED: 'A teacher Gemini API key is required',
+    PLATFORM_AI_KEY_UNAVAILABLE: 'The platform Gemini key is not configured',
+    TEACHER_KEY_GENERATION_FAILED: 'Generation failed with the teacher API key. Check the key or its quota and try again.',
+    PLATFORM_GENERATION_FAILED: 'The platform generation service is temporarily unavailable.',
+    INVALID_DECK_CONTENT: 'The AI returned invalid game content'
+});
+
+function publicError(error) {
+    const code = error?.code || 'GENERATION_FAILED';
+    const status = Number.isInteger(error?.status) ? error.status : 502;
+    return {
+        status,
+        body: {
+            success: false,
+            code,
+            error: SAFE_ERROR_MESSAGES[code] || (
+                status < 500 ? 'The generation request is invalid' : 'Generation failed'
+            )
+        }
+    };
+}
+
+export function createGenerationHandler({
+    gameType,
+    contentKey,
+    geminiApiKey,
+    generationService,
+    parseInput,
+    generate,
+    aiProvider = 'gemini',
+    aiModel = null
+}) {
+    if (!gameType || !contentKey || !generationService || !parseInput || !generate) {
+        throw new Error('Generation handler is missing required dependencies');
+    }
+
+    return async function generationHandler(req, res) {
+        try {
+            const teacherContext = extractTeacherContext(req, { geminiApiKey });
+            const generationInput = parseInput(req.body || {});
+            const deck = await generationService.generateAndRegister({
+                gameType,
+                deckName: req.body?.deckName,
+                generationInput,
+                teacherContext,
+                aiProvider,
+                aiModel,
+                generate: ({ apiKey, keySource }) => generate(generationInput, { apiKey, keySource })
+            });
+            const content = deck.currentVersion.content;
+
+            return res.status(201).json({
+                success: true,
+                count: Array.isArray(content) ? content.length : 0,
+                [contentKey]: content,
+                deck
+            });
+        } catch (error) {
+            const response = publicError(error);
+            return res.status(response.status).json(response.body);
+        }
+    };
+}
+
