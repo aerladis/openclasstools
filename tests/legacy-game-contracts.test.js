@@ -24,6 +24,11 @@ test('all legacy content pages load the shared deck client before game code', as
     }
 });
 
+test('shared deck styles keep retired legacy controls visually hidden', async () => {
+    const styles = await readFile(new URL('../deck-library.css', import.meta.url), 'utf8');
+    assert.match(styles, /\[hidden\]\s*\{[^}]*display:\s*none\s*!important/s);
+});
+
 test('all legacy content games select exact decks and record lifecycle', async () => {
     for (const [, script] of CONTENT_GAMES) {
         const source = await readFile(new URL(`../${script}`, import.meta.url), 'utf8');

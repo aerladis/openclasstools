@@ -1,3 +1,7 @@
+[hidden] {
+    display: none !important;
+}
+
 .deck-library {
     display: grid;
     gap: 0.75rem;
