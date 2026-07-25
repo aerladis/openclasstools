@@ -23,7 +23,7 @@
 
 ## File Map
 
-- Supabase CLI output path from `supabase migration new persistent_platform_foundation`: schema, data migration, constraints, grants, and RLS. Record the generated path in the task checklist before editing it.
+- `supabase/migrations/20260725130600_persistent_platform_foundation.sql`: schema, data migration, constraints, grants, and RLS.
 - `server/config.js`: validated server configuration.
 - `server/db/pool.js`: PostgreSQL pool lifecycle.
 - `server/domain/game-types.js`: canonical game identifiers.
@@ -47,7 +47,7 @@
 - Create: `server/config.js`
 - Create: `server/db/pool.js`
 - Create: `tests/config.test.js`
-- Create: the exact path printed by `supabase migration new persistent_platform_foundation`
+- Create: `supabase/migrations/20260725130600_persistent_platform_foundation.sql`
 
 **Interfaces:**
 - Produces: `loadConfig(env, { production }) -> AppConfig`

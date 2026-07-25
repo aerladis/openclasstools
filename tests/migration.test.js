@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const migrationPath = new URL(
+    '../supabase/migrations/20260725130600_persistent_platform_foundation.sql',
+    import.meta.url
+);
+
+test('migration creates immutable deck and session tables', async () => {
+    const sql = await readFile(migrationPath, 'utf8');
+
+    for (const table of ['decks', 'deck_versions', 'game_sessions', 'game_activity_logs']) {
+        assert.match(sql, new RegExp(`create table public\\.${table}\\b`, 'i'));
+    }
+    assert.match(sql, /unique\s*\(game_type,\s*normalized_name\)/i);
+    assert.match(sql, /unique\s*\(deck_id,\s*version_number\)/i);
+    assert.match(sql, /deck_version_id uuid references public\.deck_versions/i);
+});
+
+test('migration locks operational and legacy telemetry away from public roles', async () => {
+    const sql = await readFile(migrationPath, 'utf8');
+
+    for (const table of [
+        'decks',
+        'deck_versions',
+        'game_sessions',
+        'game_activity_logs',
+        'telemetry_game_sessions_legacy',
+        'telemetry_game_activity_logs_legacy'
+    ]) {
+        assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, 'i'));
+        assert.match(sql, new RegExp(`revoke all on (table )?public\\.${table} from anon, authenticated`, 'i'));
+    }
+    assert.doesNotMatch(sql, /create policy[\s\S]+to\s+(anon|authenticated|public)/i);
+});
+
+test('migration preserves old session rows as explicitly legacy records', async () => {
+    const sql = await readFile(migrationPath, 'utf8');
+
+    assert.match(sql, /telemetry_game_sessions_legacy/i);
+    assert.match(sql, /legacy_source_id/i);
+    assert.match(sql, /'legacy',\s*true/i);
+});
