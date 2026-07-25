@@ -269,6 +269,172 @@ grant execute on function public.create_deck_revision(
     uuid, uuid, jsonb, text, text, text
 ) to service_role;
 
+create function public.start_game_session(
+    p_game_type text,
+    p_room_code text,
+    p_teacher_display_name text,
+    p_participant_names jsonb,
+    p_deck_id uuid,
+    p_deck_version_id uuid
+)
+returns public.game_sessions
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_session public.game_sessions%rowtype;
+    v_valid_reference boolean;
+begin
+    if p_game_type in (
+        'who', 'taboo', 'hangman', 'millionaire',
+        'kelime', 'flashcards', 'hats', 'lingoparty'
+    ) then
+        select exists (
+            select 1
+            from public.decks d
+            join public.deck_versions v
+              on v.id = p_deck_version_id
+             and v.deck_id = d.id
+            where d.id = p_deck_id
+              and d.game_type = p_game_type
+              and d.current_version_id = p_deck_version_id
+              and d.archived_at is null
+        ) into v_valid_reference;
+
+        if not v_valid_reference then
+            raise exception using
+                errcode = '40001',
+                message = 'DECK_VERSION_MISMATCH';
+        end if;
+    elsif p_game_type in ('bottle', 'wheel') then
+        if p_deck_id is not null or p_deck_version_id is not null then
+            raise exception using
+                errcode = '22023',
+                message = 'DECK_VERSION_MISMATCH';
+        end if;
+    else
+        raise exception using
+            errcode = '22023',
+            message = 'INVALID_GAME_TYPE';
+    end if;
+
+    insert into public.game_sessions (
+        room_code,
+        game_type,
+        teacher_display_name,
+        participant_names,
+        deck_id,
+        deck_version_id
+    )
+    values (
+        nullif(btrim(p_room_code), ''),
+        p_game_type,
+        btrim(p_teacher_display_name),
+        coalesce(p_participant_names, '[]'::jsonb),
+        p_deck_id,
+        p_deck_version_id
+    )
+    returning * into v_session;
+
+    return v_session;
+end
+$function$;
+
+create function public.complete_game_session(
+    p_session_id uuid,
+    p_result jsonb
+)
+returns public.game_sessions
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_session public.game_sessions%rowtype;
+begin
+    update public.game_sessions
+    set status = 'completed',
+        result = coalesce(p_result, '{}'::jsonb),
+        ended_at = now(),
+        last_activity_at = now()
+    where id = p_session_id
+      and status = 'active'
+    returning * into v_session;
+
+    if found then
+        return v_session;
+    end if;
+
+    if exists (select 1 from public.game_sessions where id = p_session_id) then
+        raise exception using
+            errcode = '40001',
+            message = 'SESSION_ALREADY_COMPLETED';
+    end if;
+
+    raise exception using
+        errcode = 'P0002',
+        message = 'SESSION_NOT_FOUND';
+end
+$function$;
+
+create function public.touch_game_session(p_session_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+    update public.game_sessions
+    set last_activity_at = now()
+    where id = p_session_id
+      and status = 'active';
+    return found;
+end
+$function$;
+
+create function public.abandon_stale_game_sessions(p_cutoff timestamptz)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_count integer;
+begin
+    update public.game_sessions
+    set status = 'abandoned',
+        ended_at = now(),
+        last_activity_at = now()
+    where status = 'active'
+      and last_activity_at < p_cutoff;
+    get diagnostics v_count = row_count;
+    return v_count;
+end
+$function$;
+
+revoke all on function public.start_game_session(
+    text, text, text, jsonb, uuid, uuid
+) from public, anon, authenticated;
+grant execute on function public.start_game_session(
+    text, text, text, jsonb, uuid, uuid
+) to service_role;
+
+revoke all on function public.complete_game_session(uuid, jsonb)
+from public, anon, authenticated;
+grant execute on function public.complete_game_session(uuid, jsonb)
+to service_role;
+
+revoke all on function public.touch_game_session(uuid)
+from public, anon, authenticated;
+grant execute on function public.touch_game_session(uuid)
+to service_role;
+
+revoke all on function public.abandon_stale_game_sessions(timestamptz)
+from public, anon, authenticated;
+grant execute on function public.abandon_stale_game_sessions(timestamptz)
+to service_role;
+
 do $migration$
 begin
     if to_regclass('public.telemetry_game_sessions_legacy') is not null then

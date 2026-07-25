@@ -16,6 +16,8 @@ import { createDeckRepository } from './server/repositories/deck-repository.js';
 import { createDeckRouter } from './server/routes/decks.js';
 import { createGenerationService } from './server/services/generation-service.js';
 import { createGenerationHandler } from './server/routes/generation-handler.js';
+import { createSessionRepository } from './server/repositories/session-repository.js';
+import { createSessionRouter } from './server/routes/sessions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,6 +71,25 @@ const deckRepository = platformDatabase
         }
     };
 const generationService = createGenerationService({ deckRepository });
+const sessionRepository = platformDatabase
+    ? createSessionRepository(platformDatabase)
+    : {
+        async start() {
+            const error = new Error('Session persistence is not configured');
+            error.status = 503;
+            error.code = 'SESSION_SERVICE_UNAVAILABLE';
+            throw error;
+        },
+        async complete() {
+            const error = new Error('Session persistence is not configured');
+            error.status = 503;
+            error.code = 'SESSION_SERVICE_UNAVAILABLE';
+            throw error;
+        },
+        async abandonStale() {
+            return 0;
+        }
+    };
 
 // ============================================
 // AI Provider: auto-detect Anthropic, Gemini (free), or OpenAI
@@ -160,6 +181,7 @@ app.use(rateLimitMiddleware);
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use('/api/decks', createDeckRouter({ repository: deckRepository }));
+app.use('/api/sessions', createSessionRouter({ repository: sessionRepository }));
 
 // ============================================
 // Session Tracking
@@ -170,7 +192,7 @@ const MAX_GAME_AGE = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_GAMES = 1000; // Maximum concurrent games
 
 // Cleanup old games periodically
-setInterval(() => {
+setInterval(async () => {
     const now = Date.now();
     let cleaned = 0;
     for (const [gameId, data] of activeGames.entries()) {
@@ -182,6 +204,16 @@ setInterval(() => {
     }
     if (cleaned > 0) {
         console.log(`🧹 Cleaned up ${cleaned} expired games`);
+    }
+    try {
+        const abandoned = await sessionRepository.abandonStale(
+            new Date(now - MAX_GAME_AGE)
+        );
+        if (abandoned > 0) {
+            console.log(`Marked ${abandoned} expired play sessions as abandoned`);
+        }
+    } catch {
+        console.warn('Unable to classify expired play sessions');
     }
 }, 60 * 60 * 1000); // Every hour
 

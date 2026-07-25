@@ -53,3 +53,26 @@ test('migration exposes atomic deck writes only to the server role', async () =>
     }
     assert.match(sql, /security definer\s+set search_path = ''/i);
 });
+
+test('migration exposes atomic session lifecycle functions only to the server role', async () => {
+    const sql = await readFile(migrationPath, 'utf8');
+
+    for (const functionName of [
+        'start_game_session',
+        'complete_game_session',
+        'touch_game_session',
+        'abandon_stale_game_sessions'
+    ]) {
+        assert.match(sql, new RegExp(`create function public\\.${functionName}\\b`, 'i'));
+        assert.match(sql, new RegExp(
+            `revoke all on function public\\.${functionName}[\\s\\S]+from public, anon, authenticated`,
+            'i'
+        ));
+        assert.match(sql, new RegExp(
+            `grant execute on function public\\.${functionName}[\\s\\S]+to service_role`,
+            'i'
+        ));
+    }
+    assert.match(sql, /d\.current_version_id = p_deck_version_id/i);
+    assert.match(sql, /where id = p_session_id\s+and status = 'active'/i);
+});
