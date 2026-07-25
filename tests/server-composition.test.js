@@ -30,6 +30,7 @@ test('server authenticates every privileged Socket.IO control path', async () =>
     assert.match(source, /attachAdminSocketAuthorization\(socket, adminSessionManager\)/);
     for (const eventName of [
         'adminJoin',
+        'requestState',
         'updateWordListAdmin',
         'adminUpdateHost',
         'lingoAction'

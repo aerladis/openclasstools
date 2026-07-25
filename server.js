@@ -203,7 +203,8 @@ app.use('/api/admin', createAdminAuthRouter({
 }));
 app.use('/api/admin', createAdminDataRouter({
     sessionManager: adminSessionManager,
-    sessionRepository
+    sessionRepository,
+    deckRepository
 }));
 app.use('/api/decks', createDeckRouter({ repository: deckRepository }));
 app.use('/api/sessions', createSessionRouter({ repository: sessionRepository }));
@@ -340,6 +341,7 @@ io.on('connection', (socket) => {
 
     // Admin requests current state from host
     socket.on('requestState', (gameId) => {
+        if (!requireAuthorizedAdminSocket(socket)) return;
         if (!gameId || typeof gameId !== 'string') return;
         
         const upperGameId = gameId.toUpperCase();

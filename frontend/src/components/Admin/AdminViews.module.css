@@ -1,0 +1,169 @@
+.view {
+  display: grid;
+  gap: 1rem;
+  color: #e2e8f0;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.metrics article {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 14px;
+  background: rgba(15, 10, 35, 0.8);
+}
+
+.metrics strong {
+  font-size: 1.6rem;
+}
+
+.metrics span {
+  color: #94a3b8;
+}
+
+.filters,
+.remoteJoin,
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.filters input,
+.filters select,
+.remoteJoin input {
+  min-width: 150px;
+  flex: 1;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 9px;
+  background: #090617;
+  color: #f8fafc;
+}
+
+.view button {
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 9px;
+  padding: 0.6rem 0.85rem;
+  color: #fff;
+  background: rgba(124, 58, 237, 0.28);
+  cursor: pointer;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableWrap th,
+.tableWrap td {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tableWrap small {
+  display: block;
+  color: #94a3b8;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.8rem;
+}
+
+.cardGrid button {
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 1rem;
+}
+
+.cardGrid span,
+.cardGrid small {
+  color: #c4b5fd;
+}
+
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(2, 6, 23, 0.72);
+}
+
+.drawer,
+.drawerWide {
+  width: min(520px, 94vw);
+  padding: 1.5rem;
+  overflow: auto;
+  background: #080513;
+  border-left: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+.drawerWide {
+  width: min(900px, 96vw);
+}
+
+.drawer dt {
+  margin-top: 0.8rem;
+  color: #94a3b8;
+}
+
+.drawer dd {
+  margin-left: 0;
+}
+
+.drawer pre,
+.statePreview {
+  overflow: auto;
+  padding: 0.8rem;
+  border-radius: 10px;
+  background: #020617;
+  color: #c4b5fd;
+}
+
+.remotePanel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 14px;
+  background: rgba(15, 10, 35, 0.72);
+}
+
+.packEditor {
+  width: 100%;
+  min-height: 260px;
+  padding: 0.8rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+  color: #e2e8f0;
+  background: #020617;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.error {
+  color: #fca5a5;
+}
+
+@media (max-width: 760px) {
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

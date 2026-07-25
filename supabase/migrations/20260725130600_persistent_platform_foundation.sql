@@ -269,6 +269,99 @@ grant execute on function public.create_deck_revision(
     uuid, uuid, jsonb, text, text, text
 ) to service_role;
 
+create function public.rename_deck(
+    p_deck_id uuid,
+    p_name text,
+    p_expected_version_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_deck public.decks%rowtype;
+    v_version public.deck_versions%rowtype;
+begin
+    select * into v_deck
+    from public.decks
+    where id = p_deck_id
+    for update;
+
+    if not found then
+        raise exception using errcode = 'P0002', message = 'DECK_NOT_FOUND';
+    end if;
+    if v_deck.current_version_id is distinct from p_expected_version_id then
+        raise exception using errcode = '40001', message = 'DECK_VERSION_CONFLICT';
+    end if;
+
+    update public.decks
+    set name = btrim(p_name),
+        updated_at = now()
+    where id = p_deck_id
+    returning * into v_deck;
+
+    select * into v_version
+    from public.deck_versions
+    where id = v_deck.current_version_id;
+
+    return jsonb_build_object('deck', to_jsonb(v_deck), 'version', to_jsonb(v_version));
+exception
+    when unique_violation then
+        raise exception using errcode = '23505', message = 'DECK_NAME_CONFLICT';
+end
+$function$;
+
+create function public.set_deck_archived(
+    p_deck_id uuid,
+    p_archived boolean,
+    p_expected_version_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_deck public.decks%rowtype;
+    v_version public.deck_versions%rowtype;
+begin
+    select * into v_deck
+    from public.decks
+    where id = p_deck_id
+    for update;
+
+    if not found then
+        raise exception using errcode = 'P0002', message = 'DECK_NOT_FOUND';
+    end if;
+    if v_deck.current_version_id is distinct from p_expected_version_id then
+        raise exception using errcode = '40001', message = 'DECK_VERSION_CONFLICT';
+    end if;
+
+    update public.decks
+    set archived_at = case when p_archived then now() else null end,
+        updated_at = now()
+    where id = p_deck_id
+    returning * into v_deck;
+
+    select * into v_version
+    from public.deck_versions
+    where id = v_deck.current_version_id;
+
+    return jsonb_build_object('deck', to_jsonb(v_deck), 'version', to_jsonb(v_version));
+end
+$function$;
+
+revoke all on function public.rename_deck(uuid, text, uuid)
+from public, anon, authenticated;
+grant execute on function public.rename_deck(uuid, text, uuid)
+to service_role;
+
+revoke all on function public.set_deck_archived(uuid, boolean, uuid)
+from public, anon, authenticated;
+grant execute on function public.set_deck_archived(uuid, boolean, uuid)
+to service_role;
+
 create function public.start_game_session(
     p_game_type text,
     p_room_code text,

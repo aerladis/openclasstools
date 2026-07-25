@@ -46,7 +46,12 @@ test('migration preserves old session rows as explicitly legacy records', async 
 test('migration exposes atomic deck writes only to the server role', async () => {
     const sql = await readFile(migrationPath, 'utf8');
 
-    for (const functionName of ['create_generated_deck', 'create_deck_revision']) {
+    for (const functionName of [
+        'create_generated_deck',
+        'create_deck_revision',
+        'rename_deck',
+        'set_deck_archived'
+    ]) {
         assert.match(sql, new RegExp(`create function public\\.${functionName}\\b`, 'i'));
         assert.match(sql, new RegExp(`revoke all on function public\\.${functionName}[\\s\\S]+from public, anon, authenticated`, 'i'));
         assert.match(sql, new RegExp(`grant execute on function public\\.${functionName}[\\s\\S]+to service_role`, 'i'));

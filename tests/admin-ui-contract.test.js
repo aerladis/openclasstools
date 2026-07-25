@@ -24,3 +24,27 @@ test('admin UI uses cookie auth and never stores a passcode', async () => {
     assert.match(dashboard, /x-csrf-token/);
     assert.doesNotMatch(dashboard, /localStorage|sessionStorage|x-admin-passcode|verifyPasscode/);
 });
+
+test('control center includes analytics, versioned deck editing, and protected live controls', async () => {
+    const [sessions, decks, editor, remote] = await Promise.all([
+        readFile(new URL('../frontend/src/components/Admin/SessionsView.jsx', import.meta.url), 'utf8'),
+        readFile(new URL('../frontend/src/components/Admin/DecksView.jsx', import.meta.url), 'utf8'),
+        readFile(new URL('../frontend/src/components/Admin/editors/DeckEditor.jsx', import.meta.url), 'utf8'),
+        readFile(new URL('../frontend/src/components/Admin/RemoteControlView.jsx', import.meta.url), 'utf8')
+    ]);
+
+    for (const filter of [
+        'teacher', 'participant', 'gameType', 'deck', 'roomCode',
+        'theme', 'cefr', 'status', 'from', 'to'
+    ]) {
+        assert.match(sessions, new RegExp(`\\b${filter}\\b`));
+    }
+    assert.match(sessions, /Exact content/);
+    assert.match(decks, /Publish|publish/);
+    assert.match(decks, /Archive/);
+    assert.match(decks, /Sessions using/);
+    assert.doesNotMatch(editor, /textarea/i);
+    assert.match(remote, /USE_LIFELINE/);
+    assert.match(remote, /GRADE_ANSWER/);
+    assert.match(remote, /updateWordListAdmin/);
+});
