@@ -10,6 +10,10 @@ import { Server } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadConfig } from './server/config.js';
+import { createSupabaseRestClient } from './server/db/supabase-rest.js';
+import { createDeckRepository } from './server/repositories/deck-repository.js';
+import { createDeckRouter } from './server/routes/decks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +35,31 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 8090;
+const platformConfig = loadConfig(process.env);
+
+const platformDatabase = platformConfig.supabaseUrl && platformConfig.supabaseServiceRoleKey
+    ? createSupabaseRestClient({
+        url: platformConfig.supabaseUrl,
+        serviceRoleKey: platformConfig.supabaseServiceRoleKey
+    })
+    : null;
+
+const deckRepository = platformDatabase
+    ? createDeckRepository(platformDatabase)
+    : {
+        async listCurrent() {
+            const error = new Error('Deck persistence is not configured');
+            error.status = 503;
+            error.code = 'DECK_SERVICE_UNAVAILABLE';
+            throw error;
+        },
+        async getCurrent() {
+            const error = new Error('Deck persistence is not configured');
+            error.status = 503;
+            error.code = 'DECK_SERVICE_UNAVAILABLE';
+            throw error;
+        }
+    };
 
 // ============================================
 // AI Provider: auto-detect Anthropic, Gemini (free), or OpenAI
@@ -121,6 +150,7 @@ app.use(rateLimitMiddleware);
 // Request size limits
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use('/api/decks', createDeckRouter({ repository: deckRepository }));
 
 // ============================================
 // Session Tracking

@@ -104,6 +104,171 @@ create index game_sessions_game_status_idx
 create index game_activity_logs_session_idx
     on public.game_activity_logs (session_id, created_at);
 
+create function public.create_generated_deck(
+    p_game_type text,
+    p_name text,
+    p_content jsonb,
+    p_source text,
+    p_theme text,
+    p_cefr_level text,
+    p_generation_parameters jsonb,
+    p_teacher_display_name text,
+    p_ai_provider text,
+    p_ai_model text,
+    p_teacher_key_used boolean,
+    p_is_system boolean
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_deck public.decks%rowtype;
+    v_version public.deck_versions%rowtype;
+begin
+    insert into public.decks (game_type, name, is_system)
+    values (p_game_type, p_name, coalesce(p_is_system, false))
+    returning * into v_deck;
+
+    insert into public.deck_versions (
+        deck_id,
+        version_number,
+        content,
+        source,
+        theme,
+        cefr_level,
+        generation_parameters,
+        teacher_display_name,
+        ai_provider,
+        ai_model,
+        teacher_key_used
+    )
+    values (
+        v_deck.id,
+        1,
+        p_content,
+        p_source,
+        nullif(btrim(p_theme), ''),
+        nullif(btrim(p_cefr_level), ''),
+        coalesce(p_generation_parameters, '{}'::jsonb),
+        nullif(btrim(p_teacher_display_name), ''),
+        nullif(btrim(p_ai_provider), ''),
+        nullif(btrim(p_ai_model), ''),
+        coalesce(p_teacher_key_used, false)
+    )
+    returning * into v_version;
+
+    update public.decks
+    set current_version_id = v_version.id,
+        updated_at = now()
+    where id = v_deck.id
+    returning * into v_deck;
+
+    return jsonb_build_object(
+        'deck', to_jsonb(v_deck),
+        'version', to_jsonb(v_version)
+    );
+exception
+    when unique_violation then
+        raise exception using
+            errcode = '23505',
+            message = 'DECK_NAME_CONFLICT';
+end
+$function$;
+
+create function public.create_deck_revision(
+    p_deck_id uuid,
+    p_expected_version_id uuid,
+    p_content jsonb,
+    p_theme text,
+    p_cefr_level text,
+    p_teacher_display_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+    v_deck public.decks%rowtype;
+    v_version public.deck_versions%rowtype;
+    v_next_version integer;
+begin
+    select *
+    into v_deck
+    from public.decks
+    where id = p_deck_id
+    for update;
+
+    if not found then
+        raise exception using
+            errcode = 'P0002',
+            message = 'DECK_NOT_FOUND';
+    end if;
+
+    if v_deck.current_version_id is distinct from p_expected_version_id then
+        raise exception using
+            errcode = '40001',
+            message = 'DECK_VERSION_CONFLICT';
+    end if;
+
+    select coalesce(max(version_number), 0) + 1
+    into v_next_version
+    from public.deck_versions
+    where deck_id = p_deck_id;
+
+    insert into public.deck_versions (
+        deck_id,
+        version_number,
+        content,
+        source,
+        theme,
+        cefr_level,
+        generation_parameters,
+        teacher_display_name,
+        teacher_key_used
+    )
+    values (
+        p_deck_id,
+        v_next_version,
+        p_content,
+        'admin_edit',
+        nullif(btrim(p_theme), ''),
+        nullif(btrim(p_cefr_level), ''),
+        '{}'::jsonb,
+        nullif(btrim(p_teacher_display_name), ''),
+        false
+    )
+    returning * into v_version;
+
+    update public.decks
+    set current_version_id = v_version.id,
+        updated_at = now()
+    where id = p_deck_id
+    returning * into v_deck;
+
+    return jsonb_build_object(
+        'deck', to_jsonb(v_deck),
+        'version', to_jsonb(v_version)
+    );
+end
+$function$;
+
+revoke all on function public.create_generated_deck(
+    text, text, jsonb, text, text, text, jsonb, text, text, text, boolean, boolean
+) from public, anon, authenticated;
+grant execute on function public.create_generated_deck(
+    text, text, jsonb, text, text, text, jsonb, text, text, text, boolean, boolean
+) to service_role;
+
+revoke all on function public.create_deck_revision(
+    uuid, uuid, jsonb, text, text, text
+) from public, anon, authenticated;
+grant execute on function public.create_deck_revision(
+    uuid, uuid, jsonb, text, text, text
+) to service_role;
+
 do $migration$
 begin
     if to_regclass('public.telemetry_game_sessions_legacy') is not null then
