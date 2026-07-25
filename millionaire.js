@@ -378,6 +378,8 @@ const elements = {
     resultAmount: document.getElementById('result-amount'),
     resultDetails: document.getElementById('result-details')
 };
+let deckLibrary = null;
+let playSessionId = null;
 
 // ============================================
 // Screen Management
@@ -469,14 +471,29 @@ function restoreGeneratedQuestions() {
 
 elements.btnReuseGenerated?.addEventListener('click', restoreGeneratedQuestions);
 
-document.getElementById('btn-start-default').addEventListener('click', () => {
-    startGame(DEFAULT_QUESTIONS);
-});
+async function startSelectedDeck() {
+    const selectedDeck = deckLibrary?.getSelectedDeck();
+    const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+    if (!selectedDeck || !selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
+        showNotification('Choose or generate a registered deck first.', 'error');
+        return;
+    }
+    try {
+        const session = await window.OpenClassPlatform.startSession({
+            gameType: 'millionaire',
+            roomCode: gameId,
+            participantNames: [],
+            ...selectedDeckRef
+        });
+        playSessionId = session.id;
+        startGame(selectedDeck.currentVersion.content);
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
 
-document.getElementById('btn-start-ai').addEventListener('click', async () => {
-    const theme = elements.themeInput.value.trim();
-    await generateQuestions(theme);
-});
+document.getElementById('btn-start-default').addEventListener('click', startSelectedDeck);
+document.getElementById('btn-start-ai').addEventListener('click', startSelectedDeck);
 
 document.getElementById('btn-how-to-play').addEventListener('click', () => {
     showScreen('help');
@@ -1081,6 +1098,15 @@ function endGame(won, reason = '', walkAwayAmount = null) {
             won
         });
     }
+    if (playSessionId) {
+        window.OpenClassPlatform.completeSession(playSessionId, {
+            won,
+            finalLevel: gameState.currentLevel,
+            finalPrize: amount,
+            reason: reason || (won ? 'completed_ladder' : 'wrong_answer')
+        }).catch(() => null);
+        playSessionId = null;
+    }
 }
 
 function resetGame() {
@@ -1126,4 +1152,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(idDisplay);
     initSoundControls();
     updateReuseButton();
+
+    const aiButton = document.getElementById('btn-start-ai');
+    const defaultButton = document.getElementById('btn-start-default');
+    aiButton.textContent = 'Start selected deck';
+    defaultButton.hidden = true;
+    if (elements.btnReuseGenerated) elements.btnReuseGenerated.hidden = true;
+    deckLibrary = window.OpenClassPlatform.mountDeckLibrary({
+        container: '#deck-library-mount',
+        gameType: 'millionaire',
+        endpoint: '/api/generate-millionaire',
+        collectGenerationInput: () => ({
+            theme: elements.themeInput.value.trim()
+        }),
+        onDeckSelected: (deck) => {
+            if (deck) {
+                showNotification(
+                    `Selected “${deck.name}” (v${deck.currentVersion.versionNumber}).`,
+                    'success'
+                );
+            }
+        }
+    });
 });

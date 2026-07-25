@@ -40,6 +40,8 @@ function emitGameState() {
 
 // ---- Characters (loaded dynamically from list.txt) ----
 let CHARACTERS = [];
+let deckLibrary = null;
+let playSessionId = null;
 
 async function loadCharacters() {
   const res = await fetch('list.txt');
@@ -116,12 +118,7 @@ function revealCharacter() {
   emitGameState();
 }
 
-// ---- Events ----
-btnPlay.addEventListener('click', startCountdown);
-btnMenu.addEventListener('click', () => showScreen(screenStart));
-
 const btnReplay = document.getElementById('btn-replay');
-if (btnReplay) btnReplay.addEventListener('click', startCountdown);
 
 // ---- AI Generation ----
 const btnGenerate = document.getElementById('btn-generate');
@@ -130,6 +127,47 @@ const countInput = document.getElementById('count-input');
 const generateStatus = document.getElementById('generate-status');
 const btnReuseGenerated = document.getElementById('btn-reuse-generated');
 const WHOAMI_STORAGE_KEY = 'whoami';
+
+async function startTrackedRound() {
+  const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+  if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
+    generateStatus.textContent = 'Choose or generate a registered deck first.';
+    generateStatus.className = 'generate-status error';
+    return;
+  }
+  try {
+    if (playSessionId) {
+      await window.OpenClassPlatform.completeSession(playSessionId, {
+        lastCharacter: characterName.textContent || null,
+        reason: 'new_round'
+      }).catch(() => null);
+    }
+    const session = await window.OpenClassPlatform.startSession({
+      gameType: 'who',
+      roomCode: gameId,
+      participantNames: [],
+      ...selectedDeckRef
+    });
+    playSessionId = session.id;
+    startCountdown();
+  } catch (error) {
+    generateStatus.textContent = error.message;
+    generateStatus.className = 'generate-status error';
+  }
+}
+
+btnPlay.addEventListener('click', startTrackedRound);
+btnMenu.addEventListener('click', () => {
+  if (playSessionId) {
+    window.OpenClassPlatform.completeSession(playSessionId, {
+      lastCharacter: characterName.textContent || null,
+      reason: 'returned_to_menu'
+    }).catch(() => null);
+    playSessionId = null;
+  }
+  showScreen(screenStart);
+});
+if (btnReplay) btnReplay.addEventListener('click', startTrackedRound);
 
 function saveGeneratedCharacters(characters, meta = {}) {
   window.generatedContentStore?.save(WHOAMI_STORAGE_KEY, { characters, meta });
@@ -212,6 +250,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnReuseGenerated?.addEventListener('click', restoreGeneratedCharacters);
   updateReuseButton();
+
+  btnGenerate.hidden = true;
+  if (btnReuseGenerated) btnReuseGenerated.hidden = true;
+  deckLibrary = window.OpenClassPlatform.mountDeckLibrary({
+    container: '#deck-library-mount',
+    gameType: 'who',
+    endpoint: '/api/generate',
+    collectGenerationInput: () => ({
+      theme: themeInput.value.trim(),
+      count: parseInt(countInput.value, 10) || 50
+    }),
+    onDeckSelected: (deck) => {
+      if (!deck?.currentVersion?.content) return;
+      CHARACTERS = deck.currentVersion.content
+        .map(character => String(character).trim())
+        .filter(Boolean);
+      bag = [];
+      generateStatus.textContent = `Using registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`;
+      generateStatus.className = 'generate-status success';
+      if (socket) socket.emit('syncWordList', {
+        gameId,
+        type: 'whoami',
+        characters: CHARACTERS
+      });
+    }
+  });
 });
 
 // ============================================

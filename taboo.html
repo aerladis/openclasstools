@@ -14,6 +14,7 @@
         rel="stylesheet" />
     <link rel="stylesheet" href="taboo.css" />
     <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="deck-library.css" />
     <script src="theme.js"></script>
 </head>
 
@@ -69,6 +70,7 @@
                     <span class="btn-text">Generate Cards with AI</span>
                 </button>
                 <p id="generate-status" class="generate-status"></p>
+                <div id="deck-library-mount"></div>
             </div>
             <button id="btn-reuse-generated" class="btn-secondary" type="button" hidden>Reuse Last Generated</button>
 
@@ -180,6 +182,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="generated-content.js"></script>
     <script src="particles.js"></script>
+    <script src="platform-client.js"></script>
     <script src="taboo.js"></script>
 </body>
 

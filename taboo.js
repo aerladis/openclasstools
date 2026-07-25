@@ -217,6 +217,8 @@ let state = {
     deck: [],
     currentCard: null,
 };
+let deckLibrary = null;
+let playSessionId = null;
 
 // ---- Helpers ----
 function showScreen(name) {
@@ -304,22 +306,8 @@ function appendGeneratedCards(newCards) {
 }
 
 async function requestGeneratedCards(count = AUTO_CARD_REFILL_COUNT) {
-    const response = await fetch('/api/generate-taboo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            theme: generationContext.theme || els.cardTheme.value.trim() || 'general knowledge and pop culture',
-            count,
-        }),
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to generate more Taboo cards');
-    }
-
-    const result = await response.json();
-    const nextCards = Array.isArray(result.cards) ? result.cards : [];
-    return appendGeneratedCards(nextCards);
+    void count;
+    return 0;
 }
 
 async function maybeTopUpDeck(force = false) {
@@ -398,7 +386,13 @@ function updatePassCounter() {
 }
 
 // ---- Start game ----
-els.btnStart.addEventListener('click', () => {
+els.btnStart.addEventListener('click', async () => {
+    const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+    if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
+        els.generateStatus.textContent = 'Choose or generate a registered deck first.';
+        els.generateStatus.className = 'generate-status error';
+        return;
+    }
     state.teams[0] = els.team1Name.value.trim() || 'Team 🔴';
     state.teams[1] = els.team2Name.value.trim() || 'Team 🔵';
     state.maxPass = parseInt(els.maxPass.value) || 3;
@@ -409,6 +403,19 @@ els.btnStart.addEventListener('click', () => {
     setGenerationContext({
         theme: els.cardTheme.value.trim() || generationContext.theme,
     });
+    try {
+        const session = await window.OpenClassPlatform.startSession({
+            gameType: 'taboo',
+            roomCode: gameId,
+            participantNames: [...state.teams],
+            ...selectedDeckRef
+        });
+        playSessionId = session.id;
+    } catch (error) {
+        els.generateStatus.textContent = error.message;
+        els.generateStatus.className = 'generate-status error';
+        return;
+    }
     shuffleDeck();
     startTurnIntro();
 });
@@ -516,6 +523,14 @@ function showFinalScoreboard() {
     }
 
     showScreen('scoreboard');
+    if (playSessionId) {
+        window.OpenClassPlatform.completeSession(playSessionId, {
+            teams: [...state.teams],
+            scores: [...state.scores],
+            turnsPlayed: state.turnsPlayed
+        }).catch(() => null);
+        playSessionId = null;
+    }
 }
 
 els.btnNewGame.addEventListener('click', () => {
@@ -579,6 +594,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (socket) socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
     els.btnReuseGenerated?.addEventListener('click', restoreGeneratedCards);
     updateReuseButton();
+
+    els.btnGenerate.hidden = true;
+    if (els.btnReuseGenerated) els.btnReuseGenerated.hidden = true;
+    deckLibrary = window.OpenClassPlatform.mountDeckLibrary({
+        container: '#deck-library-mount',
+        gameType: 'taboo',
+        endpoint: '/api/generate-taboo',
+        collectGenerationInput: () => ({
+            theme: els.cardTheme.value.trim(),
+            count: parseInt(els.cardCount.value, 10) || 30
+        }),
+        onDeckSelected: (deck) => {
+            if (!deck?.currentVersion?.content) return;
+            cards = deck.currentVersion.content
+                .map(normalizeCard)
+                .filter(card => card.word && card.forbidden.length >= 3);
+            shuffleDeck();
+            els.generateStatus.textContent = `Using registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`;
+            els.generateStatus.className = 'generate-status success';
+            if (socket) socket.emit('syncWordList', { gameId, type: 'taboo', cards });
+        }
+    });
 });
 
 // ============================================

@@ -17,7 +17,8 @@ export default function BoardStage({
   gameState,
   setGameState,
   broadcastGameState,
-  playSound
+  playSound,
+  onGameComplete
 }) {
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
@@ -235,6 +236,8 @@ export default function BoardStage({
         curTeam.trophies = (curTeam.trophies || 0) + 1;
 
         if (curTeam.gibelCubes >= 3) {
+          setGameState(prev => ({ ...prev, teams: teamsCopy }));
+          onGameComplete?.(teamsCopy, 'victory');
           setActiveModal('victory');
           setCurrentChallenge(null);
           return;
@@ -542,6 +545,7 @@ export default function BoardStage({
             className="btn-secondary"
             style={{ width: '100%', marginTop: '0.4rem' }}
             onClick={() => {
+              onGameComplete?.(gameState.teams, 'returned_to_setup');
               setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
               broadcastGameState({ ...gameState, activeScreen: 'setup' });
             }}

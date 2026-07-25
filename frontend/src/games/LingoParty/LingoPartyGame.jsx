@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import SetupScreen from './components/SetupScreen';
 import BoardStage from './components/BoardStage';
 import { useSocketGame } from '../../hooks/useSocketGame';
+import {
+  completeSession,
+  startSession,
+} from '../../services/platformApi';
 
 // Sound Synthesizer using Web Audio API
 const audioCtx = typeof window !== 'undefined' && window.AudioContext ? new (window.AudioContext || window.webkitAudioContext)() : null;
@@ -71,7 +75,8 @@ export function playSound(type = 'roll') {
 }
 
 export default function LingoPartyGame() {
-  const { socket, isConnected, gameId, isHost, broadcastGameState } = useSocketGame();
+  const { isConnected, gameId, broadcastGameState } = useSocketGame();
+  const [playSessionId, setPlaySessionId] = useState(null);
 
   const [gameState, setGameState] = useState({
     gameId,
@@ -81,10 +86,12 @@ export default function LingoPartyGame() {
     round: 1,
     boardLength: 42,
     tiles: [],
-    deck: []
+    deck: [],
+    deckId: null,
+    deckVersionId: null,
   });
 
-  const generateTiles = (length, deck) => {
+  const generateTiles = (length) => {
     const tiles = [];
     const chance1 = Math.floor(length / 4);
     const chance2 = Math.floor((3 * length) / 4);
@@ -102,10 +109,6 @@ export default function LingoPartyGame() {
         tiles.push({ id: i, type: 'challenge', label: 'Challenge Tile' });
       }
     }
-
-    const eligibleIdx = tiles
-      .map((t, idx) => idx)
-      .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
 
     // Sprinkle remaining hazard planets (Cosmic Vortex, Asteroid Belt) on challenge tiles
     const remainingEligible = tiles
@@ -127,8 +130,22 @@ export default function LingoPartyGame() {
     return tiles;
   };
 
-  const handleStartGame = useCallback(({ teams, boardLength, baseColor, deck }) => {
-    const tiles = generateTiles(boardLength, deck);
+  const handleStartGame = useCallback(async ({
+    teams,
+    boardLength,
+    baseColor,
+    deck,
+    deckId,
+    deckVersionId,
+  }) => {
+    const session = await startSession({
+      gameType: 'lingoparty',
+      roomCode: gameId,
+      participantNames: teams.map((team) => team.name),
+      deckId,
+      deckVersionId,
+    });
+    const tiles = generateTiles(boardLength);
     const initTeams = teams.map(t => ({
       ...t,
       position: 0,
@@ -138,19 +155,42 @@ export default function LingoPartyGame() {
     }));
 
     const newState = {
-      ...gameState,
+      gameId,
       activeScreen: 'board',
       teams: initTeams,
       boardLength,
       baseColor,
       tiles,
       deck: deck || [],
+      deckId,
+      deckVersionId,
       currentTeamIndex: 0,
       round: 1
     };
+    setPlaySessionId(session.id);
     setGameState(newState);
     broadcastGameState(newState);
-  }, [gameId, gameState, broadcastGameState]);
+  }, [gameId, broadcastGameState]);
+
+  const handleGameComplete = useCallback((teams, reason = 'victory') => {
+    if (!playSessionId) return;
+    const rankedTeams = [...teams]
+      .sort((left, right) => (
+        (right.trophies || 0) - (left.trophies || 0) ||
+        (right.coins || 0) - (left.coins || 0)
+      ));
+    completeSession(playSessionId, {
+      reason,
+      winner: rankedTeams[0]?.name || null,
+      teams: teams.map((team) => ({
+        name: team.name,
+        trophies: team.trophies || 0,
+        coins: team.coins || 0,
+        position: team.position || 0,
+      })),
+    }).catch(() => null);
+    setPlaySessionId(null);
+  }, [playSessionId]);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#050311' }}>
@@ -243,6 +283,7 @@ export default function LingoPartyGame() {
           setGameState={setGameState}
           broadcastGameState={broadcastGameState}
           playSound={playSound}
+          onGameComplete={handleGameComplete}
         />
       )}
     </div>

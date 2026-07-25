@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+test('LingoParty setup launches an exact registered deck version', async () => {
+    const source = await readFile(
+        new URL('../frontend/src/games/LingoParty/components/SetupScreen.jsx', import.meta.url),
+        'utf8'
+    );
+    assert.match(source, /useDeckLibrary\('lingoparty'\)/);
+    assert.match(source, /deckId:\s*deck\.id/);
+    assert.match(source, /deckVersionId:\s*deck\.currentVersion\.id/);
+    assert.match(source, /deckName/);
+    assert.doesNotMatch(source, /berkai_gemini_api_key|fallback/i);
+});
+
+test('LingoParty records real custom teams against the socket room code', async () => {
+    const source = await readFile(
+        new URL('../frontend/src/games/LingoParty/LingoPartyGame.jsx', import.meta.url),
+        'utf8'
+    );
+    assert.match(source, /startSession\(/);
+    assert.match(source, /roomCode:\s*gameId/);
+    assert.match(source, /participantNames:\s*teams\.map/);
+    assert.match(source, /deckVersionId/);
+    assert.match(source, /completeSession\(/);
+    assert.doesNotMatch(source, /Dragons|Rockets|Androids/);
+});

@@ -53,6 +53,8 @@ let timerSeconds = 300; // 5 min default
 let timerRemaining = 300;
 let timerInterval = null;
 let timerRunning = false;
+let deckLibrary = null;
+let playSessionId = null;
 
 // ---- DOM ----
 const screenSetup = document.getElementById('screen-setup');
@@ -89,52 +91,45 @@ function shuffle(arr) {
     return a;
 }
 
-// ---- Generate Hat Content (API call) ----
+// ---- Launch a registered hat deck ----
 btnGenerate.addEventListener('click', async () => {
-    const topic = topicInput.value.trim();
-    if (!topic) {
-        topicInput.focus();
-        topicInput.style.borderColor = '#ef4444';
-        setTimeout(() => topicInput.style.borderColor = '', 1500);
+    const selectedDeck = deckLibrary?.getSelectedDeck();
+    const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+    if (!selectedDeck || !selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
+        alert('Choose or generate a registered deck first.');
         return;
     }
 
+    const topic = topicInput.value.trim();
     const cefrLevel = cefrSelect.value;
     const minutes = Math.min(15, Math.max(1, parseInt(timerInput.value) || 5));
-
-    // Show loading
     btnGenerate.style.display = 'none';
     loadingArea.style.display = 'flex';
 
     try {
-        const res = await fetch('/api/generate-hats', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, cefrLevel })
+        const session = await window.OpenClassPlatform.startSession({
+            gameType: 'hats',
+            participantNames: [],
+            ...selectedDeckRef
         });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-            throw new Error(data.error || 'Generation failed');
-        }
-
-        hatData = data.hats;
+        playSessionId = session.id;
+        hatData = HATS.map(hat => (
+            selectedDeck.currentVersion.content.find(item => item.color === hat.id) ||
+            { color: hat.id, questions: [], starters: [] }
+        ));
         hatOrder = shuffle([0, 1, 2, 3, 4, 5]);
         timerSeconds = minutes * 60;
         timerRemaining = timerSeconds;
-
-        // Switch to board
-        boardTopicText.textContent = topic;
-        boardCefrBadge.textContent = cefrLevel || 'Mixed';
-        boardCefrBadge.style.display = cefrLevel ? '' : 'none';
+        boardTopicText.textContent = topic || selectedDeck.currentVersion.theme || selectedDeck.name;
+        boardCefrBadge.textContent = cefrLevel || selectedDeck.currentVersion.cefrLevel || 'Mixed';
+        boardCefrBadge.style.display = (
+            cefrLevel || selectedDeck.currentVersion.cefrLevel
+        ) ? '' : 'none';
         renderBoard();
         resetTimer();
         showScreen(screenBoard);
-
     } catch (err) {
-        console.error('Generation error:', err);
-        alert('Failed to generate: ' + err.message);
+        alert('Unable to start: ' + err.message);
     } finally {
         btnGenerate.style.display = '';
         loadingArea.style.display = 'none';
@@ -247,6 +242,14 @@ btnShuffle.addEventListener('click', () => {
 // ---- New Topic ----
 btnNewTopic.addEventListener('click', () => {
     stopTimer();
+    if (playSessionId) {
+        window.OpenClassPlatform.completeSession(playSessionId, {
+            topic: boardTopicText.textContent,
+            reason: 'new_topic',
+            remainingSeconds: timerRemaining
+        }).catch(() => null);
+        playSessionId = null;
+    }
     showScreen(screenSetup);
     topicInput.focus();
 });
@@ -312,6 +315,22 @@ btnTimerToggle.addEventListener('click', () => {
 });
 
 btnTimerReset.addEventListener('click', resetTimer);
+
+btnGenerate.querySelector('.btn-text').textContent = 'Start selected hats deck';
+deckLibrary = window.OpenClassPlatform.mountDeckLibrary({
+    container: '#deck-library-mount',
+    gameType: 'hats',
+    endpoint: '/api/generate-hats',
+    collectGenerationInput: () => ({
+        topic: topicInput.value.trim(),
+        cefrLevel: cefrSelect.value
+    }),
+    onDeckSelected: (deck) => {
+        if (deck?.currentVersion?.theme && !topicInput.value.trim()) {
+            topicInput.value = deck.currentVersion.theme;
+        }
+    }
+});
 
 // ---- Keyboard shortcuts ----
 document.addEventListener('keydown', (e) => {

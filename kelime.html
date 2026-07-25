@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="kelime.css">
     <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="deck-library.css" />
     <script src="theme.js"></script>
 </head>
 
@@ -46,6 +47,7 @@
                     <button id="btn-generate-ai" class="btn-primary"><span class="btn-icon">✨</span> AI Generate</button>
                     <button id="btn-use-default" class="btn-secondary"><span class="btn-icon">▶️</span> Play / Start</button>
                 </div>
+                <div id="deck-library-mount"></div>
                 <div class="solo-action-bar">
                     <button id="btn-reveal-letter" class="action-btn btn-reveal" title="Reveal 1 random letter (-100 pts)">💡 Harf Al</button>
                     <button id="btn-correct-answer" class="action-btn btn-correct" title="Mark correct & get points">✅ Doğru</button>
@@ -70,6 +72,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="particles.js"></script>
+    <script src="platform-client.js"></script>
     <script src="kelime.js"></script>
 </body>
 
