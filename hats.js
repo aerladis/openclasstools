@@ -106,13 +106,16 @@ btnGenerate.addEventListener('click', async () => {
     btnGenerate.style.display = 'none';
     loadingArea.style.display = 'flex';
 
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'hats',
+        participantNames: [],
+        ...selectedDeckRef
+    }, error => {
+        alert(`The activity will still start, but it could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
+
     try {
-        const session = await window.OpenClassPlatform.startSession({
-            gameType: 'hats',
-            participantNames: [],
-            ...selectedDeckRef
-        });
-        playSessionId = session.id;
         hatData = HATS.map(hat => (
             selectedDeck.currentVersion.content.find(item => item.color === hat.id) ||
             { color: hat.id, questions: [], starters: [] }

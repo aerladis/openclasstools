@@ -286,19 +286,17 @@ async function startGame() {
         generateStatus.className = 'generate-status error';
         return;
     }
-    try {
-        const session = await window.OpenClassPlatform.startSession({
-            gameType: 'hangman',
-            roomCode: gameId,
-            participantNames: [],
-            ...selectedDeckRef
-        });
-        playSessionId = session.id;
-    } catch (error) {
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'hangman',
+        roomCode: gameId,
+        participantNames: [],
+        ...selectedDeckRef
+    }, error => {
         generateStatus.textContent = error.message;
         generateStatus.className = 'generate-status error';
-        return;
-    }
+        alert(`The game will still start, but it could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
 
     const pick = pickWord();
     currentWord = pick.word;

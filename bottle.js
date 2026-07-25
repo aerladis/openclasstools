@@ -102,22 +102,19 @@ zebraToggleGame.addEventListener('change', () => {
 
 // ---- Start Game ----
 async function startBottleSession() {
-    const session = await window.OpenClassPlatform.startSession({
+    const session = await window.OpenClassPlatform.startSessionSafely({
         gameType: 'bottle',
         participantNames: [...basePlayers],
         deckId: null,
         deckVersionId: null
+    }, error => {
+        alert(`Play will continue, but this session could not be recorded: ${error.message}`);
     });
-    playSessionId = session.id;
+    playSessionId = session?.id || null;
 }
 
 btnStart.addEventListener('click', async () => {
-    try {
-        await startBottleSession();
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
+    await startBottleSession();
     buildActivePlayers();
     drawCircle();
     promptDisplay.textContent = '';

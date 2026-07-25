@@ -172,6 +172,15 @@
             return body.session;
         }
 
+        async function startSessionSafely(input, onWarning) {
+            try {
+                return await startSession(input);
+            } catch (error) {
+                if (typeof onWarning === 'function') onWarning(error);
+                return null;
+            }
+        }
+
         async function completeSession(id, result) {
             if (!id) return null;
             const body = await request(
@@ -325,6 +334,7 @@
             listDecks,
             generateDeck,
             startSession,
+            startSessionSafely,
             completeSession,
             mountDeckLibrary
         });

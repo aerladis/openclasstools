@@ -696,18 +696,16 @@ document.addEventListener('DOMContentLoaded', () => {
             setStatusMessage('Choose or generate a registered deck first.', '#ef4444');
             return;
         }
-        try {
-            const session = await window.OpenClassPlatform.startSession({
-                gameType: 'kelime',
-                roomCode: gameId,
-                participantNames: [],
-                ...selectedDeckRef
-            });
-            playSessionId = session.id;
-        } catch (error) {
+        const session = await window.OpenClassPlatform.startSessionSafely({
+            gameType: 'kelime',
+            roomCode: gameId,
+            participantNames: [],
+            ...selectedDeckRef
+        }, error => {
             setStatusMessage(error.message, '#ef4444');
-            return;
-        }
+            alert(`The game will still start, but it could not be recorded: ${error.message}`);
+        });
+        playSessionId = session?.id || null;
         gameState.currentScore = 0;
         if (scoreDisplay) scoreDisplay.textContent = '0';
         playSound('start');

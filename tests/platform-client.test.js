@@ -200,3 +200,30 @@ test('returns safe structured API errors', async () => {
             /already exists/.test(error.message)
     );
 });
+
+test('session logging failures warn without blocking an already loaded game', async () => {
+    const createPlatformClient = await loadFactory();
+    const warnings = [];
+    const client = createPlatformClient({
+        localStorage: memoryStorage(),
+        sessionStorage: memoryStorage(),
+        fetch: async () => {
+            throw new Error('database offline');
+        }
+    });
+    client.saveTeacherSettings({
+        teacherDisplayName: 'Ms Ada',
+        keySource: 'platform',
+        geminiApiKey: ''
+    });
+
+    const session = await client.startSessionSafely({
+        gameType: 'who',
+        participantNames: [],
+        deckId: 'd1',
+        deckVersionId: 'v1'
+    }, error => warnings.push(error.message));
+
+    assert.equal(session, null);
+    assert.deepEqual(warnings, ['Unable to reach the game server']);
+});

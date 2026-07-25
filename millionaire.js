@@ -478,18 +478,17 @@ async function startSelectedDeck() {
         showNotification('Choose or generate a registered deck first.', 'error');
         return;
     }
-    try {
-        const session = await window.OpenClassPlatform.startSession({
-            gameType: 'millionaire',
-            roomCode: gameId,
-            participantNames: [],
-            ...selectedDeckRef
-        });
-        playSessionId = session.id;
-        startGame(selectedDeck.currentVersion.content);
-    } catch (error) {
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'millionaire',
+        roomCode: gameId,
+        participantNames: [],
+        ...selectedDeckRef
+    }, error => {
         showNotification(error.message, 'error');
-    }
+        alert(`The quiz will still start, but it could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
+    startGame(selectedDeck.currentVersion.content);
 }
 
 document.getElementById('btn-start-default').addEventListener('click', startSelectedDeck);

@@ -153,18 +153,15 @@ function drawWheel() {
 // ---- Spin ----
 btnSpin.addEventListener('click', async () => {
     if (spinning || names.length < 2) return;
-    try {
-        const session = await window.OpenClassPlatform.startSession({
-            gameType: 'wheel',
-            participantNames: [...names],
-            deckId: null,
-            deckVersionId: null
-        });
-        playSessionId = session.id;
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'wheel',
+        participantNames: [...names],
+        deckId: null,
+        deckVersionId: null
+    }, error => {
+        alert(`The wheel will still spin, but this session could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
     spinning = true;
     btnSpin.disabled = true;
     winnerDisplay.textContent = '';

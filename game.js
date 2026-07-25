@@ -135,25 +135,24 @@ async function startTrackedRound() {
     generateStatus.className = 'generate-status error';
     return;
   }
-  try {
-    if (playSessionId) {
-      await window.OpenClassPlatform.completeSession(playSessionId, {
-        lastCharacter: characterName.textContent || null,
-        reason: 'new_round'
-      }).catch(() => null);
-    }
-    const session = await window.OpenClassPlatform.startSession({
-      gameType: 'who',
-      roomCode: gameId,
-      participantNames: [],
-      ...selectedDeckRef
-    });
-    playSessionId = session.id;
-    startCountdown();
-  } catch (error) {
+  if (playSessionId) {
+    await window.OpenClassPlatform.completeSession(playSessionId, {
+      lastCharacter: characterName.textContent || null,
+      reason: 'new_round'
+    }).catch(() => null);
+  }
+  const session = await window.OpenClassPlatform.startSessionSafely({
+    gameType: 'who',
+    roomCode: gameId,
+    participantNames: [],
+    ...selectedDeckRef
+  }, error => {
     generateStatus.textContent = error.message;
     generateStatus.className = 'generate-status error';
-  }
+    alert(`The round will still start, but it could not be recorded: ${error.message}`);
+  });
+  playSessionId = session?.id || null;
+  startCountdown();
 }
 
 btnPlay.addEventListener('click', startTrackedRound);

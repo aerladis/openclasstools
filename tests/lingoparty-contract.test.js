@@ -19,7 +19,7 @@ test('LingoParty records real custom teams against the socket room code', async 
         new URL('../frontend/src/games/LingoParty/LingoPartyGame.jsx', import.meta.url),
         'utf8'
     );
-    assert.match(source, /startSession\(/);
+    assert.match(source, /startSessionSafely\(/);
     assert.match(source, /roomCode:\s*gameId/);
     assert.match(source, /participantNames:\s*teams\.map/);
     assert.match(source, /deckVersionId/);

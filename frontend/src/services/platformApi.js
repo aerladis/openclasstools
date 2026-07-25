@@ -123,6 +123,15 @@ export async function startSession(input) {
   })).session;
 }
 
+export async function startSessionSafely(input, onWarning) {
+  try {
+    return await startSession(input);
+  } catch (error) {
+    if (typeof onWarning === 'function') onWarning(error);
+    return null;
+  }
+}
+
 export async function completeSession(sessionId, result = {}) {
   if (!sessionId) return null;
   return (await request(`/api/sessions/${encodeURIComponent(sessionId)}/complete`, {

@@ -450,18 +450,16 @@ document.addEventListener('DOMContentLoaded', () => {
             setStatusMessage('Choose or generate a registered deck first.', '#ef4444');
             return;
         }
-        try {
-            const session = await window.OpenClassPlatform.startSession({
-                gameType: 'flashcards',
-                roomCode: gameId,
-                participantNames: [],
-                ...selectedDeckRef
-            });
-            playSessionId = session.id;
-        } catch (error) {
+        const session = await window.OpenClassPlatform.startSessionSafely({
+            gameType: 'flashcards',
+            roomCode: gameId,
+            participantNames: [],
+            ...selectedDeckRef
+        }, error => {
             setStatusMessage(error.message, '#ef4444');
-            return;
-        }
+            alert(`Study will still start, but this session could not be recorded: ${error.message}`);
+        });
+        playSessionId = session?.id || null;
         loadDeck(selectedDeck.currentVersion.content, false);
         playSound('sync');
         setStatusMessage('Registered vocabulary deck started.', '#22c55e');

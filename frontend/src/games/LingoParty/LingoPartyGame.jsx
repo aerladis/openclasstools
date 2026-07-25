@@ -4,7 +4,7 @@ import BoardStage from './components/BoardStage';
 import { useSocketGame } from '../../hooks/useSocketGame';
 import {
   completeSession,
-  startSession,
+  startSessionSafely,
 } from '../../services/platformApi';
 
 // Sound Synthesizer using Web Audio API
@@ -77,6 +77,7 @@ export function playSound(type = 'roll') {
 export default function LingoPartyGame() {
   const { isConnected, gameId, broadcastGameState } = useSocketGame();
   const [playSessionId, setPlaySessionId] = useState(null);
+  const [trackingWarning, setTrackingWarning] = useState('');
 
   const [gameState, setGameState] = useState({
     gameId,
@@ -138,12 +139,17 @@ export default function LingoPartyGame() {
     deckId,
     deckVersionId,
   }) => {
-    const session = await startSession({
+    setTrackingWarning('');
+    const session = await startSessionSafely({
       gameType: 'lingoparty',
       roomCode: gameId,
       participantNames: teams.map((team) => team.name),
       deckId,
       deckVersionId,
+    }, (error) => {
+      setTrackingWarning(
+        `Play can continue, but this session is not being recorded: ${error.message}`
+      );
     });
     const tiles = generateTiles(boardLength);
     const initTeams = teams.map(t => ({
@@ -167,7 +173,7 @@ export default function LingoPartyGame() {
       currentTeamIndex: 0,
       round: 1
     };
-    setPlaySessionId(session.id);
+    setPlaySessionId(session?.id || null);
     setGameState(newState);
     broadcastGameState(newState);
   }, [gameId, broadcastGameState]);
@@ -274,6 +280,21 @@ export default function LingoPartyGame() {
           </span>
         </div>
       </header>
+
+      {trackingWarning && (
+        <div
+          role="status"
+          style={{
+            padding: '0.7rem 1.5rem',
+            background: 'rgba(245, 158, 11, 0.16)',
+            borderBottom: '1px solid rgba(245, 158, 11, 0.45)',
+            color: '#fde68a',
+            fontWeight: 700,
+          }}
+        >
+          {trackingWarning}
+        </div>
+      )}
 
       {gameState.activeScreen === 'setup' ? (
         <SetupScreen onStartGame={handleStartGame} playSound={playSound} />

@@ -403,19 +403,17 @@ els.btnStart.addEventListener('click', async () => {
     setGenerationContext({
         theme: els.cardTheme.value.trim() || generationContext.theme,
     });
-    try {
-        const session = await window.OpenClassPlatform.startSession({
-            gameType: 'taboo',
-            roomCode: gameId,
-            participantNames: [...state.teams],
-            ...selectedDeckRef
-        });
-        playSessionId = session.id;
-    } catch (error) {
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'taboo',
+        roomCode: gameId,
+        participantNames: [...state.teams],
+        ...selectedDeckRef
+    }, error => {
         els.generateStatus.textContent = error.message;
         els.generateStatus.className = 'generate-status error';
-        return;
-    }
+        alert(`The game will still start, but it could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
     shuffleDeck();
     startTurnIntro();
 });

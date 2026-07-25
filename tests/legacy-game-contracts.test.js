@@ -34,7 +34,11 @@ test('all legacy content games select exact decks and record lifecycle', async (
         const source = await readFile(new URL(`../${script}`, import.meta.url), 'utf8');
         assert.match(source, /mountDeckLibrary/, `${script} must mount registered decks`);
         assert.match(source, /getSelectedDeckRef/, `${script} must use the exact deck version`);
-        assert.match(source, /startSession/, `${script} must record play start`);
+        assert.match(
+            source,
+            /startSessionSafely/,
+            `${script} must not block play when session logging is unavailable`
+        );
         assert.match(source, /completeSession/, `${script} must record play completion`);
     }
 });
@@ -42,7 +46,7 @@ test('all legacy content games select exact decks and record lifecycle', async (
 test('deckless Bottle and Wheel still record play without deck references', async () => {
     for (const script of ['bottle.js', 'wheel.js']) {
         const source = await readFile(new URL(`../${script}`, import.meta.url), 'utf8');
-        assert.match(source, /OpenClassPlatform\.startSession/);
+        assert.match(source, /OpenClassPlatform\.startSessionSafely/);
         assert.match(source, /deckId:\s*null/);
         assert.match(source, /deckVersionId:\s*null/);
         assert.match(source, /OpenClassPlatform\.completeSession/);
