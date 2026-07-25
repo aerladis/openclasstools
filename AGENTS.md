@@ -20,8 +20,7 @@ OpenClassTools is a modern, interactive web-based party games platform designed 
 5. **Wheel of Names** (`wheel.html`, `wheel.js`, `wheel.css`) - Customizable spinning wheel selector
 6. **Who Wants to Be a Millionaire** (`millionaire.html`, `millionaire.js`, `millionaire.css`) - Quiz show with 15 questions, lifelines, and progressive difficulty
 7. **Kelime Oyunu** (`kelime.html`, `kelime.js`, `kelime.css`) - Turkish word game with letter reveal, timer, scoring, and AI question generation
-8. **Flappy Crocodile** (`FlappyCrocodile/`) - Canvas-based arcade game (self-contained subdirectory)
-9. **LingoParty** (`lingoparty.html`, `lingoparty.js`, `lingoparty.css`) - Mario Party-style language board game with AI mini-challenges, shop, power-ups, and real-time mobile interaction
+8. **LingoParty** (`lingoparty.html`, `lingoparty.js`, `lingoparty.css`) - Mario Party-style language board game with AI mini-challenges, shop, power-ups, and real-time mobile interaction
 
 ## Technology Stack
 
@@ -78,10 +77,6 @@ project-root/
 ├── admin.js               # Admin panel logic (Socket.IO client)
 ├── admin.css              # Admin panel styles
 │
-└── FlappyCrocodile/       # Self-contained arcade game
-    ├── index.html
-    ├── script.js
-    └── style.css
 ```
 
 ## Build and Run Commands

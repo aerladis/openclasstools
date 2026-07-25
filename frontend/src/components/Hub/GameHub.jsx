@@ -90,6 +90,26 @@ export default function GameHub() {
       isReact: false
     },
     {
+      id: 'flashcards',
+      title: 'Vocabulary Flashcards',
+      subtitle: 'Review & Mastery',
+      icon: '📇',
+      desc: 'Study named vocabulary decks, flip cards, and record mastered and review counts.',
+      tags: ['Vocabulary', 'Study'],
+      path: '/flashcards.html',
+      isReact: false
+    },
+    {
+      id: 'hats',
+      title: 'Six Thinking Hats',
+      subtitle: 'Structured Discussion',
+      icon: '🎩',
+      desc: 'Guide classroom discussion through six perspectives with reusable question decks.',
+      tags: ['Discussion', 'Critical Thinking'],
+      path: '/hats.html',
+      isReact: false
+    },
+    {
       id: 'wheel',
       title: 'Wheel of Names',
       subtitle: 'Custom Selector',

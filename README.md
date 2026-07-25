@@ -14,7 +14,6 @@ The old screenshot-to-book generation flow has been removed from the app and ser
 - **6 Thinking Hats**: De Bono-inspired classroom discussion board with AI-generated prompts and CEFR-aware scaffolding
 - **Word Game**: admin-controlled classroom word game with AI-generated question packs
 - **Who Wants to Be a Millionaire?**: 15-question quiz ladder with lifelines and admin sync
-- **Flappy Crocodile**: self-contained arcade mini-game
 
 ## Screenshots
 
@@ -113,6 +112,5 @@ The following flows were smoke-tested locally against the current repo state:
 - `Wheel of Names`: load and spin
 - `Word Game`: host load, admin connect, and round start from admin
 - `Millionaire`: default-question start and question render
-- `Flappy Crocodile`: load and start
 
 Benign note: pages without an explicit favicon may log a `favicon.ico` 404 in the browser console during local testing.
