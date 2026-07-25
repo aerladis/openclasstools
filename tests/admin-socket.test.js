@@ -42,6 +42,21 @@ test('accepts privileged socket work with a verified admin cookie', () => {
     };
     attachAdminSocketAuthorization(socket, auth, 2_000);
 
-    assert.equal(requireAuthorizedAdminSocket(socket), true);
+    assert.equal(requireAuthorizedAdminSocket(socket, undefined, 2_001), true);
     assert.equal(socket.isAdminAuthorized, true);
+});
+
+test('re-checks cookie expiry before every privileged socket action', () => {
+    const auth = createAuth();
+    const login = auth.login('admin-passcode-123', 1_000);
+    const socket = {
+        handshake: {
+            headers: { cookie: login.cookie }
+        }
+    };
+    attachAdminSocketAuthorization(socket, auth, 2_000);
+
+    assert.equal(requireAuthorizedAdminSocket(socket, undefined, 2_001), true);
+    assert.equal(requireAuthorizedAdminSocket(socket, undefined, 61_001), false);
+    assert.equal(socket.isAdminAuthorized, false);
 });
