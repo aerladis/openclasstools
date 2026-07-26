@@ -101,8 +101,6 @@ function generateStars(count = 80) {
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
       size: Math.random() * 2.5 + 0.5,
-      dur: `${Math.random() * 4 + 2}s`,
-      delay: `${Math.random() * 4}s`,
       opacity: Math.random() * 0.6 + 0.2
     });
   }
@@ -112,16 +110,24 @@ function generateStars(count = 80) {
 /* ═══════════════════════════════════════════════════════════════
    Hexagon Generator Helper
    ═══════════════════════════════════════════════════════════════ */
+function getHexAngles() {
+  return Array.from({ length: 6 }, (_, i) => (Math.PI / 3) * i + Math.PI / 6);
+}
 function getHexPoints(R) {
   const points = [];
   for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const angle = (Math.PI / 3) * i + Math.PI / 6;
     const x = R * Math.cos(angle);
     const y = R * Math.sin(angle);
     points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
   }
   return points.join(' ');
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Deterministic per-index sphere textures (stable across renders)
+   ═══════════════════════════════════════════════════════════════ */
+const SPHERE_TEXTURES = ['bands', 'craters', 'ring'];
 
 /* ═══════════════════════════════════════════════════════════════
    Orbit Galaxy Theme Configuration — Unique Galaxy Palettes Per Orbit
@@ -143,7 +149,7 @@ export function getOrbitTheme(orbitNumber = 1) {
    BoardMap Component — Space Odyssey Multi-Shape Widescreen Board
    ═══════════════════════════════════════════════════════════════ */
 export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', round = 1, baseColor, onTileClick, onHoverPlanet }) {
-  const stars = useMemo(() => generateStars(90), []);
+  const stars = useMemo(() => generateStars(60), []);
   const currentOrbitTheme = useMemo(() => getOrbitTheme(round), [round]);
 
   // Pre-compute SVG coordinates for each tile
@@ -180,8 +186,6 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
               top: s.top,
               width: `${s.size}px`,
               height: `${s.size}px`,
-              '--twinkle-dur': s.dur,
-              animationDelay: s.delay,
               opacity: s.opacity
             }}
           />
@@ -200,6 +204,11 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
           </linearGradient>
 
           {/* Glow filter for planets */}
+          <linearGradient id="lunarMetalSheen" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
+            <stop offset="45%" stopColor="#94a3b8" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#0f172a" stopOpacity="0.28" />
+          </linearGradient>
           <filter id="planetGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
             <feMerge>
@@ -230,6 +239,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
           const baseRadius = total > 36 ? 56 : (total > 24 ? 64 : 72);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
           const cssClass = conf.cssClass || '';
+          const sphereTexture = SPHERE_TEXTURES[tp.idx % SPHERE_TEXTURES.length];
 
           return (
             <g
@@ -256,6 +266,22 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                   <circle r={radius + 10} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
                   <circle r={radius + 6} className={styles.tileOrbitRing} stroke={tileColor} />
                   <circle r={radius} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
+                  {sphereTexture === 'bands' && (
+                    <>
+                      <ellipse rx={radius * 0.92} ry={radius * 0.3} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="3" />
+                      <ellipse rx={radius * 0.75} ry={radius * 0.18} fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="2" transform="translate(0, -14)" />
+                    </>
+                  )}
+                  {sphereTexture === 'craters' && (
+                    <>
+                      <circle cx={-radius * 0.32} cy={-radius * 0.18} r={radius * 0.14} fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+                      <circle cx={radius * 0.25} cy={radius * 0.3} r={radius * 0.11} fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+                      <circle cx={radius * 0.1} cy={-radius * 0.4} r={radius * 0.08} fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+                    </>
+                  )}
+                  {sphereTexture === 'ring' && (
+                    <ellipse rx={radius * 1.5} ry={radius * 0.42} fill="none" stroke={tileColor} strokeWidth="4" opacity="0.55" transform="rotate(-18)" />
+                  )}
                   {isIconicTile && <text y="0" className={styles.tileEmoji}>{conf.icon}</text>}
                 </>
               )}
@@ -264,6 +290,14 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
               {tileStyle === 'hex' && (
                 <>
                   <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+                  <polygon points={getHexPoints(hexRadius)} fill="url(#lunarMetalSheen)" />
+                  {/* Lunar-metal panel seams + rivets */}
+                  {getHexAngles().map((a, i) => (
+                    <line key={`seam-${i}`} x1="0" y1="0" x2={hexRadius * 0.88 * Math.cos(a)} y2={hexRadius * 0.88 * Math.sin(a)} stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
+                  ))}
+                  {getHexAngles().map((a, i) => (
+                    <circle key={`rivet-${i}`} cx={hexRadius * 0.62 * Math.cos(a)} cy={hexRadius * 0.62 * Math.sin(a)} r="3" fill="rgba(255,255,255,0.3)" />
+                  ))}
                   <polygon points={getHexPoints(hexRadius * 0.88)} fill="none" stroke={tileColor} strokeWidth="1.5" opacity="0.7" />
                   {isIconicTile && (
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
@@ -271,20 +305,28 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                 </>
               )}
 
-              {/* ── STYLE 3: CAPSULE (Holographic High-UX Space Capsules) ── */}
-              {tileStyle === 'capsule' && (() => {
-                const capW = total > 28 ? 136 : 148;
-                const capH = total > 28 ? 58 : 64;
-                return (
-                  <>
-                    <rect x={-capW / 2 - 2} y={-capH / 2 - 2} width={capW + 4} height={capH + 4} rx="26" fill={tileColor} opacity="0.14" filter="blur(4px)" className={styles.tileGlowOuter} />
-                    <rect x={-capW / 2} y={-capH / 2} width={capW} height={capH} rx="24" fill="rgba(15, 12, 35, 0.88)" stroke={tileColor} strokeWidth="2.5" />
-                    <circle cx={-capW / 2 + 24} cy={0} r="19" fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                    {isIconicTile && <text x={-capW / 2 + 24} y="1" textAnchor="middle" dominantBaseline="central" fontSize="18">{conf.icon}</text>}
-                    <text x={-capW / 2 + 50} y="1" textAnchor="start" fill="#ffffff" fontSize="12" fontWeight="800">{conf.label || tp.type.toUpperCase()}</text>
-                  </>
-                );
-              })()}
+              {/* ── Distinct special-tile visual layers (Fate Box / Swirl / Fractured Rock) ── */}
+              {tp.type === 'chance' && (
+                <>
+                  <rect x={-radius * 0.72} y={-radius * 0.72} width={radius * 1.44} height={radius * 1.44} rx="12" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeDasharray="6 5" opacity="0.85" />
+                  <line x1={-radius * 0.72} y1="0" x2={radius * 0.72} y2="0" stroke="#ec4899" strokeWidth="1.5" opacity="0.5" />
+                  <line x1="0" y1={-radius * 0.72} x2="0" y2={radius * 0.72} stroke="#ec4899" strokeWidth="1.5" opacity="0.5" />
+                </>
+              )}
+              {tp.type === 'vortex' && (
+                <>
+                  <circle r={radius * 0.78} fill="none" stroke="#818cf8" strokeWidth="3" strokeDasharray="20 14" opacity="0.8" />
+                  <circle r={radius * 0.52} fill="none" stroke="#6366f1" strokeWidth="3" strokeDasharray="12 16" opacity="0.8" transform="rotate(40)" />
+                  <circle r={radius * 0.26} fill="none" stroke="#c7d2fe" strokeWidth="2.5" strokeDasharray="8 10" opacity="0.9" transform="rotate(80)" />
+                </>
+              )}
+              {tp.type === 'asteroid' && (
+                <>
+                  <polyline points={`${-radius * 0.7},${-radius * 0.1} ${-radius * 0.2},${radius * 0.12} ${-radius * 0.35},${radius * 0.62}`} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
+                  <polyline points={`${radius * 0.15},${-radius * 0.65} ${radius * 0.3},${-radius * 0.05} ${radius * 0.68},${radius * 0.25}`} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
+                  <polygon points={`${radius * 0.05},${-radius * 0.2} ${radius * 0.35},${radius * 0.05} ${-radius * 0.05},${radius * 0.28}`} fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                </>
+              )}
             </g>
           );
         })}

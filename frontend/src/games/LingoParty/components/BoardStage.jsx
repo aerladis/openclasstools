@@ -34,7 +34,7 @@ export default function BoardStage({
   const [tileStyle, setTileStyle] = useState('hex');
 
   const cycleTileStyle = () => {
-    const STYLES = ['sphere', 'hex', 'capsule'];
+    const STYLES = ['sphere', 'hex'];
     const nextStyle = STYLES[(STYLES.indexOf(tileStyle) + 1) % STYLES.length];
     setTileStyle(nextStyle);
     localStorage.setItem('lingoparty_tile_style', nextStyle);
@@ -442,11 +442,10 @@ export default function BoardStage({
             <button
               className={styles.tileStyleBtn}
               onClick={cycleTileStyle}
-              title="Click to cycle tile shape design (Spheres / Hexagons / Capsules)"
+              title="Click to cycle tile shape design (Spheres / Hexagons)"
             >
               {tileStyle === 'sphere' && '🌌 Style: Spheres'}
               {tileStyle === 'hex' && '⬡ Style: Hexagons'}
-              {tileStyle === 'capsule' && '💊 Style: Capsules'}
             </button>
             <div className={styles.roundCounter}>🛸 Orbit {gameState.round}</div>
           </div>

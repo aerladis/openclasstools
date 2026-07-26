@@ -81,7 +81,8 @@ export default function LingoPartyGame() {
     round: 1,
     boardLength: 42,
     tiles: [],
-    deck: []
+    deck: [],
+    mode: 'crew'
   });
 
   const generateTiles = (length, deck) => {
@@ -127,7 +128,7 @@ export default function LingoPartyGame() {
     return tiles;
   };
 
-  const handleStartGame = useCallback(({ teams, boardLength, baseColor, deck }) => {
+  const handleStartGame = useCallback(({ teams, boardLength, baseColor, deck, mode }) => {
     const tiles = generateTiles(boardLength, deck);
     const initTeams = teams.map(t => ({
       ...t,
@@ -145,6 +146,7 @@ export default function LingoPartyGame() {
       baseColor,
       tiles,
       deck: deck || [],
+      mode: mode || 'crew',
       currentTeamIndex: 0,
       round: 1
     };

@@ -67,8 +67,15 @@ const DEFAULT_DECK = [
 
 const EMOJI_PALETTE = ['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬', '👽', '🛸', '⭐', '🪐', '👾', '👑', '🔥', '💎', '🦄', '🐅', '🦅', '🦈'];
 const DEFAULT_NAMES = ['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H'];
+const TEAM_COLORS = ['#a855f7', '#06b6d4', '#f43f5e', '#eab308', '#10b981', '#ec4899', '#6366f1', '#f97316'];
+const GAME_MODES = [
+  { id: 'solo', label: 'Solo', desc: '1 student per pawn' },
+  { id: 'duo', label: 'Duo', desc: '2 students per pawn' },
+  { id: 'crew', label: 'Crew', desc: '3+ students per pawn' }
+];
 
 export default function SetupScreen({ onStartGame, playSound }) {
+  const [mode, setMode] = useState('crew');
   const [teamCount, setTeamCount] = useState(3);
   const [boardLength, setBoardLength] = useState(30);
   const [cefr, setCefr] = useState('B1');
@@ -76,6 +83,12 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [baseColor, setBaseColor] = useState('#64748b');
   const [customNames, setCustomNames] = useState(['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H']);
   const [customPawns, setCustomPawns] = useState(['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬']);
+  const [customColors, setCustomColors] = useState(TEAM_COLORS);
+  const [teacherName, setTeacherName] = useState(() => localStorage.getItem('berkai_teacher_name') || '');
+  const [deckTitle, setDeckTitle] = useState('');
+  const [aiView, setAiView] = useState('generate'); // 'generate' | 'saved'
+  const [savedDecks, setSavedDecks] = useState([]);
+  const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
 
@@ -99,26 +112,63 @@ export default function SetupScreen({ onStartGame, playSound }) {
     if (playSound) playSound('roll');
   };
 
+  const handleColorChange = (index, value) => {
+    const next = [...customColors];
+    next[index] = value;
+    setCustomColors(next);
+  };
+
+  const buildTeams = () => Array.from({ length: teamCount }, (_, i) => ({
+    id: `team-${i + 1}`,
+    name: customNames[i] && customNames[i].trim() ? customNames[i].trim() : `${DEFAULT_NAMES[i % DEFAULT_NAMES.length]}`,
+    pawn: customPawns[i] || EMOJI_PALETTE[i % EMOJI_PALETTE.length],
+    color: customColors[i] || TEAM_COLORS[i % TEAM_COLORS.length],
+    position: 0,
+    trophies: 1,
+    items: []
+  }));
+
+  const loadSavedDecks = async () => {
+    setIsLoadingDecks(true);
+    try {
+      const res = await fetch('/api/lingoparty-decks');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.decks)) {
+        setSavedDecks(data.decks);
+      }
+    } catch (err) {
+      addLog(`❌ Failed to load saved decks: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingDecks(false);
+    }
+  };
+
+  const handleTeacherNameChange = (value) => {
+    setTeacherName(value);
+    localStorage.setItem('berkai_teacher_name', value.trim() || 'Anonymous Teacher');
+  };
+
+  const launchSavedDeck = (deck) => {
+    if (!deck || !Array.isArray(deck.cards) || deck.cards.length === 0) return;
+    const deckMode = ['solo', 'duo', 'crew'].includes(deck.mode) ? deck.mode : 'crew';
+    setMode(deckMode);
+    if (playSound) playSound('correct');
+    onStartGame({ teams: buildTeams(), boardLength, baseColor, deck: deck.cards, mode: deckMode });
+  };
+
   const handleStart = async (useAi = false) => {
-    const teams = Array.from({ length: teamCount }, (_, i) => ({
-      id: `team-${i + 1}`,
-      name: customNames[i] && customNames[i].trim() ? customNames[i].trim() : `${DEFAULT_NAMES[i % DEFAULT_NAMES.length]}`,
-      pawn: customPawns[i] || EMOJI_PALETTE[i % EMOJI_PALETTE.length],
-      position: 0,
-      trophies: 1,
-      items: []
-    }));
+    const teams = buildTeams();
 
     if (!useAi) {
       if (playSound) playSound('correct');
-      onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK });
+      onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK, mode });
       return;
     }
 
     setIsGenerating(true);
     setDebugLogs([]);
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
-    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Target: 30 Challenges`, 'info');
+    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Mode: ${mode.toUpperCase()} | Target: 30 Challenges`, 'info');
 
     const startTime = Date.now();
 
@@ -129,9 +179,9 @@ export default function SetupScreen({ onStartGame, playSound }) {
         headers: {
           'Content-Type': 'application/json',
           'x-gemini-api-key': localStorage.getItem('berkai_gemini_api_key') || '',
-          'x-teacher-name': localStorage.getItem('berkai_teacher_name') || ''
+          'x-teacher-name': teacherName.trim() || 'Anonymous Teacher'
         },
-        body: JSON.stringify({ theme: topic, cefr, count: 30 })
+        body: JSON.stringify({ theme: topic, cefr, count: 30, mode, deckTitle: deckTitle.trim() })
       });
 
       addLog(`📥 HTTP Status: ${res.status} ${res.statusText}`, res.ok ? 'success' : 'warn');
@@ -145,10 +195,14 @@ export default function SetupScreen({ onStartGame, playSound }) {
         data.cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
         addLog(`📊 Category Breakdown: ${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(', ')}`, 'info');
 
+        if (data.savedDeck) {
+          addLog(`📚 Deck saved to shared library: "${data.savedDeck.title}" by ${data.savedDeck.teacherName}`, 'success');
+        }
+
         if (playSound) playSound('correct');
         setTimeout(() => {
           setIsGenerating(false);
-          onStartGame({ teams, boardLength, baseColor, deck: data.cards });
+          onStartGame({ teams, boardLength, baseColor, deck: data.cards, mode });
         }, 1200);
       } else {
         addLog(`⚠️ AI Error / Fallback: ${data.error || 'Gemini API key in .env is invalid or missing'}`, 'error');
@@ -157,7 +211,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
         if (playSound) playSound('wrong');
         setTimeout(() => {
           setIsGenerating(false);
-          onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK });
+          onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK, mode });
         }, 2200);
       }
     } catch (err) {
@@ -166,7 +220,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
       if (playSound) playSound('wrong');
       setTimeout(() => {
         setIsGenerating(false);
-        onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK });
+        onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK, mode });
       }, 1800);
     }
   };
@@ -180,15 +234,44 @@ export default function SetupScreen({ onStartGame, playSound }) {
         </div>
 
         <div className={styles.formGrid}>
+          <div className={`${styles.formGroup} ${styles.fullSpan}`}>
+            <label>Game Mode</label>
+            <div className={styles.modeSegmented}>
+              {GAME_MODES.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`${styles.modeOption} ${mode === m.id ? styles.modeOptionActive : ''}`}
+                  onClick={() => { setMode(m.id); if (playSound) playSound('roll'); }}
+                >
+                  <span className={styles.modeOptionLabel}>{m.label}</span>
+                  <span className={styles.modeOptionDesc}>{m.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className={styles.formGroup}>
-            <label>Number of Crews</label>
-            <select
-              className={styles.selectField}
-              value={teamCount}
-              onChange={e => setTeamCount(Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Crew' : 'Crews'}</option>)}
-            </select>
+            <label>Number of Teams</label>
+            <div className={styles.stepper}>
+              <button
+                type="button"
+                className={styles.stepperBtn}
+                onClick={() => setTeamCount(c => Math.max(1, c - 1))}
+                disabled={teamCount <= 1}
+              >
+                −
+              </button>
+              <span className={styles.stepperValue}>{teamCount} {teamCount === 1 ? 'Team' : 'Teams'}</span>
+              <button
+                type="button"
+                className={styles.stepperBtn}
+                onClick={() => setTeamCount(c => Math.min(6, c + 1))}
+                disabled={teamCount >= 6}
+              >
+                +
+              </button>
+            </div>
           </div>
 
           <div className={styles.formGroup}>
@@ -216,27 +299,19 @@ export default function SetupScreen({ onStartGame, playSound }) {
             />
           </div>
 
-          {/* Custom Crew Naming Section */}
+          {/* Compact Team Rows */}
           <div className={`${styles.formGroup} ${styles.fullSpan}`}>
             <label style={{ fontSize: '1.05rem', fontWeight: 800, color: '#c4b5fd', marginBottom: '0.6rem', display: 'block' }}>
-              👥 Custom Crew Names
+              👥 Teams ({mode === 'solo' ? '1 student' : mode === 'duo' ? '2 students' : '3+ students'} per pawn)
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.8rem' }}>
+            <div className={styles.teamRows}>
               {Array.from({ length: teamCount }).map((_, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div key={i} className={styles.teamRow}>
                   <button
                     type="button"
                     onClick={() => handlePawnCycle(i)}
-                    title="Click to change crew emoji"
-                    style={{
-                      fontSize: '1.7rem',
-                      background: 'rgba(168, 85, 247, 0.2)',
-                      border: '1px solid rgba(168, 85, 247, 0.4)',
-                      borderRadius: '12px',
-                      padding: '4px 10px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
+                    title="Click to change team emoji"
+                    className={styles.teamEmojiBtn}
                   >
                     {customPawns[i] || EMOJI_PALETTE[i % EMOJI_PALETTE.length]}
                   </button>
@@ -245,53 +320,138 @@ export default function SetupScreen({ onStartGame, playSound }) {
                     className={styles.inputField}
                     value={customNames[i] || ''}
                     onChange={e => handleNameChange(i, e.target.value)}
-                    placeholder={`Crew ${String.fromCharCode(65 + i)} Name`}
+                    placeholder={`Team ${String.fromCharCode(65 + i)} Name`}
+                  />
+                  <input
+                    type="color"
+                    className={styles.teamColorInput}
+                    title="Team color"
+                    value={customColors[i] || TEAM_COLORS[i % TEAM_COLORS.length]}
+                    onChange={e => handleColorChange(i, e.target.value)}
                   />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* AI Generation Parameters */}
+          {/* AI Mission Center */}
           <div className={`${styles.formGroup} ${styles.fullSpan}`}>
             <div className={styles.aiSection}>
-              <div className={styles.aiTitle}>🤖 AI Challenge Deck Generator (Gemini 2.5 Flash)</div>
+              <div className={styles.aiTitle}>🤖 AI Mission Center (Gemini 2.5 Flash)</div>
 
-              <div className={styles.formGrid} style={{ gap: '1rem' }}>
-                <div className={styles.formGroup}>
-                  <label>CEFR Difficulty Level</label>
-                  <select
-                    className={styles.selectField}
-                    value={cefr}
-                    onChange={e => setCefr(e.target.value)}
-                  >
-                    <option value="A1">A1 — Beginner</option>
-                    <option value="A2">A2 — Elementary</option>
-                    <option value="B1">B1 — Intermediate</option>
-                    <option value="B2">B2 — Upper Intermediate</option>
-                    <option value="C1">C1 — Advanced</option>
-                  </select>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Mission Topic / Vocabulary Focus</label>
-                  <input
-                    type="text"
-                    className={styles.inputField}
-                    value={topic}
-                    onChange={e => setTopic(e.target.value)}
-                    placeholder="e.g. Space Exploration, Environmental Issues, Travel & Airport"
-                  />
-                </div>
+              <div className={styles.aiTabs}>
+                <button
+                  type="button"
+                  className={`${styles.aiTab} ${aiView === 'generate' ? styles.aiTabActive : ''}`}
+                  onClick={() => setAiView('generate')}
+                >
+                  ✨ Generate New Deck
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.aiTab} ${aiView === 'saved' ? styles.aiTabActive : ''}`}
+                  onClick={() => { setAiView('saved'); loadSavedDecks(); }}
+                >
+                  📚 Saved Decks
+                </button>
               </div>
 
-              <button
-                className={`btn-accent ${styles.btnStart}`}
-                onClick={() => handleStart(true)}
-                disabled={isGenerating}
-              >
-                {isGenerating ? '⚡ Generating AI Challenge Deck & Charting Course...' : '✨ Generate AI Challenge Deck & Launch!'}
-              </button>
+              {aiView === 'generate' ? (
+                <>
+                  <div className={styles.formGrid} style={{ gap: '1rem' }}>
+                    <div className={styles.formGroup}>
+                      <label>Teacher Name</label>
+                      <input
+                        type="text"
+                        className={styles.inputField}
+                        value={teacherName}
+                        onChange={e => handleTeacherNameChange(e.target.value)}
+                        placeholder="e.g. Ms. Yılmaz"
+                      />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label>Deck Title</label>
+                      <input
+                        type="text"
+                        className={styles.inputField}
+                        value={deckTitle}
+                        onChange={e => setDeckTitle(e.target.value)}
+                        placeholder={`e.g. ${topic} — ${mode.toUpperCase()} Mission`}
+                      />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label>CEFR Difficulty Level</label>
+                      <select
+                        className={styles.selectField}
+                        value={cefr}
+                        onChange={e => setCefr(e.target.value)}
+                      >
+                        <option value="A1">A1 — Beginner</option>
+                        <option value="A2">A2 — Elementary</option>
+                        <option value="B1">B1 — Intermediate</option>
+                        <option value="B1+">B1+ — Strong Intermediate</option>
+                        <option value="B2">B2 — Upper Intermediate</option>
+                        <option value="C1">C1 — Advanced</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label>Mission Topic / Vocabulary Focus</label>
+                      <input
+                        type="text"
+                        className={styles.inputField}
+                        value={topic}
+                        onChange={e => setTopic(e.target.value)}
+                        placeholder="e.g. Space Exploration, Environmental Issues, Travel & Airport"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    className={`btn-accent ${styles.btnStart}`}
+                    onClick={() => handleStart(true)}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? '⚡ Generating AI Challenge Deck & Charting Course...' : `✨ Generate ${mode.toUpperCase()} Deck & Launch!`}
+                  </button>
+                </>
+              ) : (
+                <div className={styles.savedDecksPanel}>
+                  <div className={styles.savedDecksHeader}>
+                    <span>📚 Shared Deck Library ({savedDecks.length})</span>
+                    <button type="button" className={styles.debugClearBtn} onClick={loadSavedDecks} disabled={isLoadingDecks}>
+                      {isLoadingDecks ? 'Loading...' : '🔄 Refresh'}
+                    </button>
+                  </div>
+                  {savedDecks.length === 0 && !isLoadingDecks && (
+                    <div className={styles.savedDecksEmpty}>
+                      No saved decks yet — generate a deck and it will appear here for everyone.
+                    </div>
+                  )}
+                  <div className={styles.savedDecksList}>
+                    {savedDecks.map(deck => (
+                      <div key={deck.id} className={styles.savedDeckItem}>
+                        <div className={styles.savedDeckMeta}>
+                          <div className={styles.savedDeckTitle}>{deck.title}</div>
+                          <div className={styles.savedDeckSub}>
+                            👩‍🏫 {deck.teacherName} · 🎯 {deck.theme} · {deck.cefr} · {(deck.mode || 'crew').toUpperCase()} · 🃏 {deck.cards?.length || 0} cards
+                            {deck.createdAt && ` · ${new Date(deck.createdAt).toLocaleDateString()}`}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`btn-primary ${styles.savedDeckLaunchBtn}`}
+                          onClick={() => launchSavedDeck(deck)}
+                        >
+                          🚀 Launch
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {debugLogs.length > 0 && (
                 <div className={styles.debugBox}>

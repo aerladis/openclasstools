@@ -26,16 +26,22 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     });
   };
 
+  // Bitmap allocation happens once here (mount + container resizes), never per frame
+  const resizeCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const size = 520;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
   const drawWheel = (angle) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
     const size = 520;
-
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const cx = size / 2;
     const cy = size / 2;
@@ -97,7 +103,17 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
   };
 
   useEffect(() => {
-    drawWheel(0);
+    resizeCanvas();
+    drawWheel(currentAngleRef.current);
+
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      resizeCanvas();
+      drawWheel(currentAngleRef.current);
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, []);
 
   const spinWheel = () => {

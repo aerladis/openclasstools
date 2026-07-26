@@ -40,15 +40,9 @@
   position: absolute;
   border-radius: 50%;
   background: #fff;
-  animation: twinkle var(--twinkle-dur, 3s) ease-in-out infinite alternate;
   opacity: 0;
 }
 
-@keyframes twinkle {
-  0% { opacity: 0.1; transform: scale(0.8); }
-  50% { opacity: 0.9; transform: scale(1.2); }
-  100% { opacity: 0.2; transform: scale(0.9); }
-}
 
 /* ── SVG Map Layer ── */
 .svgMap {
@@ -69,7 +63,6 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.3));
-  animation: guidelineDashFlow 3s linear infinite;
   opacity: 0.35;
 }
 
@@ -81,13 +74,8 @@
   stroke-linecap: round;
   filter: blur(3px);
   opacity: 0;
-  animation: guidelineDashFlow 1.8s linear infinite;
 }
 
-@keyframes guidelineDashFlow {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -44; }
-}
 
 .mapPathGlow {
   fill: none;
@@ -108,7 +96,6 @@
   stroke-dasharray: 10 8;
   opacity: 0.35;
   filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.3));
-  animation: trailFlow 20s linear infinite;
 }
 
 .mapPathStardust {
@@ -119,13 +106,8 @@
   stroke-linejoin: round;
   stroke-dasharray: 2 20;
   opacity: 0.3;
-  animation: trailFlow 35s linear infinite reverse;
 }
 
-@keyframes trailFlow {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -400; }
-}
 
 /* ── Planet Tile Nodes ── */
 .tileNode {
@@ -215,29 +197,12 @@
 
 .tileTrophy .tilePlanet {
   filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.8));
-  animation: trophyPulse 2s ease-in-out infinite;
 }
 
-@keyframes trophyPulse {
-  0%, 100% { filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6)); }
-  50% { filter: drop-shadow(0 0 28px rgba(245, 158, 11, 1)); }
-}
 
 .tileChance .tilePlanet {
-  animation: chancePulse 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(236, 72, 153, 0.6));
 }
 
-@keyframes chancePulse {
-  0%, 100% { filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.5)); }
-  50% { filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.9)); }
-}
 
-.tileBlackhole .tilePlanet {
-  animation: blackholeSwirl 3s linear infinite;
-}
 
-@keyframes blackholeSwirl {
-  0% { filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.5)) hue-rotate(0deg); }
-  50% { filter: drop-shadow(0 0 26px rgba(139, 92, 246, 0.95)) hue-rotate(25deg); }
-  100% { filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.5)) hue-rotate(0deg); }
-}

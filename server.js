@@ -926,6 +926,62 @@ function getCEFRInstruction(cefr) {
     return buildWordGameCefrInstruction(cefr);
 }
 
+// ============================================
+// LingoParty Shared Deck Library (flat JSON file)
+// ============================================
+const LINGOPARTY_DECKS_FILE = path.join(__dirname, 'lingoparty-decks.json');
+const MAX_SHARED_DECKS = 100;
+
+function sanitizeGameMode(mode) {
+    const normalized = String(mode ?? '').trim().toLowerCase();
+    return ['solo', 'duo', 'crew'].includes(normalized) ? normalized : 'crew';
+}
+
+function getModeInstruction(mode) {
+    if (mode === 'solo') {
+        return 'GAME MODE: Solo (1 student per pawn). Every challenge MUST be answerable by a single student responding individually. Phrase roleplays as solo mission-log monologues.';
+    }
+    if (mode === 'duo') {
+        return 'GAME MODE: Duo (2 students per pawn). Every challenge MUST be structured as an exchange of two turns between the pair of students. Phrase roleplays as two-turn dialogues.';
+    }
+    return 'GAME MODE: Crew (3+ students per pawn). Every challenge MUST involve collaboration among three or more participants. Phrase roleplays as group collaborations with roles for at least three speakers.';
+}
+
+function readSharedDecks() {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(LINGOPARTY_DECKS_FILE, 'utf8'));
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeSharedDecks(decks) {
+    try {
+        fs.writeFileSync(LINGOPARTY_DECKS_FILE, JSON.stringify(decks.slice(0, MAX_SHARED_DECKS), null, 2));
+    } catch (err) {
+        console.warn('[SharedDecks] Failed to persist deck library:', err.message);
+    }
+}
+
+function saveSharedDeck({ teacherName, title, theme, cefr, mode, cards }) {
+    if (!Array.isArray(cards) || cards.length === 0) return null;
+    const record = {
+        id: `deck-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`,
+        teacherName: String(teacherName || 'Anonymous Teacher').trim().slice(0, 60) || 'Anonymous Teacher',
+        title: String(title || '').trim().slice(0, 80) || `${theme} Deck`,
+        theme,
+        cefr: cefr || 'B1',
+        mode,
+        createdAt: new Date().toISOString(),
+        cards
+    };
+    const decks = readSharedDecks();
+    decks.unshift(record);
+    writeSharedDecks(decks);
+    return record;
+}
+
 function jumbleWord(word) {
     const raw = String(word ?? '').toUpperCase().trim();
     const chars = raw.replace(/[^A-Z]/g, '').split('');
@@ -979,20 +1035,26 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
     const cleanTheme = theme || 'General English';
 
     if (gameType === 'lingoparty') {
+        const mode = sanitizeGameMode(options.mode);
+        const roleplayFraming = mode === 'solo'
+            ? 'individually, as a solo mission-log monologue'
+            : mode === 'duo'
+                ? 'as an exchange of two turns between the pair of students'
+                : 'as a collaboration among three or more participants';
         const templates = [
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: Narrate a 30-second mission log about "${cleanTheme}" as if reporting to mission control. Use at least 3 key vocabulary words!`,
+                prompt: `🎭 Roleplay Scenario: Narrate a 30-second mission log about "${cleanTheme}" as if reporting to mission control. Use at least 3 key vocabulary words! Perform ${roleplayFraming}.`,
                 answer: `Key phrases: "Could you tell me...", "In my opinion...", "I suggest that..."`
             },
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: You are ordering or requesting assistance regarding "${cleanTheme}". Express your request clearly in English!`,
+                prompt: `🎭 Roleplay Scenario: You are ordering or requesting assistance regarding "${cleanTheme}". Express your request clearly in English! Perform ${roleplayFraming}.`,
                 answer: `Key phrases: "Excuse me, I need help with...", "How much does it cost?"`
             },
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: Narrate a mission log describing what you would do if you were an expert in "${cleanTheme}" for a day.`,
+                prompt: `🎭 Roleplay Scenario: Narrate a mission log describing what you would do if you were an expert in "${cleanTheme}" for a day. Perform ${roleplayFraming}.`,
                 answer: `Key phrases: "If I were...", "The first thing I would do is...", "I'd also..."`
             },
             {
@@ -1446,10 +1508,13 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
     const count = sanitizeCount(req.body.count, 100);
     const cefr = sanitizeCEFR(req.body.cefr);
     const cefrInstruction = getCEFRInstruction(cefr);
+    const mode = sanitizeGameMode(req.body.mode);
+    const deckTitle = sanitizeTheme(req.body.deckTitle);
     const { customApiKey, teacherName, options } = extractTeacherContext(req);
 
     try {
-        const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction });
+        const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction })
+            + `\n\n${getModeInstruction(mode)}`;
         const rawResult = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
             ...options,
             temperature: 0.7,
@@ -1524,12 +1589,24 @@ app.post('/api/generate-lingoparty', apiRateLimit, async (req, res) => {
             custom_api_key_used: !!customApiKey
         });
 
-        res.json({ success: true, gameId, count: validCards.length, cards: validCards });
+        const savedDeck = saveSharedDeck({ teacherName, title: deckTitle, theme, cefr, mode, cards: validCards });
+
+        res.json({ success: true, gameId, count: validCards.length, cards: validCards, mode, savedDeck });
     } catch (err) {
         console.warn(`[AI Fallback] /api/generate-lingoparty fallback for theme "${theme}":`, err.message);
-        const fallbackCards = createFallbackQuestions('lingoparty', theme, count, { cefr });
-        res.json({ success: false, error: err.message, count: fallbackCards.length, cards: fallbackCards, isFallback: true });
+        const fallbackCards = createFallbackQuestions('lingoparty', theme, count, { cefr, mode });
+        const savedDeck = saveSharedDeck({ teacherName, title: deckTitle, theme, cefr, mode, cards: fallbackCards });
+        res.json({ success: false, error: err.message, count: fallbackCards.length, cards: fallbackCards, isFallback: true, mode, savedDeck });
     }
+});
+
+// ---- GET /api/lingoparty-decks (Shared Deck Library, newest first) ----
+app.get('/api/lingoparty-decks', apiRateLimit, (req, res) => {
+    const decks = readSharedDecks()
+        .slice()
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+        .slice(0, MAX_SHARED_DECKS);
+    res.json({ success: true, decks });
 });
 
 // ---- Admin Telemetry API Endpoints ----
