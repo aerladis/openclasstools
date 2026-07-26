@@ -1,11 +1,13 @@
 import React from 'react';
 import styles from './DeckLibraryPanel.module.css';
+import GenerationConsole from '../../../components/Common/GenerationConsole';
 
 export default function DeckLibraryPanel({
   decks,
   selectedDeck,
   loading,
   error,
+  logs,
   refresh,
   select,
   cefr,
@@ -74,6 +76,7 @@ export default function DeckLibraryPanel({
       </div>
 
       {(error || launchError) && <p className={styles.error}>{launchError || error}</p>}
+      <GenerationConsole logs={logs} />
     </section>
   );
 }

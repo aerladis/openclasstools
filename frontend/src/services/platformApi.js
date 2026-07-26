@@ -54,8 +54,15 @@ export function saveTeacherSettings({
 }
 
 export function hasTeacherKey() {
-  const { session } = stores();
-  return Boolean(session.getItem(STORAGE_KEYS.geminiKey));
+  return Boolean(getTeacherContext().geminiApiKey);
+}
+
+export function declineAiFeatures() {
+  window.sessionStorage.setItem('oct_ai_declined', 'true');
+}
+
+export function wantsAiFeatures() {
+  return window.sessionStorage.getItem('oct_ai_declined') !== 'true';
 }
 
 async function request(url, options) {
@@ -94,11 +101,12 @@ export async function listDecks(gameType) {
   return (await request(`/api/decks?${query}`)).decks || [];
 }
 
-export async function generateDeck(gameType, endpoint, input) {
+export async function generateDeck(gameType, endpoint, input, onLog = () => {}) {
   const context = requiredTeacherContext();
   if (!input?.deckName?.trim()) {
     throw new PlatformApiError('Deck name is required', { status: 400 });
   }
+  onLog('Sending request...');
   const body = await request(endpoint, {
     method: 'POST',
     headers: {
@@ -109,6 +117,9 @@ export async function generateDeck(gameType, endpoint, input) {
     },
     body: JSON.stringify({ ...input, deckName: input.deckName.trim() }),
   });
+  const count = body.deck?.currentVersion?.content?.length || body.count || 0;
+  onLog(`Received ${count} items`);
+  onLog('Saving deck...');
   return body.deck;
 }
 

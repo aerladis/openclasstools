@@ -1,0 +1,51 @@
+.console {
+  background: rgba(4, 2, 16, 0.75);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+  margin-top: 1rem;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.2);
+}
+
+.header {
+  background: rgba(168, 85, 247, 0.15);
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #c4b5fd;
+  border-bottom: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.logList {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.logItem {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.logItem.error {
+  color: #fca5a5;
+}
+
+.time {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.message {
+  word-break: break-word;
+}
