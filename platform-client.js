@@ -35,10 +35,9 @@
 
     function createPlatformClient(dependencies) {
         const options = dependencies || {};
-        const local = options.localStorage || root.localStorage;
         const session = options.sessionStorage || root.sessionStorage;
         const fetchImpl = options.fetch || root.fetch?.bind(root);
-        if (!local || !session || typeof fetchImpl !== 'function') {
+        if (!session || typeof fetchImpl !== 'function') {
             throw new Error('OpenClassPlatform requires storage and fetch');
         }
 
@@ -311,6 +310,15 @@
         return Object.freeze({
             getTeacherContext,
             saveTeacherSettings,
+            hasTeacherKey: function hasTeacherKey() {
+                return Boolean(getTeacherContext().geminiApiKey);
+            },
+            declineAiFeatures: function declineAiFeatures() {
+                session.setItem('oct_ai_declined', 'true');
+            },
+            wantsAiFeatures: function wantsAiFeatures() {
+                return session.getItem('oct_ai_declined') !== 'true';
+            },
             listDecks,
             generateDeck,
             startSession,
@@ -324,9 +332,8 @@
         createPlatformClient,
         PlatformApiError
     });
-    if (root.localStorage && root.sessionStorage && typeof root.fetch === 'function') {
+    if (root.sessionStorage && typeof root.fetch === 'function') {
         root.OpenClassPlatform = createPlatformClient({
-            localStorage: root.localStorage,
             sessionStorage: root.sessionStorage,
             fetch: root.fetch.bind(root)
         });
