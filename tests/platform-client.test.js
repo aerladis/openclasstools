@@ -26,25 +26,21 @@ async function loadFactory() {
     return sandbox.OpenClassPlatformFactory.createPlatformClient;
 }
 
-test('stores teacher name persistently and key for the tab session only', async () => {
+test('stores teacher name and key for the tab session only', async () => {
     const createPlatformClient = await loadFactory();
-    const local = memoryStorage();
     const session = memoryStorage();
     const client = createPlatformClient({
-        localStorage: local,
+        localStorage: memoryStorage(),
         sessionStorage: session,
         fetch: async () => assert.fail('storage must not call fetch')
     });
 
     client.saveTeacherSettings({
         teacherDisplayName: ' Ms Ada ',
-        keySource: 'teacher',
         geminiApiKey: 'secret-key-123'
     });
 
-    assert.equal(local.getItem('oct_teacher_name'), 'Ms Ada');
-    assert.equal(local.getItem('oct_gemini_key'), null);
-    assert.equal(local.getItem('oct_ai_key_source'), 'teacher');
+    assert.equal(session.getItem('oct_teacher_name'), 'Ms Ada');
     assert.equal(session.getItem('oct_gemini_key'), 'secret-key-123');
     assert.deepEqual(
         JSON.parse(JSON.stringify(client.getTeacherContext())),
@@ -56,7 +52,7 @@ test('stores teacher name persistently and key for the tab session only', async 
     );
 });
 
-test('requires a teacher name and selected teacher key', async () => {
+test('requires a teacher name and teacher key', async () => {
     const createPlatformClient = await loadFactory();
     const client = createPlatformClient({
         localStorage: memoryStorage(),
@@ -67,15 +63,13 @@ test('requires a teacher name and selected teacher key', async () => {
     assert.throws(
         () => client.saveTeacherSettings({
             teacherDisplayName: '',
-            keySource: 'platform',
-            geminiApiKey: ''
+            geminiApiKey: 'secret-key-123'
         }),
         /Teacher name is required/
     );
     assert.throws(
         () => client.saveTeacherSettings({
             teacherDisplayName: 'Ms Ada',
-            keySource: 'teacher',
             geminiApiKey: ''
         }),
         /Gemini API key is required/
@@ -111,7 +105,6 @@ test('sends explicit teacher headers and never falls back key sources', async ()
     });
     client.saveTeacherSettings({
         teacherDisplayName: 'Ms Ada',
-        keySource: 'teacher',
         geminiApiKey: 'teacher-key-123'
     });
 
@@ -162,8 +155,7 @@ test('lists decks and records the same selected version in a session', async () 
     });
     client.saveTeacherSettings({
         teacherDisplayName: 'Ms Ada',
-        keySource: 'platform',
-        geminiApiKey: ''
+        geminiApiKey: 'teacher-key-123'
     });
 
     const decks = await client.listDecks('who');
@@ -213,8 +205,7 @@ test('session logging failures warn without blocking an already loaded game', as
     });
     client.saveTeacherSettings({
         teacherDisplayName: 'Ms Ada',
-        keySource: 'platform',
-        geminiApiKey: ''
+        geminiApiKey: 'teacher-key-123'
     });
 
     const session = await client.startSessionSafely({

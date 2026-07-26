@@ -23,7 +23,6 @@ test('generation handler returns registered deck metadata and legacy content key
     const handler = createGenerationHandler({
         gameType: 'who',
         contentKey: 'characters',
-        geminiApiKey: 'platform-secret-key',
         generationService: {
             generateAndRegister: async input => {
                 calls.push(input);
@@ -41,7 +40,7 @@ test('generation handler returns registered deck metadata and legacy content key
     const req = {
         headers: {
             'x-teacher-name': 'Ms Ada',
-            'x-ai-key-source': 'platform'
+            'x-gemini-api-key': 'teacher-secret-key-123'
         },
         body: { deckName: 'Space Heroes', theme: 'Space' }
     };
@@ -53,13 +52,13 @@ test('generation handler returns registered deck metadata and legacy content key
     assert.deepEqual(res.body.characters, ['Leia']);
     assert.equal(res.body.deck.id, 'd1');
     assert.equal(calls[0].deckName, 'Space Heroes');
+    assert.equal(calls[0].teacherContext.apiKey, 'teacher-secret-key-123');
 });
 
 test('generation handler returns safe domain errors', async () => {
     const handler = createGenerationHandler({
         gameType: 'who',
         contentKey: 'characters',
-        geminiApiKey: 'platform-secret-key',
         generationService: {
             generateAndRegister: async () => {
                 const error = new Error('Sensitive upstream body');
@@ -76,7 +75,6 @@ test('generation handler returns safe domain errors', async () => {
     await handler({
         headers: {
             'x-teacher-name': 'Ms Ada',
-            'x-ai-key-source': 'teacher',
             'x-gemini-api-key': 'teacher-secret-key'
         },
         body: { deckName: 'Set' }
