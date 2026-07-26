@@ -8,7 +8,6 @@ import {
 export default function ApiKeyModal({ isOpen, onClose }) {
   const [apiKey, setApiKey] = useState('');
   const [teacherName, setTeacherName] = useState('');
-  const [keySource, setKeySource] = useState('platform');
   const [savedStatus, setSavedStatus] = useState(false);
   const [error, setError] = useState('');
 
@@ -17,7 +16,6 @@ export default function ApiKeyModal({ isOpen, onClose }) {
       const context = getTeacherContext();
       setApiKey(context.geminiApiKey);
       setTeacherName(context.teacherDisplayName);
-      setKeySource(context.keySource);
       setSavedStatus(false);
       setError('');
     }
@@ -30,7 +28,6 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     try {
       saveTeacherSettings({
         teacherDisplayName: teacherName,
-        keySource,
         geminiApiKey: apiKey,
       });
       setError('');
@@ -45,9 +42,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
   };
 
   const handleClear = () => {
-    sessionStorage.removeItem('oct_gemini_key');
+    window.sessionStorage.removeItem('oct_gemini_key');
     setApiKey('');
-    setKeySource('platform');
     setSavedStatus(false);
   };
 
@@ -78,19 +74,6 @@ export default function ApiKeyModal({ isOpen, onClose }) {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label>AI quota source</label>
-            <select
-              className={styles.inputField}
-              value={keySource}
-              onChange={e => setKeySource(e.target.value)}
-            >
-              <option value="platform">Platform key</option>
-              <option value="teacher">My teacher key</option>
-            </select>
-          </div>
-
-          {keySource === 'teacher' && (
-          <div className={styles.fieldGroup}>
             <label>Google Gemini API Key</label>
             <input
               type="password"
@@ -102,10 +85,9 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             />
             <span className={styles.hint}>
               Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>.
-              If it fails, the app will not silently retry with the platform key.
+              If it fails, the app will not silently retry with another key.
             </span>
           </div>
-          )}
 
           {error && <div className={styles.errorBadge}>{error}</div>}
           {savedStatus && (
@@ -115,9 +97,9 @@ export default function ApiKeyModal({ isOpen, onClose }) {
           )}
 
           <div className={styles.btnRow}>
-            {keySource === 'teacher' && apiKey && (
+            {apiKey && (
               <button type="button" className={styles.btnClear} onClick={handleClear}>
-                Clear Custom Key
+                Clear Key
               </button>
             )}
             <button type="submit" className={styles.btnSave}>
