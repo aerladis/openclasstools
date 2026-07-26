@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './GameHub.module.css';
 import ApiKeyModal from '../Common/ApiKeyModal';
-import { getTeacherContext } from '../../services/platformApi';
+import TeacherKeyPrompt from '../Common/TeacherKeyPrompt';
+import {
+  hasTeacherKey,
+  wantsAiFeatures,
+} from '../../services/platformApi';
 
 export default function GameHub() {
   const [serverHealth, setServerHealth] = useState({ status: 'checking', activeGames: 0 });
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [hasCustomKey, setHasCustomKey] = useState(false);
+  const [showKeyPrompt, setShowKeyPrompt] = useState(false);
+  const [keyActive, setKeyActive] = useState(hasTeacherKey());
 
   useEffect(() => {
     fetch('/api/health')
@@ -22,11 +27,18 @@ export default function GameHub() {
         setServerHealth({ status: 'offline', activeGames: 0 });
       });
 
-    const teacherContext = getTeacherContext();
-    setHasCustomKey(
-      teacherContext.keySource === 'teacher' && Boolean(teacherContext.geminiApiKey)
-    );
-  }, [isApiKeyModalOpen]);
+    setShowKeyPrompt(!hasTeacherKey() && wantsAiFeatures());
+  }, []);
+
+  const handlePromptClose = () => {
+    setShowKeyPrompt(false);
+    setKeyActive(hasTeacherKey());
+  };
+
+  const handleApiModalClose = () => {
+    setIsApiKeyModalOpen(false);
+    setKeyActive(hasTeacherKey());
+  };
 
   const games = [
     {
@@ -147,7 +159,7 @@ export default function GameHub() {
             className={styles.btnApiKey}
             onClick={() => setIsApiKeyModalOpen(true)}
           >
-            {hasCustomKey ? '🟢 Teacher Key Active' : '🔑 Teacher API Key'}
+            {keyActive ? '🟢 AI Key Active' : '🔴 AI Generation Disabled'}
           </button>
 
           <div className={styles.statusBadge}>
@@ -182,7 +194,11 @@ export default function GameHub() {
 
       <ApiKeyModal
         isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
+        onClose={handleApiModalClose}
+      />
+      <TeacherKeyPrompt
+        isOpen={showKeyPrompt}
+        onClose={handlePromptClose}
       />
     </div>
   );
