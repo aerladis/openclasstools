@@ -66,8 +66,8 @@
 
         function getTeacherContext() {
             return {
-                teacherDisplayName: local.getItem(STORAGE_KEYS.teacherName) || '',
-                keySource: local.getItem(STORAGE_KEYS.keySource) || 'platform',
+                teacherDisplayName: session.getItem(STORAGE_KEYS.teacherName) || '',
+                keySource: 'teacher',
                 geminiApiKey: session.getItem(STORAGE_KEYS.geminiKey) || ''
             };
         }
@@ -78,43 +78,25 @@
                 'Teacher name',
                 120
             );
-            const keySource = settings?.keySource;
-            if (keySource !== 'teacher' && keySource !== 'platform') {
-                throw new PlatformApiError('Choose a teacher or platform key', {
-                    status: 400,
-                    code: 'AI_KEY_SOURCE_REQUIRED'
-                });
-            }
             const geminiApiKey = typeof settings?.geminiApiKey === 'string'
                 ? settings.geminiApiKey.trim()
                 : '';
-            if (keySource === 'teacher' && !geminiApiKey) {
+            if (!geminiApiKey) {
                 throw new PlatformApiError('Gemini API key is required', {
                     status: 400,
                     code: 'TEACHER_AI_KEY_REQUIRED'
                 });
             }
 
-            local.setItem(STORAGE_KEYS.teacherName, teacherDisplayName);
-            local.setItem(STORAGE_KEYS.keySource, keySource);
-            if (keySource === 'teacher') {
-                session.setItem(STORAGE_KEYS.geminiKey, geminiApiKey);
-            } else {
-                session.removeItem(STORAGE_KEYS.geminiKey);
-            }
+            session.setItem(STORAGE_KEYS.teacherName, teacherDisplayName);
+            session.setItem(STORAGE_KEYS.geminiKey, geminiApiKey);
             return getTeacherContext();
         }
 
         function requireTeacherContext() {
             const context = getTeacherContext();
             cleanText(context.teacherDisplayName, 'Teacher name', 120);
-            if (context.keySource !== 'teacher' && context.keySource !== 'platform') {
-                throw new PlatformApiError('Choose a teacher or platform key', {
-                    status: 400,
-                    code: 'AI_KEY_SOURCE_REQUIRED'
-                });
-            }
-            if (context.keySource === 'teacher' && !context.geminiApiKey) {
+            if (!context.geminiApiKey) {
                 throw new PlatformApiError('Gemini API key is required', {
                     status: 400,
                     code: 'TEACHER_AI_KEY_REQUIRED'
@@ -127,10 +109,8 @@
             return {
                 'Content-Type': 'application/json',
                 'x-teacher-name': context.teacherDisplayName,
-                'x-ai-key-source': context.keySource,
-                ...(context.keySource === 'teacher'
-                    ? { 'x-gemini-api-key': context.geminiApiKey }
-                    : {})
+                'x-ai-key-source': 'teacher',
+                'x-gemini-api-key': context.geminiApiKey
             };
         }
 

@@ -15,23 +15,21 @@ export class PlatformApiError extends Error {
 
 function stores() {
   return {
-    local: window.localStorage,
     session: window.sessionStorage,
   };
 }
 
 export function getTeacherContext() {
-  const { local, session } = stores();
+  const { session } = stores();
   return {
-    teacherDisplayName: local.getItem(STORAGE_KEYS.teacherName) || '',
-    keySource: local.getItem(STORAGE_KEYS.keySource) || 'platform',
+    teacherDisplayName: session.getItem(STORAGE_KEYS.teacherName) || '',
+    keySource: 'teacher',
     geminiApiKey: session.getItem(STORAGE_KEYS.geminiKey) || '',
   };
 }
 
 export function saveTeacherSettings({
   teacherDisplayName,
-  keySource,
   geminiApiKey,
 }) {
   const name = typeof teacherDisplayName === 'string'
@@ -41,20 +39,23 @@ export function saveTeacherSettings({
   if (name.length > 120) {
     throw new PlatformApiError('Teacher name must be at most 120 characters', { status: 400 });
   }
-  if (keySource !== 'teacher' && keySource !== 'platform') {
-    throw new PlatformApiError('Choose a teacher or platform key', { status: 400 });
-  }
   const key = typeof geminiApiKey === 'string' ? geminiApiKey.trim() : '';
-  if (keySource === 'teacher' && !key) {
-    throw new PlatformApiError('Gemini API key is required', { status: 400 });
+  if (!key) {
+    throw new PlatformApiError('Gemini API key is required', {
+      status: 400,
+      code: 'TEACHER_AI_KEY_REQUIRED',
+    });
   }
 
-  const { local, session } = stores();
-  local.setItem(STORAGE_KEYS.teacherName, name);
-  local.setItem(STORAGE_KEYS.keySource, keySource);
-  if (keySource === 'teacher') session.setItem(STORAGE_KEYS.geminiKey, key);
-  else session.removeItem(STORAGE_KEYS.geminiKey);
+  const { session } = stores();
+  session.setItem(STORAGE_KEYS.teacherName, name);
+  session.setItem(STORAGE_KEYS.geminiKey, key);
   return getTeacherContext();
+}
+
+export function hasTeacherKey() {
+  const { session } = stores();
+  return Boolean(session.getItem(STORAGE_KEYS.geminiKey));
 }
 
 async function request(url, options) {
@@ -79,8 +80,11 @@ function requiredTeacherContext() {
   if (!context.teacherDisplayName) {
     throw new PlatformApiError('Teacher name is required', { status: 400 });
   }
-  if (context.keySource === 'teacher' && !context.geminiApiKey) {
-    throw new PlatformApiError('Gemini API key is required', { status: 400 });
+  if (!context.geminiApiKey) {
+    throw new PlatformApiError('Gemini API key is required', {
+      status: 400,
+      code: 'TEACHER_AI_KEY_REQUIRED',
+    });
   }
   return context;
 }
@@ -100,10 +104,8 @@ export async function generateDeck(gameType, endpoint, input) {
     headers: {
       'Content-Type': 'application/json',
       'x-teacher-name': context.teacherDisplayName,
-      'x-ai-key-source': context.keySource,
-      ...(context.keySource === 'teacher'
-        ? { 'x-gemini-api-key': context.geminiApiKey }
-        : {}),
+      'x-ai-key-source': 'teacher',
+      'x-gemini-api-key': context.geminiApiKey,
     },
     body: JSON.stringify({ ...input, deckName: input.deckName.trim() }),
   });
