@@ -5,10 +5,10 @@
 OpenClassTools is a modern, interactive web-based party games platform designed for groups, classrooms, and social gatherings. It features a collection of classic party games with AI-powered content generation and real-time multiplayer capabilities via Socket.IO.
 
 **Key Characteristics:**
-- Zero database required - uses flat-file storage (`list.txt`)
-- AI-powered content generation via Google Gemini API
+- Supabase-backed named decks, immutable versions, and play-session analytics
+- AI-powered content generation via Google Gemini API with platform or session-only teacher keys
 - Glassmorphism UI design with particle backgrounds
-- Real-time host-admin synchronization for remote game management
+- Authenticated real-time host-admin synchronization for remote game management
 - Fully modular architecture - each game is self-contained
 
 ## Included Games
@@ -20,13 +20,15 @@ OpenClassTools is a modern, interactive web-based party games platform designed 
 5. **Wheel of Names** (`wheel.html`, `wheel.js`, `wheel.css`) - Customizable spinning wheel selector
 6. **Who Wants to Be a Millionaire** (`millionaire.html`, `millionaire.js`, `millionaire.css`) - Quiz show with 15 questions, lifelines, and progressive difficulty
 7. **Kelime Oyunu** (`kelime.html`, `kelime.js`, `kelime.css`) - Turkish word game with letter reveal, timer, scoring, and AI question generation
-8. **Flappy Crocodile** (`FlappyCrocodile/`) - Canvas-based arcade game (self-contained subdirectory)
-9. **LingoParty** (`lingoparty.html`, `lingoparty.js`, `lingoparty.css`) - Mario Party-style language board game with AI mini-challenges, shop, power-ups, and real-time mobile interaction
+8. **Vocabulary Flashcards** (`flashcards.html`, `flashcards.js`, `flashcards.css`) - Vocabulary review with mastery tracking
+9. **Six Thinking Hats** (`hats.html`, `hats.js`, `hats.css`) - Structured classroom discussion prompts
+10. **LingoParty** (React `/lingoparty`) - Mario Party-style language board game with AI mini-challenges, shop, power-ups, and real-time mobile interaction
 
 ## Technology Stack
 
-- **Frontend**: HTML5, CSS3 (Vanilla), JavaScript (ES6+), Canvas API
+- **Frontend**: React/Vite hub, LingoParty and control center; legacy HTML/CSS/JavaScript game clients
 - **Backend**: Node.js, Express.js (v4.21.2), Socket.IO (v4.8.3)
+- **Database**: Supabase Postgres via a server-only service-role REST adapter
 - **AI Integration**: Google Gemini API (`gemini-2.5-flash` model)
 - **Dependencies**: `dotenv` for environment variables
 - **Deployment**: Node.js server with optional nginx reverse proxy
@@ -39,7 +41,10 @@ project-root/
 ├── package.json           # Node.js dependencies and scripts
 ├── .env                   # Environment variables (GEMINI_API_KEY, PORT)
 ├── .env.example           # Template for environment variables
-├── list.txt               # Default character list for "Who Am I?"
+├── list.txt               # Legacy/default character list
+├── server/                # Domain, repositories, routes, security, services
+├── supabase/migrations/   # Persistent-platform database migration
+├── frontend/              # React/Vite hub, LingoParty, and control center
 ├── nginx-play.conf        # Nginx reverse proxy configuration
 ├── uploads/               # Temporary file upload directory
 │
@@ -74,14 +79,6 @@ project-root/
 ├── lingoparty.js          # LingoParty game logic + dice/pawn animation + audio
 ├── lingoparty.css         # LingoParty-specific styles (glassmorphism winding board)
 │
-├── admin.html             # Admin panel for remote monitoring
-├── admin.js               # Admin panel logic (Socket.IO client)
-├── admin.css              # Admin panel styles
-│
-└── FlappyCrocodile/       # Self-contained arcade game
-    ├── index.html
-    ├── script.js
-    └── style.css
 ```
 
 ## Build and Run Commands
@@ -108,16 +105,20 @@ Create a `.env` file in the project root:
 ```env
 GEMINI_API_KEY=your_actual_api_key_here
 PORT=8090
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
+ADMIN_PASSCODE=your_long_admin_passcode
+ADMIN_SESSION_SECRET=your_random_signing_secret
 ```
 
-**Required:** Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+Apply the migration in `supabase/migrations/`, then run `npm run seed:decks`.
 
 ## API Endpoints
 
 ### POST `/api/generate`
-Generate character list for "Who Am I?"
-- Body: `{ theme: string, count: number }`
-- Saves result to `list.txt`
+Generate and register a named character deck for "Who Am I?"
+- Body includes `{ name, theme, count, teacherDisplayName, keySource, geminiApiKey? }`
+- Returns the persisted deck and exact current version
 
 ### POST `/api/generate-taboo`
 Generate Taboo cards
@@ -235,10 +236,10 @@ No automated test suite is configured. Testing is manual:
 2. Open `http://localhost:8090` in browser
 3. Test each game flow from start to finish
 4. Test AI generation features (requires valid GEMINI_API_KEY)
-5. Test admin panel by:
+5. Test the protected control center by:
    - Opening a game (note the Game ID)
-   - Opening `admin.html` in another tab
-   - Entering the Game ID to connect
+   - Opening `/control-center` directly and signing in
+   - Using the Live remote tab to connect with the Game ID
    - Verifying real-time updates
 
 ## Deployment
@@ -255,7 +256,7 @@ Use the provided `nginx-play.conf` as a template:
 - Handles upgrade headers for real-time communication
 
 ### Environment Requirements
-- Node.js v16+
+- Node.js v18+
 - Valid GEMINI_API_KEY in environment
 - Port 8090 available (or configure via PORT env var)
 
@@ -402,8 +403,9 @@ pm2 restart openclasstools
   - AI Generation: 10 requests per 15 minutes per IP
 - **Security Headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
 - **Request Limits**: JSON body limited to 10KB
-- **File Storage**: `list.txt` is overwritten on each generation
-- **No Authentication**: Admin panel uses only Game ID (4-character code)
+- **Persistent Storage**: Named decks, immutable versions, and sessions live in Supabase
+- **Administrator Authentication**: A signed HttpOnly session cookie and CSRF protect dashboard APIs; privileged Socket.IO commands re-check that session
+- **Key Privacy**: The Supabase service role and platform/admin secrets stay server-side; teacher Gemini keys are tab-session only and never persisted
 
 ## Session Management & Multiple Games
 

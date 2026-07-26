@@ -159,6 +159,8 @@ let guessedLetters = new Set();
 let wrongCount = 0;
 let gameActive = false;
 let usedWords = [];
+let deckLibrary = null;
+let playSessionId = null;
 
 // ---- Helpers ----
 function normalizeWordList(words, fallbackCategory = 'Generated') {
@@ -179,7 +181,7 @@ function normalizeWordList(words, fallbackCategory = 'Generated') {
 
             return {
                 word: normalizedWord,
-                cat: entry.cat || fallbackCategory
+                cat: entry.category || entry.cat || fallbackCategory
             };
         })
         .filter((entry) => entry && entry.word);
@@ -272,12 +274,29 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---- Start game ----
-function startGame() {
+async function startGame() {
     if (!wordList.length) {
         generateStatus.textContent = 'No playable words available. Generate a new list first.';
         generateStatus.className = 'generate-status error';
         return;
     }
+    const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+    if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
+        generateStatus.textContent = 'Choose or generate a registered deck first.';
+        generateStatus.className = 'generate-status error';
+        return;
+    }
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'hangman',
+        roomCode: gameId,
+        participantNames: [],
+        ...selectedDeckRef
+    }, error => {
+        generateStatus.textContent = error.message;
+        generateStatus.className = 'generate-status error';
+        alert(`The game will still start, but it could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
 
     const pick = pickWord();
     currentWord = pick.word;
@@ -307,6 +326,15 @@ function endGame(won) {
     keyboard.querySelectorAll('.key-btn').forEach(b => b.disabled = true);
 
     emitGameState('gameOver', won);
+    if (playSessionId) {
+        window.OpenClassPlatform.completeSession(playSessionId, {
+            won,
+            word: currentWord,
+            category: currentCat,
+            wrongGuesses: wrongCount
+        }).catch(() => null);
+        playSessionId = null;
+    }
 
     setTimeout(() => {
         gameOverIcon.textContent = won ? '🎉' : '💀';
@@ -417,6 +445,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnReuseGenerated?.addEventListener('click', restoreGeneratedWords);
     updateReuseButton();
+
+    btnGenerate.hidden = true;
+    if (btnReuseGenerated) btnReuseGenerated.hidden = true;
+    deckLibrary = window.OpenClassPlatform.mountDeckLibrary({
+        container: '#deck-library-mount',
+        gameType: 'hangman',
+        endpoint: '/api/generate-hangman',
+        collectGenerationInput: () => ({
+            theme: wordTheme.value.trim(),
+            count: parseInt(wordCount.value, 10) || 20
+        }),
+        onDeckSelected: (deck) => {
+            if (!deck?.currentVersion?.content) return;
+            wordList = normalizeWordList(
+                deck.currentVersion.content,
+                deck.currentVersion.theme || 'Registered'
+            );
+            usedWords = [];
+            generateStatus.textContent = `Using registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`;
+            generateStatus.className = 'generate-status success';
+            if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
+        }
+    });
 
     // Sync initial word list to admin if already connected
     if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });

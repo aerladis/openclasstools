@@ -10,7 +10,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<GameHub />} />
         <Route path="/lingoparty" element={<LingoPartyGame />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/control-center" element={<AdminDashboard />} />
         <Route path="*" element={<GameHub />} />
       </Routes>
     </div>

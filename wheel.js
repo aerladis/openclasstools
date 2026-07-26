@@ -9,6 +9,7 @@ let names = [];
 let spinning = false;
 let currentAngle = 0;
 let lastWinnerIndex = -1;
+let playSessionId = null;
 const FULL_TURN = Math.PI * 2;
 const MIN_WHEEL_SPIN_TURNS = 6.5;
 const MAX_WHEEL_EXTRA_TURNS = 2.5;
@@ -150,8 +151,17 @@ function drawWheel() {
 }
 
 // ---- Spin ----
-btnSpin.addEventListener('click', () => {
+btnSpin.addEventListener('click', async () => {
     if (spinning || names.length < 2) return;
+    const session = await window.OpenClassPlatform.startSessionSafely({
+        gameType: 'wheel',
+        participantNames: [...names],
+        deckId: null,
+        deckVersionId: null
+    }, error => {
+        alert(`The wheel will still spin, but this session could not be recorded: ${error.message}`);
+    });
+    playSessionId = session?.id || null;
     spinning = true;
     btnSpin.disabled = true;
     winnerDisplay.textContent = '';
@@ -205,6 +215,11 @@ btnSpin.addEventListener('click', () => {
             winnerName.textContent = names[winnerIndex];
             winnerDisplay.append(winnerEmoji, winnerName);
             btnRemoveWinner.style.display = '';
+            window.OpenClassPlatform.completeSession(playSessionId, {
+                spinCount: 1,
+                selectedName: names[winnerIndex]
+            }).catch(() => null);
+            playSessionId = null;
         }
     }
 

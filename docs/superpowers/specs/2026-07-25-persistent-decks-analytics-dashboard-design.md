@@ -12,7 +12,7 @@ Evolve OpenClassTools into a persistent web application that:
 - records the exact deck generation or revision used in each session;
 - provides an unlinked, server-protected administration dashboard for analytics and deck management;
 - applies teacher identity and optional teacher-provided Gemini keys consistently across every content generator; and
-- removes Flappy Crocodile completely.
+- removes the retired arcade game completely.
 
 This release does not add teacher accounts. A teacher is identified by a persistent display name, and participants are identified by the team or player labels entered for a game.
 
@@ -31,7 +31,7 @@ The following games support both selecting an existing registered deck and gener
 7. Six Thinking Hats
 8. LingoParty
 
-Bottle and Wheel remain deckless utility games, but their game sessions are still eligible for telemetry. Flappy Crocodile and every hub, documentation, deployment, and analytics reference to it are removed.
+Bottle and Wheel remain deckless utility games, but their game sessions are still eligible for telemetry. The retired arcade game and every hub, documentation, deployment, and analytics reference to it are removed.
 
 ### Migration strategy
 
@@ -299,18 +299,18 @@ The hub:
 
 - contains no administrator link, including in development;
 - retains shared Teacher Settings;
-- removes Flappy Crocodile;
+- removes the retired arcade game;
 - continues linking stable legacy game pages during incremental migration.
 
-Flappy removal includes:
+Retired-game removal includes:
 
-- deleting `FlappyCrocodile/`;
+- deleting its self-contained directory;
 - removing static and React hub entries;
 - removing analytics icons/types;
 - updating README, test, deployment, and agent documentation;
-- excluding obsolete packaged deployment artifacts from source control or regenerating them without Flappy where they remain necessary.
+- excluding obsolete packaged deployment artifacts from source control.
 
-The Hangman word “CROCODILE” is ordinary game content and is not removed merely because Flappy Crocodile is removed.
+Ordinary Hangman vocabulary is not removed merely because the unrelated arcade game is retired.
 
 ## Failure and Degraded Modes
 
@@ -349,7 +349,7 @@ The Hangman word “CROCODILE” is ordinary game content and is not removed mer
 - Test registered-deck selection and required-name generation in all eight content games.
 - Test participant/team capture and session warnings.
 - Test admin login, logout, analytics filters, deck editing, conflicts, archive/restore, and revision history.
-- Verify the hub contains all intended games and no admin or Flappy entry.
+- Verify the hub contains all intended games and no admin or retired-game entry.
 
 ### End-to-end smoke flow
 
@@ -391,7 +391,7 @@ Build, lint, API tests, database verification, and representative browser flows 
 - complete analytics and session inspection;
 - add game-aware deck editing and revision history;
 - integrate protected live remote control;
-- remove Flappy Crocodile and stale references;
+- remove the retired arcade game and stale references;
 - update documentation and deployment configuration;
 - execute the full verification matrix.
 

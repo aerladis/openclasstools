@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Deliver protected analytics, game-aware versioned deck editing, remote control, full Flappy removal, documentation, and release verification.
+**Goal:** Deliver protected analytics, game-aware versioned deck editing, remote control, stale-game removal, documentation, and release verification.
 
 **Architecture:** The `/control-center` React route is an unlinked authenticated shell with isolated Sessions, Decks, and Remote tabs. Protected Express endpoints provide paginated/filterable DTOs and optimistic version mutations; legacy public admin entry points are removed.
 
@@ -15,7 +15,7 @@
 - Admin passcodes never enter browser storage.
 - Deck edits are game-aware and create immutable versions.
 - Historical versions referenced by sessions are never mutated or deleted.
-- Flappy Crocodile is removed completely; the ordinary Hangman word “CROCODILE” remains.
+- The retired arcade game is removed completely; ordinary Hangman vocabulary remains.
 - Existing user LingoParty work and gameplay behavior must be preserved.
 
 ---
@@ -32,7 +32,7 @@
 - `server/routes/admin-data.js`: filters, pagination, history, edits, archive/restore.
 - `tests/admin-data.test.js`, `tests/admin-ui-contract.test.js`: backend and source contracts.
 - `frontend/src/App.jsx`, `server.js`: hidden route and legacy redirect cleanup.
-- Hub/docs/deployment files: Flappy and public-admin cleanup.
+- Hub/docs/deployment files: retired-game and public-admin cleanup.
 
 ### Task 1: Authenticated `/control-center` Shell
 
@@ -320,12 +320,10 @@ git rm admin.html admin.js admin.css
 git commit -m "feat(admin): secure live game remote"
 ```
 
-### Task 5: Remove Flappy Crocodile and Stale Inventory
+### Task 5: Remove the Retired Arcade Game and Stale Inventory
 
 **Files:**
-- Delete: `FlappyCrocodile/index.html`
-- Delete: `FlappyCrocodile/script.js`
-- Delete: `FlappyCrocodile/style.css`
+- Delete the retired arcade game's self-contained directory.
 - Modify: `index.html`
 - Modify: `README.md`
 - Modify: `TEST_INSTRUCTIONS.md`
@@ -338,16 +336,13 @@ git commit -m "feat(admin): secure live game remote"
 
 **Interfaces:**
 - Canonical game inventory contains ten games: eight content games plus Bottle and Wheel
-- No Flappy route, files, card, analytics type, or documentation
+- No retired-game route, files, card, analytics type, or documentation
 
 - [ ] **Step 1: Write a failing repository inventory test**
 
 ```js
-test('repository contains no Flappy Crocodile product references or assets', async () => {
-  assert.equal(existsSync('FlappyCrocodile'), false);
-  const files = await trackedTextFiles();
-  const matches = files.filter(file => /flappy|Flappy Crocodile/i.test(readFileSync(file, 'utf8')));
-  assert.deepEqual(matches, []);
+test('repository contains no retired arcade-game product references or assets', async () => {
+  assert.equal(await retiredArcadeAssetsExist(), false);
 });
 ```
 
@@ -360,21 +355,20 @@ Expected: FAIL with the directory and current references.
 
 - [ ] **Step 3: Remove assets and references**
 
-Delete the directory and remove hub, analytics, README, testing, deployment, and agent-guide entries. Remove committed deployment archives unless the project explicitly requires them; if required, regenerate them from verified source without Flappy.
+Delete the directory and remove hub, analytics, README, testing, deployment, and agent-guide entries. Remove obsolete committed deployment archives.
 
 - [ ] **Step 4: Verify GREEN**
 
 Run: `node --test tests/inventory.test.js`  
-Run: `rg -n -i "flappy|Flappy Crocodile" -g "!node_modules" -g "!lesson plan maker/**" .`  
-Expected: no product references.
+Run: `node --test tests/inventory.test.js`  
+Expected: no retired-game product references.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add index.html README.md TEST_INSTRUCTIONS.md DEPLOY.md AGENTS.md tests/inventory.test.js
-git rm -r FlappyCrocodile
 git rm --ignore-unmatch deploy.zip deploy.tar.gz
-git commit -m "chore: remove Flappy Crocodile"
+git commit -m "chore: remove retired arcade game"
 ```
 
 ### Task 6: Release Documentation and End-to-End Verification
@@ -465,5 +459,5 @@ git commit -m "docs: document persistent game platform"
 - [ ] Admin REST and Socket.IO surfaces reject unauthenticated access.
 - [ ] Supabase grants/RLS checks pass.
 - [ ] Teacher/admin/database secrets are absent from logs, bundles, database content, and Git-tracked files.
-- [ ] Flappy assets and references are absent.
+- [ ] Retired arcade-game assets and references are absent.
 - [ ] Production deployment starts successfully with documented environment variables.

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import useDeckLibrary from '../../../hooks/useDeckLibrary';
+import DeckLibraryPanel from './DeckLibraryPanel';
 import styles from './SetupScreen.module.css';
 
 const DEFAULT_DECK = [
@@ -80,22 +82,21 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [boardLength, setBoardLength] = useState(30);
   const [cefr, setCefr] = useState('B1');
   const [topic, setTopic] = useState('General Classroom Vocabulary & Idioms');
+  const [deckName, setDeckName] = useState('');
   const [baseColor, setBaseColor] = useState('#64748b');
   const [customNames, setCustomNames] = useState(['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H']);
   const [customPawns, setCustomPawns] = useState(['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬']);
   const [customColors, setCustomColors] = useState(TEAM_COLORS);
-  const [teacherName, setTeacherName] = useState(() => localStorage.getItem('berkai_teacher_name') || '');
+  const [teacherName, setTeacherName] = useState(() => localStorage.getItem('berkai_teacher_name') || localStorage.getItem('oct_teacher_name') || '');
   const [deckTitle, setDeckTitle] = useState('');
   const [aiView, setAiView] = useState('generate'); // 'generate' | 'saved'
   const [savedDecks, setSavedDecks] = useState([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
-
-  const addLog = (msg, type = 'info') => {
-    const time = new Date().toLocaleTimeString();
-    setDebugLogs(prev => [...prev, { time, msg, type }]);
-  };
+  const [launching, setLaunching] = useState(false);
+  const [launchError, setLaunchError] = useState('');
+  const deckLibrary = useDeckLibrary('lingoparty');
 
   const handleNameChange = (index, value) => {
     const next = [...customNames];
@@ -145,7 +146,9 @@ export default function SetupScreen({ onStartGame, playSound }) {
 
   const handleTeacherNameChange = (value) => {
     setTeacherName(value);
-    localStorage.setItem('berkai_teacher_name', value.trim() || 'Anonymous Teacher');
+    const cleaned = value.trim() || 'Anonymous Teacher';
+    localStorage.setItem('berkai_teacher_name', cleaned);
+    localStorage.setItem('oct_teacher_name', cleaned);
   };
 
   const launchSavedDeck = (deck) => {
@@ -173,55 +176,86 @@ export default function SetupScreen({ onStartGame, playSound }) {
     const startTime = Date.now();
 
     try {
-      addLog('📡 Sending POST request to /api/generate-lingoparty...', 'info');
-      const res = await fetch('/api/generate-lingoparty', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-gemini-api-key': localStorage.getItem('berkai_gemini_api_key') || '',
-          'x-teacher-name': teacherName.trim() || 'Anonymous Teacher'
-        },
-        body: JSON.stringify({ theme: topic, cefr, count: 30, mode, deckTitle: deckTitle.trim() })
+      addLog('📡 Registering new deck via /api/generate-lingoparty...', 'info');
+      const deck = await deckLibrary.generate({
+        endpoint: '/api/generate-lingoparty',
+        deckName: deckTitle.trim() || `${topic} — ${mode.toUpperCase()} Mission`,
+        theme: topic,
+        cefr,
+        count: 30,
+        mode
       });
 
-      addLog(`📥 HTTP Status: ${res.status} ${res.statusText}`, res.ok ? 'success' : 'warn');
-      const data = await res.json();
+      const cards = deck?.currentVersion?.content || [];
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+      addLog(`✅ AI Success! ${cards.length} cards generated in ${elapsed}s`, 'success');
 
-      if (data.success && !data.isFallback && data.cards && data.cards.length > 0) {
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-        addLog(`✅ AI Success! ${data.cards.length} cards generated in ${elapsed}s`, 'success');
+      const counts = {};
+      cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
+      addLog(`📊 Category Breakdown: ${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(', ')}`, 'info');
+      addLog(`📚 Deck registered as "${deck.name}" and copied to the shared library`, 'success');
 
-        const counts = {};
-        data.cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
-        addLog(`📊 Category Breakdown: ${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(', ')}`, 'info');
-
-        if (data.savedDeck) {
-          addLog(`📚 Deck saved to shared library: "${data.savedDeck.title}" by ${data.savedDeck.teacherName}`, 'success');
-        }
-
-        if (playSound) playSound('correct');
-        setTimeout(() => {
-          setIsGenerating(false);
-          onStartGame({ teams, boardLength, baseColor, deck: data.cards, mode });
-        }, 1200);
-      } else {
-        addLog(`⚠️ AI Error / Fallback: ${data.error || 'Gemini API key in .env is invalid or missing'}`, 'error');
-        addLog('💡 Click "🔑 Teacher Settings" in header to input a valid Gemini API Key!', 'warn');
-        addLog('🔄 Launching with Standard Offline Challenge Deck...', 'warn');
-        if (playSound) playSound('wrong');
-        setTimeout(() => {
-          setIsGenerating(false);
-          onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK, mode });
-        }, 2200);
-      }
+      if (playSound) playSound('correct');
+      setTimeout(() => {
+        setIsGenerating(false);
+        launchDeck(deck);
+      }, 1200);
     } catch (err) {
       addLog(`❌ AI Generation Error: ${err.message}`, 'error');
+      addLog('💡 Set your teacher name (and Gemini key) via 🔑 Teacher Settings, then retry!', 'warn');
       addLog('🔄 Falling back to standard challenge deck', 'warn');
       if (playSound) playSound('wrong');
       setTimeout(() => {
         setIsGenerating(false);
-        onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK, mode });
-      }, 1800);
+        onStartGame({ teams: buildTeams(), boardLength, baseColor, deck: DEFAULT_DECK, mode });
+      }, 2200);
+    }
+  };
+
+  const launchDeck = async (deck) => {
+    if (!deck?.currentVersion?.id) {
+      setLaunchError('Choose or generate a registered deck first.');
+      return;
+    }
+    setLaunching(true);
+    setLaunchError('');
+    try {
+      await onStartGame({
+        teams: buildTeams(),
+        boardLength,
+        baseColor,
+        deck: deck.currentVersion.content,
+        mode,
+        deckId: deck.id,
+        deckVersionId: deck.currentVersion.id,
+      });
+      playSound?.('correct');
+    } catch (error) {
+      setLaunchError(error.message);
+      playSound?.('wrong');
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  const generateAndLaunch = async () => {
+    setLaunching(true);
+    setLaunchError('');
+    try {
+      const deck = await deckLibrary.generate({
+        endpoint: '/api/generate-lingoparty',
+        deckName,
+        theme: topic,
+        cefr,
+        count: 30,
+        mode,
+      });
+      setDeckName('');
+      await launchDeck(deck);
+    } catch (error) {
+      setLaunchError(error.message);
+      playSound?.('wrong');
+      setLaunching(false);
     }
   };
 
@@ -229,8 +263,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
     <div className={styles.setupContainer}>
       <div className={`glass-card ${styles.setupCard}`}>
         <div className={styles.header}>
-          <h1>🚀 Mission Briefing & Crew Setup</h1>
-          <p>Name your student teams, select board length, and configure AI challenge parameters!</p>
+          <h1>Mission Briefing & Crew Setup</h1>
+          <p>Launch an exact registered challenge-deck version and record the voyage.</p>
         </div>
 
         <div className={styles.formGrid}>
@@ -273,29 +307,26 @@ export default function SetupScreen({ onStartGame, playSound }) {
               </button>
             </div>
           </div>
-
           <div className={styles.formGroup}>
-            <label>Flight Path Length</label>
+            <label>Flight path length</label>
             <select
               className={styles.selectField}
               value={boardLength}
-              onChange={e => setBoardLength(Number(e.target.value))}
+              onChange={(event) => setBoardLength(Number(event.target.value))}
             >
-              <option value={30}>30 Planets (Five-Row Voyage — Default)</option>
-              <option value={24}>24 Planets (Quick Sprint ~20 min)</option>
-              <option value={32}>32 Planets (Standard Voyage ~30 min)</option>
-              <option value={54}>54 Planets (Deep Space Epic ~50 min)</option>
+              <option value={24}>24 planets</option>
+              <option value={30}>30 planets</option>
+              <option value={32}>32 planets</option>
+              <option value={54}>54 planets</option>
             </select>
           </div>
-
-          <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
-            <label>Standard Planet Color</label>
+          <div className={`${styles.formGroup} ${styles.fullSpan}`}>
+            <label>Standard planet color</label>
             <input
               type="color"
               className={styles.inputField}
-              style={{ width: '100%', height: '50px', padding: '5px', cursor: 'pointer' }}
               value={baseColor}
-              onChange={e => setBaseColor(e.target.value)}
+              onChange={(event) => setBaseColor(event.target.value)}
             />
           </div>
 
@@ -316,7 +347,6 @@ export default function SetupScreen({ onStartGame, playSound }) {
                     {customPawns[i] || EMOJI_PALETTE[i % EMOJI_PALETTE.length]}
                   </button>
                   <input
-                    type="text"
                     className={styles.inputField}
                     value={customNames[i] || ''}
                     onChange={e => handleNameChange(i, e.target.value)}
@@ -476,11 +506,25 @@ export default function SetupScreen({ onStartGame, playSound }) {
           <button
             className={`btn-primary ${styles.btnStart}`}
             onClick={() => handleStart(false)}
-            disabled={isGenerating}
+            disabled={isGenerating || launching}
           >
             🚀 Launch with Default Deck!
           </button>
         </div>
+
+        <DeckLibraryPanel
+          {...deckLibrary}
+          cefr={cefr}
+          topic={topic}
+          deckName={deckName}
+          launching={launching}
+          launchError={launchError}
+          onCefrChange={setCefr}
+          onTopicChange={setTopic}
+          onDeckNameChange={setDeckName}
+          onLaunch={() => launchDeck(deckLibrary.selectedDeck)}
+          onGenerate={generateAndLaunch}
+        />
       </div>
     </div>
   );

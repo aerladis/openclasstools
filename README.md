@@ -1,118 +1,85 @@
-# BerkAI Game Hub
+# OpenClassTools
 
-Interactive browser party games for classrooms, clubs, and group play. The project runs on plain HTML/CSS/JS with an Express + Socket.IO backend and uses Gemini for theme-based AI content generation.
+OpenClassTools is a classroom game web app with reusable named decks, AI-assisted content generation, real play-session recording, and a protected administration dashboard. React/Vite owns the canonical hub, LingoParty, and administration UI; the established games continue as focused browser clients behind the same Express and Socket.IO server.
 
-The old screenshot-to-book generation flow has been removed from the app and server. AI generation still works through text themes for the supported games.
+## Games
 
-## Included Games
+The hub contains eight deck-backed content games:
 
-- **Who Am I?**: countdown-based character reveal game with AI-generated character packs
-- **Taboo**: team word-description game with timers, scoring, and AI-generated card sets
-- **Hangman**: classic word guessing with categories and AI-generated word packs
-- **Spin the Bottle**: local multiplayer bottle spinner
-- **Wheel of Names**: customizable name wheel for random picks
-- **6 Thinking Hats**: De Bono-inspired classroom discussion board with AI-generated prompts and CEFR-aware scaffolding
-- **Word Game**: admin-controlled classroom word game with AI-generated question packs
-- **Who Wants to Be a Millionaire?**: 15-question quiz ladder with lifelines and admin sync
-- **Flappy Crocodile**: self-contained arcade mini-game
+- Who Am I?
+- Taboo
+- Hangman
+- Millionaire
+- Word Game
+- Vocabulary Flashcards
+- Six Thinking Hats
+- LingoParty
 
-## Screenshots
+Spin the Bottle and Wheel of Names are deckless utilities. They still record play sessions.
 
-### Hub
-![Hub](docs/screenshots/hub.png)
+## Platform behavior
 
-### Who Am I?
-![Who Am I](docs/screenshots/who-am-i.png)
+- Every generated pack requires a deck name and is registered as an immutable first version.
+- Any game can load an already registered deck for its game type.
+- Administrator edits publish a new version; sessions keep pointing to the exact version used.
+- Session records include the teacher label, participants or teams, game, room code, status, result, and generation metadata.
+- The React hub has no administrator link. The protected dashboard is available directly at `/control-center`.
+- Live Socket.IO remote control is part of the protected dashboard.
 
-### Taboo
-![Taboo](docs/screenshots/taboo.png)
+Teacher names are labels, not accounts. A teacher can explicitly use the platform Gemini key or a custom key. Custom keys live only in browser `sessionStorage`, are sent only for the selected generation request, and never fall back silently to the platform key.
 
-### Hangman
-![Hangman](docs/screenshots/hangman.png)
+## Local setup
 
-### Word Game
-![Word Game](docs/screenshots/word-game.png)
+Prerequisites:
 
-### Millionaire
-![Millionaire](docs/screenshots/millionaire.png)
+- Node.js 18 or newer
+- A Supabase project
+- A Gemini key for platform-key generation
 
-### Admin Panel
-![Admin Panel](docs/screenshots/admin-panel.png)
-
-## Features
-
-- Flat-file setup with no database
-- Real-time host/admin sync through Socket.IO
-- Theme-based AI generation for `Who Am I?`, `Taboo`, `Hangman`, `Word Game`, and `Millionaire`
-- Theme-based AI generation for `6 Thinking Hats` discussion boards
-- Local reuse of the last generated pack per supported game
-- Mobile-friendly glassmorphism UI
-
-## Local Setup
-
-### Prerequisites
-
-- Node.js 16+
-- A Gemini API key if you want AI generation
-
-### Install
+Install and build:
 
 ```bash
 npm install
+npm run build
 ```
 
-### Environment
-
-Create `.env` in the project root:
+Copy `.env.example` to `.env` and provide real values:
 
 ```env
-GEMINI_API_KEY=your_actual_api_key_here
+GEMINI_API_KEY=your_platform_gemini_key
 PORT=8090
-ALLOWED_ORIGINS=http://localhost:8090,http://play.metrix.dpdns.org,https://play.metrix.dpdns.org
+ALLOWED_ORIGINS=http://localhost:8090
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
+ADMIN_PASSCODE=your_long_administrator_passcode
+ADMIN_SESSION_SECRET=your_random_signing_secret
 ```
 
-### Run
+Apply the database migration and seed the built-in decks as described in [docs/database.md](docs/database.md). Then start the app:
 
 ```bash
+npm run seed:decks
 npm start
 ```
 
-Open `http://localhost:8090`.
+Open `http://localhost:8090`. Open `http://localhost:8090/control-center` directly for administration.
 
-## Admin Panel
+## Main APIs
 
-Open `http://localhost:8090/admin.html`, enter the 4-character game ID shown on a host screen, and control supported games remotely.
+- `GET /api/decks?gameType=...` lists registered current decks.
+- `POST /api/sessions` starts a real play session.
+- `PATCH /api/sessions/:id/complete` completes it.
+- `POST /api/generate*` endpoints generate and atomically register named decks.
+- `POST /api/admin/login` creates the signed administrator cookie.
+- Protected `/api/admin/sessions*` and `/api/admin/decks*` routes power analytics and deck management.
+- `GET /api/health` reports server and database readiness.
 
-Current admin-supported game flows:
+See [docs/admin-dashboard.md](docs/admin-dashboard.md), [DEPLOY.md](DEPLOY.md), and [TEST_INSTRUCTIONS.md](TEST_INSTRUCTIONS.md) for operations and verification.
 
-- `Who Am I?`: character sync
-- `Hangman`: word list sync
-- `Taboo`: card sync
-- `Word Game`: full remote round control and question editing
-- `Millionaire`: question sync, editor, and lifeline controls
+## Verification
 
-## AI Endpoints
-
-- `POST /api/generate`
-- `POST /api/generate-taboo`
-- `POST /api/generate-hangman`
-- `POST /api/generate-kelime`
-- `POST /api/generate-millionaire`
-- `POST /api/generate-hats`
-- `GET /api/health`
-
-## Manual Smoke Test
-
-The following flows were smoke-tested locally against the current repo state:
-
-- Hub page load and navigation
-- `Who Am I?`: start countdown and reveal
-- `Taboo`: setup, start turn, and first card render
-- `Hangman`: start game and keyboard render
-- `Spin the Bottle`: add 3 players, start, and spin
-- `Wheel of Names`: load and spin
-- `Word Game`: host load, admin connect, and round start from admin
-- `Millionaire`: default-question start and question render
-- `Flappy Crocodile`: load and start
-
-Benign note: pages without an explicit favicon may log a `favicon.ico` 404 in the browser console during local testing.
+```bash
+npm test
+npm --prefix frontend run lint
+npm --prefix frontend run build
+```

@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ApiKeyModal.module.css';
+import {
+  getTeacherContext,
+  saveTeacherSettings,
+} from '../../services/platformApi';
 
 export default function ApiKeyModal({ isOpen, onClose }) {
   const [apiKey, setApiKey] = useState('');
   const [teacherName, setTeacherName] = useState('');
+  const [keySource, setKeySource] = useState('platform');
   const [savedStatus, setSavedStatus] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setApiKey(localStorage.getItem('berkai_gemini_api_key') || '');
-      setTeacherName(localStorage.getItem('berkai_teacher_name') || '');
+      const context = getTeacherContext();
+      setApiKey(context.geminiApiKey);
+      setTeacherName(context.teacherDisplayName);
+      setKeySource(context.keySource);
       setSavedStatus(false);
+      setError('');
     }
   }, [isOpen]);
 
@@ -18,17 +27,27 @@ export default function ApiKeyModal({ isOpen, onClose }) {
 
   const handleSave = (e) => {
     e.preventDefault();
-    localStorage.setItem('berkai_gemini_api_key', apiKey.trim());
-    localStorage.setItem('berkai_teacher_name', teacherName.trim() || 'Anonymous Teacher');
-    setSavedStatus(true);
-    setTimeout(() => {
-      onClose();
-    }, 900);
+    try {
+      saveTeacherSettings({
+        teacherDisplayName: teacherName,
+        keySource,
+        geminiApiKey: apiKey,
+      });
+      setError('');
+      setSavedStatus(true);
+      setTimeout(() => {
+        onClose();
+      }, 900);
+    } catch (settingsError) {
+      setError(settingsError.message);
+      setSavedStatus(false);
+    }
   };
 
   const handleClear = () => {
-    localStorage.removeItem('berkai_gemini_api_key');
+    sessionStorage.removeItem('oct_gemini_key');
     setApiKey('');
+    setKeySource('platform');
     setSavedStatus(false);
   };
 
@@ -41,8 +60,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
         </div>
 
         <p className={styles.description}>
-          Input your personal Google Gemini API Key to use your own generation quota for classroom AI content.
-          Your key stays safely stored in your browser session.
+          Set the teacher name recorded with generated decks and play sessions. A personal
+          Gemini key is kept only in this browser tab and is never stored by the server.
         </p>
 
         <form onSubmit={handleSave} className={styles.form}>
@@ -54,23 +73,41 @@ export default function ApiKeyModal({ isOpen, onClose }) {
               value={teacherName}
               onChange={e => setTeacherName(e.target.value)}
               placeholder="e.g. Mr. Smith - Room 302"
+              required
             />
           </div>
 
           <div className={styles.fieldGroup}>
-            <label>Google Gemini API Key (Optional Custom Key)</label>
+            <label>AI quota source</label>
+            <select
+              className={styles.inputField}
+              value={keySource}
+              onChange={e => setKeySource(e.target.value)}
+            >
+              <option value="platform">Platform key</option>
+              <option value="teacher">My teacher key</option>
+            </select>
+          </div>
+
+          {keySource === 'teacher' && (
+          <div className={styles.fieldGroup}>
+            <label>Google Gemini API Key</label>
             <input
               type="password"
               className={styles.inputField}
               value={apiKey}
               onChange={e => setApiKey(e.target.value)}
               placeholder="AIzaSy..."
+              required
             />
             <span className={styles.hint}>
-              Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>. Leave blank to use server key.
+              Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>.
+              If it fails, the app will not silently retry with the platform key.
             </span>
           </div>
+          )}
 
+          {error && <div className={styles.errorBadge}>{error}</div>}
           {savedStatus && (
             <div className={styles.successBadge}>
               ✅ Settings & API Key saved!
@@ -78,7 +115,7 @@ export default function ApiKeyModal({ isOpen, onClose }) {
           )}
 
           <div className={styles.btnRow}>
-            {apiKey && (
+            {keySource === 'teacher' && apiKey && (
               <button type="button" className={styles.btnClear} onClick={handleClear}>
                 Clear Custom Key
               </button>

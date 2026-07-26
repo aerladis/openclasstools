@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './GameHub.module.css';
 import ApiKeyModal from '../Common/ApiKeyModal';
+import { getTeacherContext } from '../../services/platformApi';
 
 export default function GameHub() {
   const [serverHealth, setServerHealth] = useState({ status: 'checking', activeGames: 0 });
@@ -21,7 +22,10 @@ export default function GameHub() {
         setServerHealth({ status: 'offline', activeGames: 0 });
       });
 
-    setHasCustomKey(!!localStorage.getItem('berkai_gemini_api_key'));
+    const teacherContext = getTeacherContext();
+    setHasCustomKey(
+      teacherContext.keySource === 'teacher' && Boolean(teacherContext.geminiApiKey)
+    );
   }, [isApiKeyModalOpen]);
 
   const games = [
@@ -86,6 +90,26 @@ export default function GameHub() {
       isReact: false
     },
     {
+      id: 'flashcards',
+      title: 'Vocabulary Flashcards',
+      subtitle: 'Review & Mastery',
+      icon: '📇',
+      desc: 'Study named vocabulary decks, flip cards, and record mastered and review counts.',
+      tags: ['Vocabulary', 'Study'],
+      path: '/flashcards.html',
+      isReact: false
+    },
+    {
+      id: 'hats',
+      title: 'Six Thinking Hats',
+      subtitle: 'Structured Discussion',
+      icon: '🎩',
+      desc: 'Guide classroom discussion through six perspectives with reusable question decks.',
+      tags: ['Discussion', 'Critical Thinking'],
+      path: '/hats.html',
+      isReact: false
+    },
+    {
       id: 'wheel',
       title: 'Wheel of Names',
       subtitle: 'Custom Selector',
@@ -107,11 +131,6 @@ export default function GameHub() {
     }
   ];
 
-  const isDevServer = typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  );
-
   return (
     <div className={styles.hubContainer}>
       <header className={styles.hubHeader}>
@@ -130,12 +149,6 @@ export default function GameHub() {
           >
             {hasCustomKey ? '🟢 Teacher Key Active' : '🔑 Teacher API Key'}
           </button>
-
-          {isDevServer && (
-            <Link to="/admin" className={styles.btnAdmin}>
-              🛡️ Admin Panel
-            </Link>
-          )}
 
           <div className={styles.statusBadge}>
             <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>

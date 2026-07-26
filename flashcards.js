@@ -41,6 +41,20 @@ const soundState = {
 
 // DOM Elements
 let flashcard, cardWord, cardMeaning, cardCounter, masteredCounter, reviewCounter, progressBar, statusBanner, themeInput, btnReviewMode;
+let deckLibrary = null;
+let playSessionId = null;
+
+function completeStudySessionIfReady() {
+    const reviewedCount = gameState.masteredSet.size + gameState.reviewSet.size;
+    if (playSessionId && reviewedCount >= gameState.allCards.length) {
+        window.OpenClassPlatform.completeSession(playSessionId, {
+            masteredCount: gameState.masteredSet.size,
+            reviewCount: gameState.reviewSet.size
+        }).catch(() => null);
+        playSessionId = null;
+        setStatusMessage('Study session recorded.', '#22c55e');
+    }
+}
 
 function ensureAudioContext() {
     if (!soundState.enabled) return null;
@@ -234,6 +248,7 @@ function markMastered() {
     playSound('mastered');
 
     updateStats();
+    completeStudySessionIfReady();
     nextCard();
 }
 
@@ -247,6 +262,7 @@ function markReview() {
     playSound('review');
 
     updateStats();
+    completeStudySessionIfReady();
     nextCard();
 }
 
@@ -407,10 +423,46 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-mark-review')?.addEventListener('click', markReview);
     btnReviewMode?.addEventListener('click', toggleReviewMode);
 
-    document.getElementById('btn-use-default')?.addEventListener('click', () => {
-        loadDeck(DEFAULT_DECK, false);
+    const generateButton = document.getElementById('btn-generate-ai');
+    if (generateButton) generateButton.hidden = true;
+    deckLibrary = window.OpenClassPlatform.mountDeckLibrary({
+        container: '#deck-library-mount',
+        gameType: 'flashcards',
+        endpoint: '/api/generate-flashcards',
+        collectGenerationInput: () => ({
+            theme: themeInput ? themeInput.value.trim() : '',
+            count: 20
+        }),
+        onDeckSelected: (deck) => {
+            if (!deck?.currentVersion?.content) return;
+            loadDeck(deck.currentVersion.content, false);
+            setStatusMessage(
+                `Selected registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`,
+                '#22c55e'
+            );
+        }
+    });
+
+    document.getElementById('btn-use-default')?.addEventListener('click', async () => {
+        const selectedDeck = deckLibrary?.getSelectedDeck();
+        const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+        if (!selectedDeck || !selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
+            setStatusMessage('Choose or generate a registered deck first.', '#ef4444');
+            return;
+        }
+        const session = await window.OpenClassPlatform.startSessionSafely({
+            gameType: 'flashcards',
+            roomCode: gameId,
+            participantNames: [],
+            ...selectedDeckRef
+        }, error => {
+            setStatusMessage(error.message, '#ef4444');
+            alert(`Study will still start, but this session could not be recorded: ${error.message}`);
+        });
+        playSessionId = session?.id || null;
+        loadDeck(selectedDeck.currentVersion.content, false);
         playSound('sync');
-        setStatusMessage('Loaded default vocabulary deck (15 cards).', '#22c55e');
+        setStatusMessage('Registered vocabulary deck started.', '#22c55e');
     });
 
     document.getElementById('btn-generate-ai')?.addEventListener('click', async () => {
