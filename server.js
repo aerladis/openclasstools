@@ -114,16 +114,12 @@ const sessionRepository = platformDatabase
 // ============================================
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 function getProvider() {
-    if (GEMINI_API_KEY && GEMINI_API_KEY.length > 10 && GEMINI_API_KEY !== 'your-api-key-here') {
-        return 'gemini';
-    }
     if (OPENAI_API_KEY && OPENAI_API_KEY.length > 10 && OPENAI_API_KEY !== 'your-api-key-here') {
         return 'openai';
     }
@@ -641,9 +637,9 @@ function buildGeminiGenerationConfig(options = {}) {
 }
 
 async function callGemini(prompt, options = {}) {
-    const apiKey = options.apiKey || GEMINI_API_KEY;
+    const apiKey = options.apiKey;
     if (!apiKey || apiKey.length < 10 || apiKey.includes('your_api_key')) {
-        throw new Error('No valid Gemini API key provided. Set GEMINI_API_KEY in .env or enter your key in UI.');
+        throw new Error('No valid Gemini API key provided. Enter your key in the UI.');
     }
 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -1317,7 +1313,6 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
 app.post('/api/generate', apiRateLimit, createGenerationHandler({
     gameType: 'who',
     contentKey: 'characters',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1341,7 +1336,6 @@ app.post('/api/generate', apiRateLimit, createGenerationHandler({
 app.post('/api/generate-taboo', apiRateLimit, createGenerationHandler({
     gameType: 'taboo',
     contentKey: 'cards',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1363,7 +1357,6 @@ app.post('/api/generate-taboo', apiRateLimit, createGenerationHandler({
 app.post('/api/generate-hangman', apiRateLimit, createGenerationHandler({
     gameType: 'hangman',
     contentKey: 'words',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1387,7 +1380,6 @@ app.post('/api/generate-hangman', apiRateLimit, createGenerationHandler({
 app.post('/api/generate-kelime', apiRateLimit, createGenerationHandler({
     gameType: 'kelime',
     contentKey: 'questions',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1419,7 +1411,6 @@ app.post('/api/generate-kelime', apiRateLimit, createGenerationHandler({
 app.post('/api/generate-millionaire', apiRateLimit, createGenerationHandler({
     gameType: 'millionaire',
     contentKey: 'questions',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1455,7 +1446,6 @@ app.post('/api/generate-millionaire', apiRateLimit, createGenerationHandler({
 app.post('/api/generate-hats', apiRateLimit, createGenerationHandler({
     gameType: 'hats',
     contentKey: 'hats',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1517,7 +1507,6 @@ Return ONLY valid JSON array with 6 objects for colors: white, red, black, yello
 app.post('/api/generate-flashcards', apiRateLimit, createGenerationHandler({
     gameType: 'flashcards',
     contentKey: 'cards',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1546,7 +1535,6 @@ app.post('/api/generate-flashcards', apiRateLimit, createGenerationHandler({
 app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     gameType: 'lingoparty',
     contentKey: 'cards',
-    geminiApiKey: GEMINI_API_KEY,
     generationService,
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
@@ -1698,11 +1686,9 @@ server.listen(PORT, () => {
     console.log(`📊 Max concurrent games: ${MAX_GAMES}`);
     if (AI_PROVIDER === 'anthropic') {
         console.log(`🤖 AI Provider: Anthropic (${ANTHROPIC_MODEL}) — paid`);
-    } else if (AI_PROVIDER === 'gemini') {
-        console.log(`🤖 AI Provider: Gemini (${GEMINI_MODEL}) — FREE`);
     } else if (AI_PROVIDER === 'openai') {
         console.log(`🤖 AI Provider: OpenAI (${OPENAI_MODEL}) — paid`);
     } else {
-        console.log(`⚠️  No AI key configured! Set ANTHROPIC_API_KEY, GEMINI_API_KEY (free), or OPENAI_API_KEY in .env`);
+        console.log(`🤖 AI Provider: Gemini (${GEMINI_MODEL}) — teacher key`);
     }
 });

@@ -8,7 +8,6 @@ const SAFE_ERROR_MESSAGES = Object.freeze({
     INVALID_TEACHER_NAME: 'Teacher name is invalid',
     TEACHER_AI_KEY_REQUIRED: 'A teacher Gemini API key is required',
     TEACHER_KEY_GENERATION_FAILED: 'Generation failed with the teacher API key. Check the key or its quota and try again.',
-    PLATFORM_GENERATION_FAILED: 'The platform generation service is temporarily unavailable.',
     INVALID_DECK_CONTENT: 'The AI returned invalid game content'
 });
 
@@ -30,7 +29,6 @@ function publicError(error) {
 export function createGenerationHandler({
     gameType,
     contentKey,
-    geminiApiKey,
     generationService,
     parseInput,
     generate,

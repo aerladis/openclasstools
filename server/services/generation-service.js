@@ -24,16 +24,11 @@ function cleanDeckName(value) {
     return cleaned;
 }
 
-function safeGenerationFailure(teacherKeyUsed) {
-    return teacherKeyUsed
-        ? new GenerationServiceError(
-            'Generation failed with the teacher API key. Check the key or its quota and try again.',
-            'TEACHER_KEY_GENERATION_FAILED'
-        )
-        : new GenerationServiceError(
-            'The platform generation service is temporarily unavailable.',
-            'PLATFORM_GENERATION_FAILED'
-        );
+function safeGenerationFailure() {
+    return new GenerationServiceError(
+        'Generation failed with the teacher API key. Check the key or its quota and try again.',
+        'TEACHER_KEY_GENERATION_FAILED'
+    );
 }
 
 export function createGenerationService({ deckRepository }) {
@@ -63,7 +58,7 @@ export function createGenerationService({ deckRepository }) {
                     keySource: teacherContext.keySource
                 });
             } catch {
-                throw safeGenerationFailure(Boolean(teacherContext.teacherKeyUsed));
+                throw safeGenerationFailure();
             }
 
             const content = normalizeDeckContent(gameType, generated);
