@@ -315,13 +315,21 @@ function updateStats() {
 }
 
 async function generateWithAI(theme, count = 20) {
+    if (window.GenerationConsole) {
+        window.GenerationConsole.clear();
+        window.GenerationConsole.show();
+    }
     try {
+        window.GenerationConsole?.log('Sending request...');
         const response = await fetch('/api/generate-flashcards', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: window.AiKeyPrompt?.getGenerationHeaders
+                ? window.AiKeyPrompt.getGenerationHeaders()
+                : { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme, count })
         });
 
+        window.GenerationConsole?.log('Parsing response...');
         if (!response.ok) {
             let message = 'Failed to generate flashcards';
             try {
@@ -333,10 +341,12 @@ async function generateWithAI(theme, count = 20) {
 
         const result = await response.json();
         const cards = normalizeCards(result.cards);
+        window.GenerationConsole?.log(`Received ${cards.length} flashcards`);
 
         if (result.success && cards.length > 0) {
             loadDeck(cards, false);
             playSound('sync');
+            window.GenerationConsole?.log('Done');
             setStatusMessage(`${cards.length} AI flashcards generated for topic: "${theme}". Happy studying!`, '#22c55e');
             return true;
         }
@@ -344,8 +354,11 @@ async function generateWithAI(theme, count = 20) {
         throw new Error('AI did not return valid flashcards');
     } catch (error) {
         console.error('AI generation error:', error);
+        window.GenerationConsole?.log(`Error: ${error.message}`, 'error');
         setStatusMessage(error.message || 'AI could not generate flashcards.', '#ef4444');
         return false;
+    } finally {
+        setTimeout(() => window.GenerationConsole?.hide(), 2500);
     }
 }
 

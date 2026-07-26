@@ -549,18 +549,29 @@ els.btnGenerate.addEventListener('click', async () => {
     els.generateStatus.textContent = 'Generating cards…';
     els.generateStatus.className = 'generate-status';
 
+    if (window.GenerationConsole) {
+        window.GenerationConsole.clear();
+        window.GenerationConsole.show();
+    }
+
     try {
+        window.GenerationConsole?.log('Sending request...');
         const res = await fetch('/api/generate-taboo', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: window.AiKeyPrompt?.getGenerationHeaders
+                ? window.AiKeyPrompt.getGenerationHeaders()
+                : { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme, count })
         });
+        window.GenerationConsole?.log('Parsing response...');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
 
         if (data.cards && data.cards.length > 0) {
             cards = data.cards.map(normalizeCard).filter(card => card.word && card.forbidden.length >= 3);
             shuffleDeck();
+            window.GenerationConsole?.log(`Generated ${data.cards.length} cards`);
+            window.GenerationConsole?.log('Done');
             els.generateStatus.textContent = `✓ Generated ${data.cards.length} cards!`;
             els.generateStatus.className = 'generate-status success';
 
@@ -572,11 +583,13 @@ els.btnGenerate.addEventListener('click', async () => {
             throw new Error('No cards returned');
         }
     } catch (err) {
+        window.GenerationConsole?.log(`Error: ${err.message}`, 'error');
         els.generateStatus.textContent = `✗ ${err.message}`;
         els.generateStatus.className = 'generate-status error';
     } finally {
         els.btnGenerate.disabled = false;
         els.btnGenerate.classList.remove('loading');
+        setTimeout(() => window.GenerationConsole?.hide(), 2500);
     }
 });
 

@@ -119,19 +119,24 @@
             return body.decks || [];
         }
 
-        async function generateDeck(gameType, endpoint, input) {
+        async function generateDeck(gameType, endpoint, input, onLog) {
             if (!gameType || !endpoint) {
                 throw new PlatformApiError('Game generation configuration is missing', {
                     status: 400
                 });
             }
+            const log = typeof onLog === 'function' ? onLog : function noop() {};
             const context = requireTeacherContext();
             const deckName = cleanText(input?.deckName, 'Deck name', 100);
+            log('Sending request...');
             const body = await request(endpoint, {
                 method: 'POST',
                 headers: generationHeaders(context),
                 body: JSON.stringify({ ...input, deckName })
             });
+            const count = body?.deck?.currentVersion?.content?.length || body?.count || 0;
+            log(`Received ${count} items`);
+            log('Saving deck...');
             return body.deck;
         }
 
@@ -262,6 +267,10 @@
             generateButton.addEventListener('click', async function generateClick() {
                 generateButton.disabled = true;
                 showStatus('Generating and registering deck…');
+                if (root.GenerationConsole) {
+                    root.GenerationConsole.clear();
+                    root.GenerationConsole.show();
+                }
                 try {
                     const generationInput = mountOptions.collectGenerationInput?.() || {};
                     const deck = await generateDeck(
@@ -270,8 +279,10 @@
                         {
                             ...generationInput,
                             deckName: nameInput.value
-                        }
+                        },
+                        root.GenerationConsole ? root.GenerationConsole.log : null
                     );
+                    if (root.GenerationConsole) root.GenerationConsole.log('Done');
                     decks = [deck, ...decks.filter(function notSame(item) {
                         return item.id !== deck.id;
                     })];
@@ -281,9 +292,15 @@
                     showStatus(`Saved “${deck.name}”`);
                     mountOptions.onGenerated?.(deck);
                 } catch (error) {
+                    if (root.GenerationConsole) {
+                        root.GenerationConsole.log(`Error: ${error.message}`, 'error');
+                    }
                     showStatus(error.message, true);
                 } finally {
                     generateButton.disabled = false;
+                    setTimeout(function hideConsole() {
+                        if (root.GenerationConsole) root.GenerationConsole.hide();
+                    }, 3000);
                 }
             });
 

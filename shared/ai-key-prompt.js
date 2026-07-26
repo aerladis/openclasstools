@@ -105,6 +105,7 @@
                 setTimeout(function hideAfterSave() {
                     overlay.style.display = 'none';
                     renderAllBadges();
+                    updateAiButtons();
                 }, 900);
             } catch (err) {
                 setError(err.message);
@@ -115,6 +116,7 @@
             platform.declineAiFeatures();
             overlay.style.display = 'none';
             renderAllBadges();
+            updateAiButtons();
         };
     }
 
@@ -166,6 +168,26 @@
         });
     }
 
+    function updateAiButtons() {
+        if (!root.document) return;
+        const platform = getPlatform();
+        const disabled = !platform || !platform.hasTeacherKey();
+        const selectors = [
+            '#btn-generate',
+            '#btn-generate-ai',
+            '#btn-start-ai',
+            '[data-deck-role="generate"]'
+        ];
+        selectors.forEach(function eachSelector(selector) {
+            root.document.querySelectorAll(selector).forEach(function eachButton(btn) {
+                btn.disabled = disabled;
+                btn.title = disabled
+                    ? 'Add a Gemini API key to use AI generation.'
+                    : '';
+            });
+        });
+    }
+
     function autoInit() {
         if (!root.document) return;
         renderAllBadges();
@@ -179,10 +201,23 @@
             root.document.body.appendChild(badge);
             renderBadge(badge);
         }
+        updateAiButtons();
         const platform = getPlatform();
         if (platform && !platform.hasTeacherKey() && platform.wantsAiFeatures()) {
             showPrompt();
         }
+    }
+
+    function getGenerationHeaders() {
+        const platform = getPlatform();
+        if (!platform) return { 'Content-Type': 'application/json' };
+        const context = platform.getTeacherContext();
+        return {
+            'Content-Type': 'application/json',
+            'x-teacher-name': context.teacherDisplayName,
+            'x-ai-key-source': 'teacher',
+            'x-gemini-api-key': context.geminiApiKey
+        };
     }
 
     root.AiKeyPrompt = Object.freeze({
@@ -190,6 +225,7 @@
         show: showPrompt,
         renderStatusBadge: renderStatusBadge,
         renderAllBadges: renderAllBadges,
+        getGenerationHeaders: getGenerationHeaders,
         autoInit: autoInit
     });
 

@@ -532,13 +532,21 @@ function handleAdminAction(data) {
 }
 
 async function generateWithAI(theme, count = 20) {
+    if (window.GenerationConsole) {
+        window.GenerationConsole.clear();
+        window.GenerationConsole.show();
+    }
     try {
+        window.GenerationConsole?.log('Sending request...');
         const response = await fetch('/api/generate-kelime', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: window.AiKeyPrompt?.getGenerationHeaders
+                ? window.AiKeyPrompt.getGenerationHeaders()
+                : { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme, count })
         });
 
+        window.GenerationConsole?.log('Parsing response...');
         if (!response.ok) {
             let message = 'Failed to generate questions';
 
@@ -554,6 +562,7 @@ async function generateWithAI(theme, count = 20) {
 
         const result = await response.json();
         const questions = normalizeQuestions(result.questions);
+        window.GenerationConsole?.log(`Received ${questions.length} questions`);
 
         if (result.success && questions.length > 0) {
             gameState.questions = questions;
@@ -561,6 +570,7 @@ async function generateWithAI(theme, count = 20) {
             gameState.currentScore = 0;
             if (scoreDisplay) scoreDisplay.textContent = '0';
             playSound('sync');
+            window.GenerationConsole?.log('Done');
             setStatusMessage(`${questions.length} AI questions generated and started!`, '#22c55e');
             loadQuestion(0, { resetRoundTimer: true, startTimer: true });
             return true;
@@ -569,8 +579,11 @@ async function generateWithAI(theme, count = 20) {
         throw new Error('AI did not return valid questions');
     } catch (error) {
         console.error('AI generation error:', error);
+        window.GenerationConsole?.log(`Error: ${error.message}`, 'error');
         setStatusMessage(error.message || 'AI could not generate questions.', '#ef4444');
         return false;
+    } finally {
+        setTimeout(() => window.GenerationConsole?.hide(), 2500);
     }
 }
 

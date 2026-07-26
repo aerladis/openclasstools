@@ -404,12 +404,21 @@ btnGenerate.addEventListener('click', async () => {
     generateStatus.textContent = 'Generating words…';
     generateStatus.className = 'generate-status';
 
+    if (window.GenerationConsole) {
+        window.GenerationConsole.clear();
+        window.GenerationConsole.show();
+    }
+
     try {
+        window.GenerationConsole?.log('Sending request...');
         const res = await fetch('/api/generate-hangman', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: window.AiKeyPrompt?.getGenerationHeaders
+                ? window.AiKeyPrompt.getGenerationHeaders()
+                : { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme, count })
         });
+        window.GenerationConsole?.log('Parsing response...');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Request failed');
 
@@ -417,6 +426,8 @@ btnGenerate.addEventListener('click', async () => {
             wordList = normalizeWordList(data.words, theme);
             usedWords = [];
             saveGeneratedWords(wordList, { source: 'ai', theme, count: wordList.length });
+            window.GenerationConsole?.log(`Generated ${data.words.length} words`);
+            window.GenerationConsole?.log('Done');
             generateStatus.textContent = `✓ Generated ${data.words.length} words!`;
             generateStatus.className = 'generate-status success';
 
@@ -428,11 +439,13 @@ btnGenerate.addEventListener('click', async () => {
             throw new Error('No words returned');
         }
     } catch (err) {
+        window.GenerationConsole?.log(`Error: ${err.message}`, 'error');
         generateStatus.textContent = `✗ ${err.message}`;
         generateStatus.className = 'generate-status error';
     } finally {
         btnGenerate.disabled = false;
         btnGenerate.classList.remove('loading');
+        setTimeout(() => window.GenerationConsole?.hide(), 2500);
     }
 });
 

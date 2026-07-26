@@ -545,33 +545,48 @@ async function generateQuestions(theme) {
         ? `Generating questions about "${theme}"...`
         : 'Generating questions...';
 
+    if (window.GenerationConsole) {
+        window.GenerationConsole.clear();
+        window.GenerationConsole.show();
+    }
+
     try {
+        window.GenerationConsole?.log('Sending request...');
         const response = await fetch('/api/generate-millionaire', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: window.AiKeyPrompt?.getGenerationHeaders
+                ? window.AiKeyPrompt.getGenerationHeaders()
+                : { 'Content-Type': 'application/json' },
             body: JSON.stringify({ theme, count: 15 })
         });
 
+        window.GenerationConsole?.log('Parsing response...');
         if (!response.ok) {
             throw new Error('Failed to generate questions');
         }
 
         const data = await response.json();
+        const questions = data.questions || [];
+        window.GenerationConsole?.log(`Received ${questions.length} questions`);
 
-        if (data.success && data.questions && data.questions.length >= 10) {
-            saveGeneratedQuestions(data.questions.slice(0, 15), {
+        if (data.success && questions.length >= 10) {
+            saveGeneratedQuestions(questions.slice(0, 15), {
                 source: 'ai',
                 theme,
-                count: Math.min(data.questions.length, 15)
+                count: Math.min(questions.length, 15)
             });
-            startGame(data.questions.slice(0, 15));
+            window.GenerationConsole?.log('Done');
+            startGame(questions.slice(0, 15));
         } else {
             throw new Error('Invalid question data');
         }
     } catch (err) {
         console.error('Generation error:', err);
+        window.GenerationConsole?.log(`Error: ${err.message}`, 'error');
         showNotification('Failed to generate questions. Using default questions.', 'error');
         startGame(DEFAULT_QUESTIONS);
+    } finally {
+        setTimeout(() => window.GenerationConsole?.hide(), 2500);
     }
 }
 
