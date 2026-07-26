@@ -33,44 +33,23 @@ function requireKey(value, message, code) {
     return value.trim();
 }
 
-export function extractTeacherContext(req, { geminiApiKey = '' } = {}) {
+export function extractTeacherContext(req) {
     const teacherDisplayName = cleanTeacherName(
         readHeader(req, 'x-teacher-name') || (
             typeof req?.body?.teacherDisplayName === 'string' ? req.body.teacherDisplayName : ''
         )
     );
-    const keySource = readHeader(req, 'x-ai-key-source');
-
-    if (!['teacher', 'platform'].includes(keySource)) {
-        throw new TeacherContextError(
-            'Choose either the teacher key or the platform key',
-            'AI_KEY_SOURCE_REQUIRED'
-        );
-    }
-
-    if (keySource === 'teacher') {
-        const apiKey = requireKey(
-            readHeader(req, 'x-gemini-api-key'),
-            'A teacher Gemini API key is required',
-            'TEACHER_AI_KEY_REQUIRED'
-        );
-        return {
-            teacherDisplayName,
-            keySource,
-            apiKey,
-            teacherKeyUsed: true
-        };
-    }
+    const apiKey = requireKey(
+        readHeader(req, 'x-gemini-api-key'),
+        'A teacher Gemini API key is required',
+        'TEACHER_AI_KEY_REQUIRED'
+    );
 
     return {
         teacherDisplayName,
-        keySource,
-        apiKey: requireKey(
-            geminiApiKey,
-            'The platform Gemini key is not configured',
-            'PLATFORM_AI_KEY_UNAVAILABLE'
-        ),
-        teacherKeyUsed: false
+        keySource: 'teacher',
+        apiKey,
+        teacherKeyUsed: true
     };
 }
 

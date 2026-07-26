@@ -6,9 +6,7 @@ const SAFE_ERROR_MESSAGES = Object.freeze({
     DECK_NAME_CONFLICT: 'A deck with this name already exists for the selected game',
     TEACHER_NAME_REQUIRED: 'Teacher name is required',
     INVALID_TEACHER_NAME: 'Teacher name is invalid',
-    AI_KEY_SOURCE_REQUIRED: 'Choose either the teacher key or the platform key',
     TEACHER_AI_KEY_REQUIRED: 'A teacher Gemini API key is required',
-    PLATFORM_AI_KEY_UNAVAILABLE: 'The platform Gemini key is not configured',
     TEACHER_KEY_GENERATION_FAILED: 'Generation failed with the teacher API key. Check the key or its quota and try again.',
     PLATFORM_GENERATION_FAILED: 'The platform generation service is temporarily unavailable.',
     INVALID_DECK_CONTENT: 'The AI returned invalid game content'
@@ -46,7 +44,7 @@ export function createGenerationHandler({
 
     return async function generationHandler(req, res) {
         try {
-            const teacherContext = extractTeacherContext(req, { geminiApiKey });
+            const teacherContext = extractTeacherContext(req);
             const generationInput = parseInput(req.body || {});
             const deck = await generationService.generateAndRegister({
                 gameType,
