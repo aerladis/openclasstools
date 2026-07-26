@@ -75,7 +75,7 @@ export function playSound(type = 'roll') {
 }
 
 export default function LingoPartyGame() {
-  const { isConnected, gameId, broadcastGameState } = useSocketGame();
+  const { gameId, broadcastGameState } = useSocketGame();
   const [playSessionId, setPlaySessionId] = useState(null);
   const [trackingWarning, setTrackingWarning] = useState('');
 
@@ -248,38 +248,6 @@ export default function LingoPartyGame() {
             }}>
               SPACE ODYSSEY
             </span>
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-          <span style={{
-            background: 'rgba(139, 92, 246, 0.12)',
-            border: '1px solid rgba(139, 92, 246, 0.3)',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '50px',
-            fontSize: '0.82rem',
-            fontWeight: 800,
-            color: '#c4b5fd'
-          }}>
-            📡 Station: {gameId || 'HOST'}
-          </span>
-          <span style={{
-            color: isConnected ? '#10b981' : '#ef4444',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}>
-            <span style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: isConnected ? '#10b981' : '#ef4444',
-              boxShadow: `0 0 8px ${isConnected ? '#10b981' : '#ef4444'}`,
-              display: 'inline-block'
-            }} />
-            {isConnected ? 'Online' : 'Offline'}
           </span>
         </div>
       </header>
