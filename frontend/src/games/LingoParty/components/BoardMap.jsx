@@ -110,9 +110,6 @@ function generateStars(count = 80) {
 /* ═══════════════════════════════════════════════════════════════
    Hexagon Generator Helper
    ═══════════════════════════════════════════════════════════════ */
-function getHexAngles() {
-  return Array.from({ length: 6 }, (_, i) => (Math.PI / 3) * i + Math.PI / 6);
-}
 function getHexPoints(R) {
   const points = [];
   for (let i = 0; i < 6; i++) {
@@ -291,13 +288,6 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                 <>
                   <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
                   <polygon points={getHexPoints(hexRadius)} fill="url(#lunarMetalSheen)" />
-                  {/* Lunar-metal panel seams + rivets */}
-                  {getHexAngles().map((a, i) => (
-                    <line key={`seam-${i}`} x1="0" y1="0" x2={hexRadius * 0.88 * Math.cos(a)} y2={hexRadius * 0.88 * Math.sin(a)} stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
-                  ))}
-                  {getHexAngles().map((a, i) => (
-                    <circle key={`rivet-${i}`} cx={hexRadius * 0.62 * Math.cos(a)} cy={hexRadius * 0.62 * Math.sin(a)} r="3" fill="rgba(255,255,255,0.3)" />
-                  ))}
                   <polygon points={getHexPoints(hexRadius * 0.88)} fill="none" stroke={tileColor} strokeWidth="1.5" opacity="0.7" />
                   {isIconicTile && (
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
