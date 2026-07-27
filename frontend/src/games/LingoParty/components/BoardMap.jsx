@@ -303,13 +303,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                   <line x1="0" y1={-radius * 0.72} x2="0" y2={radius * 0.72} stroke="#ec4899" strokeWidth="1.5" opacity="0.5" />
                 </>
               )}
-              {tp.type === 'vortex' && (
-                <>
-                  <circle r={radius * 0.78} fill="none" stroke="#818cf8" strokeWidth="3" strokeDasharray="20 14" opacity="0.8" />
-                  <circle r={radius * 0.52} fill="none" stroke="#6366f1" strokeWidth="3" strokeDasharray="12 16" opacity="0.8" transform="rotate(40)" />
-                  <circle r={radius * 0.26} fill="none" stroke="#c7d2fe" strokeWidth="2.5" strokeDasharray="8 10" opacity="0.9" transform="rotate(80)" />
-                </>
-              )}
+
               {tp.type === 'asteroid' && (
                 <>
                   <polyline points={`${-radius * 0.7},${-radius * 0.1} ${-radius * 0.2},${radius * 0.12} ${-radius * 0.35},${radius * 0.62}`} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />

@@ -63,7 +63,7 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.3));
-  opacity: 0.35;
+  opacity: 0.12;
 }
 
 .mapGuidelineGlow {
