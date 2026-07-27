@@ -96,6 +96,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [debugLogs, setDebugLogs] = useState([]);
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
+  const [showDeckLibrary, setShowDeckLibrary] = useState(false);
   const deckLibrary = useDeckLibrary('lingoparty');
 
   const handleNameChange = (index, value) => {
@@ -512,19 +513,31 @@ export default function SetupScreen({ onStartGame, playSound }) {
           </button>
         </div>
 
-        <DeckLibraryPanel
-          {...deckLibrary}
-          cefr={cefr}
-          topic={topic}
-          deckName={deckName}
-          launching={launching}
-          launchError={launchError}
-          onCefrChange={setCefr}
-          onTopicChange={setTopic}
-          onDeckNameChange={setDeckName}
-          onLaunch={() => launchDeck(deckLibrary.selectedDeck)}
-          onGenerate={generateAndLaunch}
-        />
+        <div className={styles.btnRow}>
+          <button
+            type="button"
+            className={`btn-secondary ${styles.btnToggleLibrary}`}
+            onClick={() => setShowDeckLibrary((show) => !show)}
+          >
+            {showDeckLibrary ? '▲ Hide Registered Decks' : '▼ Registered Challenge Decks'}
+          </button>
+        </div>
+
+        {showDeckLibrary && (
+          <DeckLibraryPanel
+            {...deckLibrary}
+            cefr={cefr}
+            topic={topic}
+            deckName={deckName}
+            launching={launching}
+            launchError={launchError}
+            onCefrChange={setCefr}
+            onTopicChange={setTopic}
+            onDeckNameChange={setDeckName}
+            onLaunch={() => launchDeck(deckLibrary.selectedDeck)}
+            onGenerate={generateAndLaunch}
+          />
+        )}
       </div>
     </div>
   );
