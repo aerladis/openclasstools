@@ -98,23 +98,6 @@ body {
     pointer-events: none;
 }
 
-.game-id-badge {
-    position: fixed;
-    top: 1.25rem;
-    right: 1.25rem;
-    z-index: 20;
-    padding: 0.72rem 1rem;
-    border-radius: 999px;
-    background: rgba(8, 15, 28, 0.64);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: var(--text-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    backdrop-filter: blur(18px);
-    box-shadow: var(--shadow-card);
-}
-
 .wordgame-stage {
     position: relative;
     z-index: 1;

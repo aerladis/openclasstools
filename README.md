@@ -1,40 +1,26 @@
 # OpenClassTools
 
-OpenClassTools is a classroom game web app with reusable named decks, AI-assisted content generation, real play-session recording, and a protected administration dashboard. React/Vite owns the canonical hub, LingoParty, and administration UI; the established games continue as focused browser clients behind the same Express and Socket.IO server.
+OpenClassTools is a collection of standalone classroom games with reusable named decks, AI-assisted content generation, and optional play-session recording. React/Vite provides the main hub and LingoParty; the established games remain focused browser clients behind the same Express HTTP server.
 
 ## Games
 
-The hub contains eight deck-backed content games:
-
-- Who Am I?
-- Taboo
-- Hangman
-- Millionaire
-- Word Game
-- Vocabulary Flashcards
-- Six Thinking Hats
-- LingoParty
-
-Spin the Bottle and Wheel of Names are deckless utilities. They still record play sessions.
+Deck-backed games include Who Am I?, Taboo, Hangman, Millionaire, Word Game, Vocabulary Flashcards, Six Thinking Hats, and LingoParty. Spin the Bottle and Wheel of Names are deckless classroom utilities.
 
 ## Platform behavior
 
-- Every generated pack requires a deck name and is registered as an immutable first version.
-- Any game can load an already registered deck for its game type.
-- Administrator edits publish a new version; sessions keep pointing to the exact version used.
-- Session records include the teacher label, participants or teams, game, room code, status, result, and generation metadata.
-- The React hub has no administrator link. The protected dashboard is available directly at `/control-center`.
-- Live Socket.IO remote control is part of the protected dashboard.
-
-Teacher names are labels, not accounts. A teacher can explicitly use the platform Gemini key or a custom key. Custom keys live only in browser `sessionStorage`, are sent only for the selected generation request, and never fall back silently to the platform key.
+- Generated packs are registered as immutable named deck versions.
+- Games can load an existing registered deck for their game type.
+- Game state stays in the browser; no room codes or remote-control server are used.
+- Optional HTTP session records keep the teacher label, participants or teams, selected deck version, status, and result.
+- A teacher Gemini key is temporary: it stays in the current browser tab's `sessionStorage`, is sent only for AI generation, and is never persisted by OpenClassTools.
 
 ## Local setup
 
-Prerequisites:
+Requirements:
 
 - Node.js 18 or newer
 - A Supabase project
-- A Gemini key for platform-key generation
+- A Gemini API key for AI generation
 
 Install and build:
 
@@ -43,38 +29,31 @@ npm install
 npm run build
 ```
 
-Copy `.env.example` to `.env` and provide real values:
+Copy `.env.example` to `.env`:
 
 ```env
-GEMINI_API_KEY=your_platform_gemini_key
+GEMINI_API_KEY=your_gemini_key
 PORT=8090
-ALLOWED_ORIGINS=http://localhost:8090
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
-ADMIN_PASSCODE=your_long_administrator_passcode
-ADMIN_SESSION_SECRET=your_random_signing_secret
 ```
 
-Apply the database migration and seed the built-in decks as described in [docs/database.md](docs/database.md). Then start the app:
+Apply the migration and seed the built-in named decks as described in [docs/database.md](docs/database.md):
 
 ```bash
 npm run seed:decks
 npm start
 ```
 
-Open `http://localhost:8090`. Open `http://localhost:8090/control-center` directly for administration.
+Open `http://localhost:8090`.
 
 ## Main APIs
 
 - `GET /api/decks?gameType=...` lists registered current decks.
-- `POST /api/sessions` starts a real play session.
+- `POST /api/sessions` starts an optional play session.
 - `PATCH /api/sessions/:id/complete` completes it.
-- `POST /api/generate*` endpoints generate and atomically register named decks.
-- `POST /api/admin/login` creates the signed administrator cookie.
-- Protected `/api/admin/sessions*` and `/api/admin/decks*` routes power analytics and deck management.
-- `GET /api/health` reports server and database readiness.
-
-See [docs/admin-dashboard.md](docs/admin-dashboard.md), [DEPLOY.md](DEPLOY.md), and [TEST_INSTRUCTIONS.md](TEST_INSTRUCTIONS.md) for operations and verification.
+- `POST /api/generate*` generates and registers a named deck.
+- `GET /api/health` reports HTTP server health.
 
 ## Verification
 

@@ -167,33 +167,6 @@ function mapSession(row) {
     };
 }
 
-function mapAdminSession(row) {
-    if (!row) return null;
-    const session = mapSession(row);
-    const deck = Array.isArray(row.deck) ? row.deck[0] : row.deck;
-    const version = Array.isArray(row.deck_version)
-        ? row.deck_version[0]
-        : row.deck_version;
-    return {
-        ...session,
-        deckName: deck?.name ?? null,
-        deckVersion: version ? {
-            id: version.id,
-            versionNumber: version.version_number,
-            content: version.content,
-            source: version.source,
-            theme: version.theme ?? null,
-            cefrLevel: version.cefr_level ?? null,
-            generationParameters: version.generation_parameters || {},
-            teacherDisplayName: version.teacher_display_name ?? null,
-            aiProvider: version.ai_provider ?? null,
-            aiModel: version.ai_model ?? null,
-            teacherKeyUsed: Boolean(version.teacher_key_used),
-            createdAt: version.created_at
-        } : null
-    };
-}
-
 function translateDatabaseError(error) {
     switch (error?.databaseMessage) {
         case 'DECK_VERSION_MISMATCH':
@@ -215,20 +188,6 @@ function translateDatabaseError(error) {
         default:
             throw error;
     }
-}
-
-function cleanAdminFilter(value, maxLength = 120) {
-    if (typeof value !== 'string') return '';
-    return value.trim().replace(/[*(),]/g, '').slice(0, maxLength);
-}
-
-function parseAdminDate(value, label) {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        throw new SessionValidationError(`${label} date is invalid`, 'INVALID_DATE_FILTER');
-    }
-    return date.toISOString();
 }
 
 export function createSessionRepository(client) {
@@ -285,153 +244,6 @@ export function createSessionRepository(client) {
             } catch (error) {
                 translateDatabaseError(error);
             }
-        },
-
-        async listAdmin({
-            limit,
-            gameType,
-            teacher,
-            participant,
-            deck,
-            roomCode,
-            theme,
-            cefr,
-            status,
-            deckVersionId,
-            from,
-            to,
-            cursor
-        } = {}) {
-            const pageSize = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
-            if (gameType && !isGameType(gameType)) {
-                throw new SessionValidationError('Game type is invalid', 'INVALID_GAME_TYPE');
-            }
-            if (status && !['active', 'completed', 'abandoned'].includes(status)) {
-                throw new SessionValidationError('Status is invalid', 'INVALID_STATUS_FILTER');
-            }
-            const filters = {};
-            if (gameType) filters.game_type = `eq.${gameType}`;
-            if (teacher) {
-                filters.teacher_display_name = `ilike.*${cleanAdminFilter(teacher)}*`;
-            }
-            if (participant) {
-                filters.participant_names = `cs.${JSON.stringify([cleanAdminFilter(participant, 80)])}`;
-            }
-            if (roomCode) filters.room_code = `eq.${cleanAdminFilter(roomCode, 12).toUpperCase()}`;
-            if (status) filters.status = `eq.${status}`;
-            if (deckVersionId) {
-                filters.deck_version_id = `eq.${cleanAdminFilter(deckVersionId, 80)}`;
-            }
-            if (deck) filters['deck.name'] = `ilike.*${cleanAdminFilter(deck, 100)}*`;
-            if (theme) filters['deck_version.theme'] = `ilike.*${cleanAdminFilter(theme, 200)}*`;
-            if (cefr) filters['deck_version.cefr_level'] = `eq.${cleanAdminFilter(cefr, 4)}`;
-            const fromDate = parseAdminDate(from, 'From');
-            const toDate = parseAdminDate(to, 'To');
-            const dateFilters = [
-                fromDate ? `started_at.gte.${fromDate}` : null,
-                toDate ? `started_at.lte.${toDate}` : null,
-                cursor ? `started_at.lt.${parseAdminDate(cursor, 'Cursor')}` : null
-            ].filter(Boolean);
-            if (dateFilters.length === 1) {
-                const [column, operator, ...value] = dateFilters[0].split('.');
-                filters[column] = `${operator}.${value.join('.')}`;
-            } else if (dateFilters.length > 1) {
-                filters.and = `(${dateFilters.join(',')})`;
-            }
-
-            const deckJoin = deck ? 'decks!inner' : 'decks';
-            const versionJoin = theme || cefr ? 'deck_versions!inner' : 'deck_versions';
-
-            const rows = await client.select('game_sessions', {
-                select: [
-                    'id',
-                    'room_code',
-                    'game_type',
-                    'teacher_display_name',
-                    'participant_names',
-                    'deck_id',
-                    'deck_version_id',
-                    'status',
-                    'result',
-                    'legacy_source_id',
-                    'started_at',
-                    'ended_at',
-                    'last_activity_at',
-                    `deck:${deckJoin}(name)`,
-                    `deck_version:${versionJoin}(id,version_number,source,theme,cefr_level,teacher_key_used,created_at)`
-                ].join(','),
-                filters,
-                order: 'started_at.desc',
-                limit: pageSize
-            });
-            const items = (rows || []).map(mapAdminSession);
-            return {
-                items,
-                nextCursor: items.length === pageSize
-                    ? items[items.length - 1]?.startedAt || null
-                    : null,
-                summary: {
-                    totalSessions: items.length,
-                    completedSessions: items.filter(item => item.status === 'completed').length,
-                    abandonedSessions: items.filter(item => item.status === 'abandoned').length,
-                    generatedDecks: new Set(
-                        items
-                            .filter(item => item.deckId && item.deckVersion?.source !== 'seed')
-                            .map(item => item.deckId)
-                    ).size,
-                    sessionsByGame: items.reduce((counts, item) => ({
-                        ...counts,
-                        [item.gameType]: (counts[item.gameType] || 0) + 1
-                    }), {}),
-                    teacherKeyUsagePercent: items.length === 0
-                        ? 0
-                        : Math.round(
-                            (items.filter(item => item.deckVersion?.teacherKeyUsed).length / items.length) * 100
-                        )
-                }
-            };
-        },
-
-        async getAdmin(id) {
-            const sessionId = cleanSessionId(id);
-            const rows = await client.select('game_sessions', {
-                select: [
-                    'id',
-                    'room_code',
-                    'game_type',
-                    'teacher_display_name',
-                    'participant_names',
-                    'deck_id',
-                    'deck_version_id',
-                    'status',
-                    'result',
-                    'legacy_source_id',
-                    'started_at',
-                    'ended_at',
-                    'last_activity_at',
-                    'deck:decks(name)',
-                    'deck_version:deck_versions(id,version_number,content,source,theme,cefr_level,generation_parameters,teacher_display_name,ai_provider,ai_model,teacher_key_used,created_at)'
-                ].join(','),
-                filters: { id: `eq.${sessionId}` },
-                limit: 1
-            });
-            const session = mapAdminSession(rows?.[0]);
-            if (!session) return null;
-            const activity = await client.select('game_activity_logs', {
-                select: 'id,event_type,details,created_at',
-                filters: { session_id: `eq.${sessionId}` },
-                order: 'created_at.asc',
-                limit: 500
-            });
-            return {
-                ...session,
-                activity: (activity || []).map(row => ({
-                    id: row.id,
-                    eventType: row.event_type,
-                    details: row.details || {},
-                    createdAt: row.created_at
-                }))
-            };
         }
     });
 }

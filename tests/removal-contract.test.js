@@ -62,3 +62,28 @@ test('hub has a concise native teacher-key guide wired to the key modal', async 
     assert.match(source, /quota/i);
     assert.match(source, /setIsApiKeyModalOpen\(true\)/);
 });
+
+test('active styles and configuration contain no room-code or administrator remnants', async () => {
+    const paths = [
+        'style.css',
+        'taboo.css',
+        'hangman.css',
+        'millionaire.css',
+        'kelime.css',
+        'wheel.css',
+        'bottle.css',
+        'theme.css',
+        'server/config.js',
+        'deploy.sh',
+        '.env.example'
+    ];
+
+    for (const path of paths) {
+        const source = await read(path);
+        assert.doesNotMatch(
+            source,
+            /game-id-badge|ADMIN_PASSCODE|ADMIN_SESSION_SECRET/i,
+            path
+        );
+    }
+});

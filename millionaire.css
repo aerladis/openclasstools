@@ -355,23 +355,6 @@ h1 {
     }
 }
 
-.game-id-badge {
-    position: fixed;
-    top: 1.25rem;
-    left: 1.25rem;
-    z-index: 20;
-    padding: 0.72rem 1rem;
-    border-radius: 999px;
-    background: rgba(8, 15, 28, 0.64);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: var(--text-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    backdrop-filter: blur(18px);
-    box-shadow: var(--shadow-card);
-}
-
 #game-screen {
     align-items: stretch;
     justify-content: stretch;
@@ -783,13 +766,6 @@ h1 {
     .glass-card {
         padding: 1.35rem;
         border-radius: 1.5rem;
-    }
-
-    .game-id-badge {
-        top: 0.9rem;
-        left: 0.9rem;
-        padding: 0.58rem 0.82rem;
-        font-size: 0.74rem;
     }
 
     .top-bar {

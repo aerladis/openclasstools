@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import {
     DeckNameConflictError,
-    DeckVersionConflictError,
     createDeckRepository
 } from '../server/repositories/deck-repository.js';
 
@@ -99,11 +98,6 @@ test('lists only active current decks for one content game', async () => {
 
 test('maps database conflicts to public-safe domain errors', async () => {
     const conflict = Object.assign(new Error('Database request failed'), { code: '23505' });
-    const versionConflict = Object.assign(new Error('Database request failed'), {
-        code: '40001',
-        databaseMessage: 'DECK_VERSION_CONFLICT'
-    });
-
     await assert.rejects(
         () => createDeckRepository({ rpc: async () => { throw conflict; } }).createGenerated({
             gameType: 'who',
@@ -113,15 +107,4 @@ test('maps database conflicts to public-safe domain errors', async () => {
         }),
         DeckNameConflictError
     );
-    await assert.rejects(
-        () => createDeckRepository({ rpc: async () => { throw versionConflict; } }).createRevision({
-            deckId: 'd1',
-            expectedVersionId: 'v1',
-            gameType: 'who',
-            content: ['Leia'],
-            teacherDisplayName: 'Administrator'
-        }),
-        DeckVersionConflictError
-    );
 });
-
