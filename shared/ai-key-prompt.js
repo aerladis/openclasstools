@@ -64,7 +64,6 @@
     function showPrompt() {
         const platform = getPlatform();
         if (!platform || !root.document) return;
-        if (platform.hasTeacherKey() || !platform.wantsAiFeatures()) return;
 
         loadStyles();
         const overlay = ensurePromptElement();
@@ -127,6 +126,27 @@
         container.innerHTML = '';
         container.className = 'ai-key-status';
 
+        const info = root.document.createElement('button');
+        info.type = 'button';
+        info.className = 'ai-key-status__info';
+        info.textContent = 'ⓘ';
+        info.title = 'Why use your own API key?';
+        info.setAttribute('aria-label', 'Why use your own API key?');
+        info.setAttribute('aria-expanded', 'false');
+
+        const details = root.document.createElement('span');
+        details.className = 'ai-key-status__details';
+        details.hidden = true;
+        details.textContent = [
+            'AI generation uses your own Google Gemini API key. ',
+            'The key stays only in this browser tab and is never stored by the server.'
+        ].join('');
+
+        info.onclick = function toggleApiDetails() {
+            details.hidden = !details.hidden;
+            info.setAttribute('aria-expanded', String(!details.hidden));
+        };
+
         const dot = root.document.createElement('span');
         dot.className = 'ai-key-status__dot';
 
@@ -147,6 +167,8 @@
             text.textContent = 'AI Generation Disabled';
         }
 
+        container.appendChild(info);
+        container.appendChild(details);
         container.appendChild(dot);
         container.appendChild(text);
         container.appendChild(change);
@@ -180,6 +202,7 @@
         ];
         selectors.forEach(function eachSelector(selector) {
             root.document.querySelectorAll(selector).forEach(function eachButton(btn) {
+                if (btn.dataset?.aiPurpose === 'start-deck') return;
                 btn.disabled = disabled;
                 btn.title = disabled
                     ? 'Add a Gemini API key to use AI generation.'

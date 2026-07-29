@@ -52,3 +52,13 @@ test('deckless Bottle and Wheel still record play without deck references', asyn
         assert.match(source, /OpenClassPlatform\.completeSession/);
     }
 });
+
+test('Six Thinking Hats marks deck launch as independent from AI generation', async () => {
+    const html = await readFile(new URL('../hats.html', import.meta.url), 'utf8');
+
+    assert.match(
+        html,
+        /id="btn-generate"[^>]*data-ai-purpose="start-deck"/,
+        'the registered hats deck launch must remain available without an AI key'
+    );
+});
