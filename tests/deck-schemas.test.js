@@ -72,7 +72,8 @@ test('normalizes every supported LingoParty challenge type', () => {
         { type: 'grammar', prompt: 'Fix it.', answer: 'Fixed.' },
         { type: 'speed', prompt: 'Quick!', answer: 'Fast' },
         { type: 'roleplay', prompt: 'Act it out.', answer: 'Useful phrases' },
-        { type: 'truefalse', prompt: 'Earth is round.', answer: true }
+        { type: 'truefalse', prompt: 'Earth is round.', answer: true },
+        { type: 'ordering', prompt: 'Put in order:\n1. B\n2. A', answer: '2, 1' }
     ]);
 
     assert.deepEqual(normalized.map(card => card.type), [
@@ -83,14 +84,15 @@ test('normalizes every supported LingoParty challenge type', () => {
         'grammar',
         'speed',
         'roleplay',
-        'truefalse'
+        'truefalse',
+        'ordering'
     ]);
     assert.equal(normalized[0].trophies, undefined);
 });
 
 test('rejects empty, oversized, unsupported, and overlong deck content', () => {
-    assert.throws(() => normalizeDeckContent('who', []), /between 1 and 200/);
-    assert.throws(() => normalizeDeckContent('who', Array.from({ length: 201 }, () => 'Name')), /between 1 and 200/);
+    assert.throws(() => normalizeDeckContent('who', []), /between 1 and/);
+    assert.throws(() => normalizeDeckContent('who', Array.from({ length: 401 }, () => 'Name')), /between 1 and/);
     assert.throws(() => normalizeDeckContent('bottle', []), /Unsupported deck game/);
     assert.throws(() => normalizeDeckContent('who', ['x'.repeat(121)]), /120 characters/);
 });

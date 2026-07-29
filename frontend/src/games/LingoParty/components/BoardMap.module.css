@@ -58,18 +58,18 @@
 .mapGuidelineFlow {
   fill: none;
   stroke: #a855f7;
-  stroke-width: 3px;
+  stroke-width: 2px;
   stroke-dasharray: 10 10;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.3));
-  opacity: 0.12;
+  filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.15));
+  opacity: 0.05;
 }
 
 .mapGuidelineGlow {
   fill: none;
   stroke: #ec4899;
-  stroke-width: 6px;
+  stroke-width: 4px;
   stroke-dasharray: 6 34;
   stroke-linecap: round;
   filter: blur(3px);
@@ -79,8 +79,8 @@
 
 .mapPathGlow {
   fill: none;
-  stroke: rgba(139, 92, 246, 0.08);
-  stroke-width: 20;
+  stroke: rgba(139, 92, 246, 0.04);
+  stroke-width: 14;
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: blur(8px);
@@ -90,22 +90,22 @@
 .mapPath {
   fill: none;
   stroke: url(#cosmicTrailGradient);
-  stroke-width: 3.5px;
+  stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 10 8;
-  opacity: 0.35;
-  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.3));
+  stroke-dasharray: 8 8;
+  opacity: 0.12;
+  filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.15));
 }
 
 .mapPathStardust {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.25);
-  stroke-width: 2.5px;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1.5px;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 2 20;
-  opacity: 0.3;
+  opacity: 0.1;
 }
 
 

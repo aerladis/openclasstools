@@ -44,7 +44,7 @@
   position: relative;
   width: 520px;
   height: 520px;
-  margin: 0.5rem 0 1.2rem 0;
+  margin: 1.6rem 0 1.2rem 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,19 +52,19 @@
 
 .pointer {
   position: absolute;
-  top: -16px;
+  top: -28px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
-  font-size: 2.2rem;
-  color: #f59e0b;
-  filter: drop-shadow(0 0 12px #f59e0b);
+  z-index: 100;
+  line-height: 1;
+  pointer-events: none;
+  transition: color 0.15s ease, filter 0.15s ease;
   animation: pulsePointer 1s infinite alternate;
 }
 
 @keyframes pulsePointer {
   from { transform: translateX(-50%) translateY(0); }
-  to { transform: translateX(-50%) translateY(3px); }
+  to { transform: translateX(-50%) translateY(4px); }
 }
 
 .wheelCanvas {

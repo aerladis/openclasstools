@@ -8,7 +8,7 @@ import PawnStandeesLayer from './PawnStandeesLayer';
    Uses a multi-row serpentine layout for a natural winding board.
    ═══════════════════════════════════════════════════════════════ */
 export function getMapCoordinates(index, totalLength) {
-  if (totalLength <= 1) return { x: 50, y: 50, sx: 800, sy: 450 };
+  if (totalLength <= 1) return { x: 50, y: 50, sx: 880, sy: 480 };
 
   const tilesPerRow = 6;
   const ROWS = Math.ceil(totalLength / tilesPerRow);
@@ -19,24 +19,25 @@ export function getMapCoordinates(index, totalLength) {
   // Physical column index from left (0 to 5)
   const c = isReversed ? (tilesPerRow - 1 - colInRow) : colInRow;
 
-  // Exact hexagonal honeycomb grid geometry
+  // Exact hexagonal honeycomb grid geometry in pixels
   const R = 120;
   const Sx = R * Math.sqrt(3); // ~207.85px horizontal spacing (hexes touch horizontally in same row)
-  const Sy = R * 1.5 + 22;     // 202px vertical spacing (creates clear vertical space between rows so hexes do NOT touch vertically)
+  const Sy = R * 1.5 + 20;     // 200px vertical spacing (creates clear vertical space between rows)
 
-  // Center the 6 columns + odd row stagger across 1600 width
+  // Center the 6 columns + odd row stagger across 1760 width (adds generous 200px+ padding margin on all sides)
   const totalGridWidth = (tilesPerRow - 1 + 0.5) * Sx; // 5.5 * 207.85 = 1143.15px
-  const startX = (1600 - totalGridWidth) / 2;          // ~228.4px
-  const startY = 140;                                  // Top margin
+  const viewBoxWidth = 1760;
+  const startX = (viewBoxWidth - totalGridWidth) / 2;  // ~308.4px
+  const startY = 160;                                  // Generous top margin
 
   // Stagger odd rows horizontally by half a column step so hexagons interlock precisely into adjacent row gaps
   const rowShift = isReversed ? (0.5 * Sx) : 0;
   const sx = startX + c * Sx + rowShift;
   const sy = startY + row * Sy;
 
-  // Dynamic SVG height to hold all rows cleanly
-  const svgHeight = Math.max(900, startY + (ROWS - 1) * Sy + 160);
-  const x = (sx / 1600) * 100;
+  // Dynamic SVG height with generous bottom padding margin
+  const svgHeight = Math.max(960, startY + (ROWS - 1) * Sy + 200);
+  const x = (sx / viewBoxWidth) * 100;
   const y = (sy / svgHeight) * 100;
 
   return { x, y, sx, sy };
@@ -60,6 +61,7 @@ const TILE_CONFIG = {
   roleplay:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
   vortex:        { color: '#312e81', glow: 'rgba(99,102,241,0.9)', icon: '🌀', label: 'VORTEX', cssClass: 'tileVortex' },
   asteroid:      { color: '#451a03', glow: 'rgba(245,158,11,0.9)', icon: '☄️', label: 'ASTEROID', cssClass: 'tileAsteroid' },
+  ordering:      { color: '#f97316', glow: 'rgba(249,115,22,0.5)', icon: '🔢', label: 'Challenge' },
 };
 
 const DEFAULT_CONF = { color: '#64748b', glow: 'rgba(100,116,139,0.5)', icon: '🌑', label: '???' };
@@ -151,7 +153,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
 
   // Pre-compute SVG coordinates for each tile
   const totalRows = Math.ceil((tiles.length || 42) / 6);
-  const svgHeight = Math.max(900, 140 + (totalRows - 1) * 180 + 160);
+  const svgHeight = Math.max(960, 160 + (totalRows - 1) * 200 + 200);
 
   const tilePoints = useMemo(() =>
     tiles.map((tile, idx) => {
@@ -190,7 +192,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
       </div>
 
       {/* ── SVG Board ── */}
-      <svg className={styles.svgMap} viewBox={`0 0 1600 ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
+      <svg className={styles.svgMap} viewBox={`0 0 1760 ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           {/* Cosmic trail gradient */}
           <linearGradient id="cosmicTrailGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -229,8 +231,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
           const tileColor = isIconicTile ? conf.color : defaultColor;
           const tileGlow = isIconicTile ? conf.glow : defaultColor;
 
-          const total = tiles.length;
-          // Hexagon radius 120 ensures adjacent horizontal hexes touch edge-to-edge
+          const total = tiles.length || 42;
           const hexRadius = 120;
 
           const baseRadius = total > 36 ? 56 : (total > 24 ? 64 : 72);
@@ -261,24 +262,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
               {tileStyle === 'sphere' && (
                 <>
                   <circle r={radius + 10} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
-                  <circle r={radius + 6} className={styles.tileOrbitRing} stroke={tileColor} />
                   <circle r={radius} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
-                  {sphereTexture === 'bands' && (
-                    <>
-                      <ellipse rx={radius * 0.92} ry={radius * 0.3} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="3" />
-                      <ellipse rx={radius * 0.75} ry={radius * 0.18} fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="2" transform="translate(0, -14)" />
-                    </>
-                  )}
-                  {sphereTexture === 'craters' && (
-                    <>
-                      <circle cx={-radius * 0.32} cy={-radius * 0.18} r={radius * 0.14} fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-                      <circle cx={radius * 0.25} cy={radius * 0.3} r={radius * 0.11} fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-                      <circle cx={radius * 0.1} cy={-radius * 0.4} r={radius * 0.08} fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-                    </>
-                  )}
-                  {sphereTexture === 'ring' && (
-                    <ellipse rx={radius * 1.5} ry={radius * 0.42} fill="none" stroke={tileColor} strokeWidth="4" opacity="0.55" transform="rotate(-18)" />
-                  )}
                   {isIconicTile && <text y="0" className={styles.tileEmoji}>{conf.icon}</text>}
                 </>
               )}
@@ -288,27 +272,9 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                 <>
                   <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
                   <polygon points={getHexPoints(hexRadius)} fill="url(#lunarMetalSheen)" />
-                  <polygon points={getHexPoints(hexRadius * 0.88)} fill="none" stroke={tileColor} strokeWidth="1.5" opacity="0.7" />
                   {isIconicTile && (
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
                   )}
-                </>
-              )}
-
-              {/* ── Distinct special-tile visual layers (Fate Box / Swirl / Fractured Rock) ── */}
-              {tp.type === 'chance' && (
-                <>
-                  <rect x={-radius * 0.72} y={-radius * 0.72} width={radius * 1.44} height={radius * 1.44} rx="12" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeDasharray="6 5" opacity="0.85" />
-                  <line x1={-radius * 0.72} y1="0" x2={radius * 0.72} y2="0" stroke="#ec4899" strokeWidth="1.5" opacity="0.5" />
-                  <line x1="0" y1={-radius * 0.72} x2="0" y2={radius * 0.72} stroke="#ec4899" strokeWidth="1.5" opacity="0.5" />
-                </>
-              )}
-
-              {tp.type === 'asteroid' && (
-                <>
-                  <polyline points={`${-radius * 0.7},${-radius * 0.1} ${-radius * 0.2},${radius * 0.12} ${-radius * 0.35},${radius * 0.62}`} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
-                  <polyline points={`${radius * 0.15},${-radius * 0.65} ${radius * 0.3},${-radius * 0.05} ${radius * 0.68},${radius * 0.25}`} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="3" />
-                  <polygon points={`${radius * 0.05},${-radius * 0.2} ${radius * 0.35},${radius * 0.05} ${-radius * 0.05},${radius * 0.28}`} fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
                 </>
               )}
             </g>
@@ -323,7 +289,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
         </g>
 
         {/* ── ForeignObject overlay so pawn standees live right inside the exact SVG coordinate grid ── */}
-        <foreignObject x="0" y="0" width="1600" height={svgHeight} style={{ overflow: 'visible', pointerEvents: 'none' }}>
+        <foreignObject x="0" y="0" width="1760" height={svgHeight} style={{ overflow: 'visible', pointerEvents: 'none' }}>
           <PawnStandeesLayer tiles={tiles} teams={teams} />
         </foreignObject>
       </svg>

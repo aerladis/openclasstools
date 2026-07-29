@@ -8,6 +8,7 @@ import AttackTargetModal from './AttackTargetModal';
 import GuideModal from './GuideModal';
 import VictoryModal from './VictoryModal';
 import CosmicWheelModal from './CosmicWheelModal';
+import OrbitResultModal from './OrbitResultModal';
 import confetti from 'canvas-confetti';
 
 const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -16,18 +17,20 @@ const ITEM_ICONS = { shield: '🛡️' };
 export default function BoardStage({
   gameState,
   setGameState,
+  broadcastGameState,
   playSound,
   onGameComplete
 }) {
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
-  const [activeModal, setActiveModal] = useState(null); // 'challenge', 'shop', 'mystery', 'guide', 'victory'
+  const [activeModal, setActiveModal] = useState(null); // 'challenge', 'shop', 'mystery', 'guide', 'victory', 'wheel', 'orbit'
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [categoryAnnouncement, setCategoryAnnouncement] = useState(null);
-  const [showQuestionReady, setShowQuestionReady] = useState(false);
+  const [showQuestionReady, setShowQuestionReady] = useState(null); // null or tile type string
   const [pendingTileAction, setPendingTileAction] = useState(null);
   const [hoveredPlanet, setHoveredPlanet] = useState(null);
   const [pendingAttack, setPendingAttack] = useState(null);
+  const [orbitResult, setOrbitResult] = useState(null); // { orbitNumber, cubeTeam, teams }
 
   const usedChallengeKeysRef = useRef(new Set());
 
@@ -65,6 +68,7 @@ export default function BoardStage({
       round: nextRound
     };
     setGameState(updatedState);
+    broadcastGameState(updatedState);
   };
 
   const shuffleTiles = (currentTiles) => {
@@ -100,11 +104,16 @@ export default function BoardStage({
       if (playSound) playSound('trophy');
 
       const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
-      const validCards = deck.filter(c => !usedChallengeKeysRef.current.has(c.prompt || c.word || c.scrambledWord || c.targetWord));
+      const cardKey = c => c.prompt || c.word || c.scrambledWord || c.targetWord;
+      const validCards = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
       let pool = validCards.length > 0 ? validCards : deck;
       let chosen = pool[Math.floor(Math.random() * pool.length)];
 
-      if (!chosen) chosen = { type: 'riddle', prompt: 'Answer the Boss Riddle!', answer: 'Correct' };
+      if (chosen) {
+        usedChallengeKeysRef.current.add(cardKey(chosen));
+      } else {
+        chosen = { type: 'riddle', prompt: 'Answer the Boss Riddle!', answer: 'Correct' };
+      }
 
       setCurrentChallenge({ ...chosen, isBoss: true });
       setActiveModal('challenge');
@@ -116,11 +125,17 @@ export default function BoardStage({
       if (playSound) playSound('damage');
       const randOffset = Math.random() < 0.5 ? -3 : 3;
       team.position = Math.max(0, Math.min(gameState.tiles.length - 1, team.position + randOffset));
-      advanceTurn(teamsList);
+      const updatedState = { ...gameState, teams: teamsList };
+      setGameState(updatedState);
+      broadcastGameState(updatedState);
+      setTimeout(() => advanceTurn(teamsList), 1200);
     } else if (tile.type === 'asteroid') {
       if (playSound) playSound('damage');
       team.position = Math.max(0, team.position - 2);
-      advanceTurn(teamsList);
+      const updatedState = { ...gameState, teams: teamsList };
+      setGameState(updatedState);
+      broadcastGameState(updatedState);
+      setTimeout(() => advanceTurn(teamsList), 1200);
     } else {
       // Standard challenge planet ➔ Triggers Wheel of Cosmic Fate!
       setActiveModal('wheel');
@@ -128,26 +143,30 @@ export default function BoardStage({
   };
 
   const handleWheelResult = (winner) => {
-    const teamsCopy = gameState.teams.map(t => ({ ...t }));
-    const curTeam = teamsCopy[gameState.currentTeamIndex];
-
     const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
     const cardKey = c => c.prompt || c.word || c.scrambledWord || c.targetWord;
-    const matchingCards = deck.filter(c => c.type === winner.type);
-    const unusedCards = matchingCards.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
 
-    let pool;
-    if (unusedCards.length > 0) {
-      pool = unusedCards;
+    const matchingCards = deck.filter(c => c.type === winner.type);
+    const unusedMatching = matchingCards.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
+
+    let chosen;
+    if (unusedMatching.length > 0) {
+      // 1. Unused card of the exact category won on the wheel
+      chosen = unusedMatching[Math.floor(Math.random() * unusedMatching.length)];
     } else if (matchingCards.length > 0) {
+      // 2. All cards of this category were shown — reset used tracking for this category & reuse!
       matchingCards.forEach(c => usedChallengeKeysRef.current.delete(cardKey(c)));
-      pool = matchingCards;
+      chosen = matchingCards[Math.floor(Math.random() * matchingCards.length)];
     } else {
+      // 3. Fallback only if deck has ZERO cards of this specific category
       const unusedAny = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
-      pool = unusedAny.length > 0 ? unusedAny : deck;
+      if (unusedAny.length > 0) {
+        chosen = unusedAny[Math.floor(Math.random() * unusedAny.length)];
+      } else {
+        chosen = deck[Math.floor(Math.random() * deck.length)];
+      }
     }
 
-    const chosen = pool[Math.floor(Math.random() * pool.length)];
     if (chosen) {
       usedChallengeKeysRef.current.add(cardKey(chosen));
     }
@@ -157,7 +176,7 @@ export default function BoardStage({
   };
 
   const handleRollDice = async () => {
-    if (isRolling || activeModal || showQuestionReady) return;
+    if (isRolling || activeModal || showQuestionReady || orbitResult) return;
     setIsRolling(true);
     setCategoryAnnouncement(null);
     if (playSound) playSound('roll');
@@ -196,6 +215,7 @@ export default function BoardStage({
         grammar: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         speed: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         roleplay: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        ordering: { text: '🔢 CONVERSATION ORDER TILE LANDED!', color: '#f97316' },
         shop: { text: '🛒 TROPHY STATION LANDED!', color: '#eab308' },
         chance: { text: '🎁 MYSTERY BOX LANDED!', color: '#ec4899' },
         start: { text: '🌍 LAUNCHPAD STATION LANDED!', color: '#10b981' },
@@ -208,19 +228,34 @@ export default function BoardStage({
       setCategoryAnnouncement(info);
       if (playSound) playSound('correct');
 
-      // Hold tile landed state & display "Show Question" button
+      // Hold tile landed state & display contextual action button
       setPendingTileAction({ tile: landedTile, teamsList: teamsCopy });
-      setShowQuestionReady(true);
+      setShowQuestionReady(landedTile.type);
     }
   };
 
   const handleRevealQuestion = () => {
-    setShowQuestionReady(false);
+    setShowQuestionReady(null);
     setCategoryAnnouncement(null);
     if (pendingTileAction) {
       handleTileAction(pendingTileAction.tile, pendingTileAction.teamsList);
       setPendingTileAction(null);
     }
+  };
+
+  const checkVictory = (teamsCopy) => {
+    const requiredCubes = gameState.orbitCount || 3;
+    const winningTeam = teamsCopy.find(t => (t.gibelCubes || 0) >= requiredCubes);
+
+    if (winningTeam) {
+      triggerConfetti();
+      setGameState(prev => ({ ...prev, teams: teamsCopy }));
+      onGameComplete?.(teamsCopy, 'victory');
+      setActiveModal('victory');
+      setCurrentChallenge(null);
+      return true;
+    }
+    return false;
   };
 
   const handleChallengeResolve = ({ result, trophies }) => {
@@ -232,38 +267,20 @@ export default function BoardStage({
         triggerConfetti();
         curTeam.gibelCubes = (curTeam.gibelCubes || 0) + 1;
         curTeam.trophies = (curTeam.trophies || 0) + 1;
+        const requiredCubes = gameState.orbitCount || 3;
 
-        if (curTeam.gibelCubes >= 3) {
-          setGameState(prev => ({ ...prev, teams: teamsCopy }));
-          onGameComplete?.(teamsCopy, 'victory');
-          setActiveModal('victory');
-          setCurrentChallenge(null);
+        if (checkVictory(teamsCopy)) {
           return;
         } else {
-          // Reset ALL teams back to start line when board warps into next orbit!
-          teamsCopy.forEach(t => {
-            t.position = 0;
-            t.startPos = 0;
+          // Show orbit result screen before resetting
+          setOrbitResult({
+            orbitNumber: gameState.round,
+            cubeTeamName: curTeam.name,
+            cubeTeamPawn: curTeam.pawn,
+            cubeCount: curTeam.gibelCubes,
+            requiredCubes,
+            teams: teamsCopy.map(t => ({ ...t })),
           });
-
-          const nextRound = gameState.round + 1;
-          const shuffled = shuffleTiles(gameState.tiles);
-
-          setCategoryAnnouncement({
-            text: `🧊 +1 Gibel Cube Acquired! (${curTeam.gibelCubes}/3) — Board Shuffled into Orbit ${nextRound}!`,
-            color: '#38bdf8'
-          });
-          setTimeout(() => setCategoryAnnouncement(null), 4500);
-
-          const updatedState = {
-            ...gameState,
-            teams: teamsCopy,
-            tiles: shuffled,
-            round: nextRound,
-            currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsCopy.length
-          };
-          setGameState(updatedState);
-
           setActiveModal(null);
           setCurrentChallenge(null);
           return;
@@ -293,6 +310,9 @@ export default function BoardStage({
         if (eventResult.trophies < 0 && playSound) playSound('damage');
         curTeam.trophies = Math.max(0, curTeam.trophies + eventResult.trophies);
       }
+      if (eventResult.gibelCubes) {
+        curTeam.gibelCubes = Math.max(0, (curTeam.gibelCubes || 0) + eventResult.gibelCubes);
+      }
       if (eventResult.steps) {
         if (eventResult.steps < 0 && playSound) playSound('damage');
         curTeam.position = Math.min(gameState.tiles.length - 1, Math.max(0, curTeam.position + eventResult.steps));
@@ -301,24 +321,25 @@ export default function BoardStage({
         teamsCopy.forEach(t => t.trophies += eventResult.globalTrophies);
       }
       setActiveModal(null);
+      if (checkVictory(teamsCopy)) return;
       advanceTurn(teamsCopy, !!eventResult.doubleRoll);
       return;
     }
 
     setActiveModal(null);
+    if (checkVictory(teamsCopy)) return;
     advanceTurn(teamsCopy);
   };
 
-  const ATTACK_ITEM_IDS = ['ufo_attack', 'meteor_strike'];
 
   const applyPurchasedItem = (item, curTeam, targetTeam) => {
     if (item.id === 'ufo_attack') {
       if (targetTeam) {
         const shieldIdx = (targetTeam.items || []).findIndex(i => i.id === 'shield');
         if (shieldIdx !== -1) {
-          targetTeam.items.splice(shieldIdx, 1); // Shield absorbs attack!
+          targetTeam.items.splice(shieldIdx, 1);
         } else {
-          targetTeam.position = Math.max(0, targetTeam.position - 3); // Zap back 3 planets!
+          targetTeam.position = Math.max(0, targetTeam.position - 3);
         }
       }
     } else if (item.id === 'meteor_strike') {
@@ -329,6 +350,24 @@ export default function BoardStage({
       }
     } else if (item.id === 'double_dice') {
       curTeam.position = Math.min(gameState.tiles.length - 1, curTeam.position + 3);
+    } else if (item.id === 'gibel_cube') {
+      curTeam.gibelCubes = (curTeam.gibelCubes || 0) + 1;
+    } else if (item.id === 'sniper_scope') {
+      if (targetTeam && targetTeam.items && targetTeam.items.length > 0) {
+        const stolenItem = targetTeam.items.splice(Math.floor(Math.random() * targetTeam.items.length), 1)[0];
+        curTeam.items = curTeam.items || [];
+        curTeam.items.push(stolenItem);
+      }
+    } else if (item.id === 'time_rewind') {
+      if (targetTeam && targetTeam.startPos !== undefined) {
+        targetTeam.position = targetTeam.startPos;
+      }
+    } else if (item.id === 'gravity_swap') {
+      if (targetTeam) {
+        const tempPos = curTeam.position;
+        curTeam.position = targetTeam.position;
+        targetTeam.position = tempPos;
+      }
     } else {
       curTeam.items = curTeam.items || [];
       curTeam.items.push(item);
@@ -337,6 +376,7 @@ export default function BoardStage({
 
   const finalizePurchase = (teamsCopy) => {
     setActiveModal(null);
+    if (checkVictory(teamsCopy)) return;
     advanceTurn(teamsCopy);
   };
 
@@ -354,7 +394,9 @@ export default function BoardStage({
 
     const otherTeams = teamsCopy.filter((t, idx) => idx !== gameState.currentTeamIndex);
 
-    if (ATTACK_ITEM_IDS.includes(item.id) && otherTeams.length > 1) {
+    const ATTACK_OR_TARGET_ITEM_IDS = ['ufo_attack', 'meteor_strike', 'sniper_scope', 'time_rewind', 'gravity_swap'];
+
+    if (ATTACK_OR_TARGET_ITEM_IDS.includes(item.id) && otherTeams.length > 1) {
       // Multiple possible targets — let the crew pick who to attack/steal from
       setPendingAttack({ item, teamsCopy });
       setActiveModal('attack-target');
@@ -415,7 +457,7 @@ export default function BoardStage({
               <div className={styles.teamStats}>
                 <span className={styles.trophyTag}>🏆 {team.trophies}</span>
                 <span style={{ fontSize: '0.82rem', color: '#38bdf8', marginTop: '2px', fontWeight: 800 }}>
-                  🧊 {team.gibelCubes || 0}/3
+                  🧊 {team.gibelCubes || 0}/{gameState.orbitCount || 3}
                 </span>
               </div>
             </div>
@@ -509,13 +551,23 @@ export default function BoardStage({
               className={styles.showQuestionBtn}
               onClick={handleRevealQuestion}
             >
-              ❓ Show Question
+              {showQuestionReady === 'trophy' || showQuestionReady === 'finish'
+                ? '👑 Face the Boss!'
+                : showQuestionReady === 'chance'
+                  ? '🎁 Open Mystery Box'
+                  : showQuestionReady === 'shop'
+                    ? '🛒 Enter Shop'
+                    : showQuestionReady === 'vortex' || showQuestionReady === 'asteroid'
+                      ? '💥 Brace for Impact!'
+                      : showQuestionReady === 'start'
+                        ? '🚀 Continue Adventure'
+                        : '❓ Show Question'}
             </button>
           ) : (
             <button
               className={`btn-primary ${styles.rollBtn}`}
               onClick={handleRollDice}
-              disabled={isRolling || activeModal !== null}
+              disabled={isRolling || activeModal !== null || orbitResult !== null}
             >
               {isRolling ? '⚡ Warping...' : '🎲 Throw the Die!'}
             </button>
@@ -543,6 +595,7 @@ export default function BoardStage({
             onClick={() => {
               onGameComplete?.(gameState.teams, 'returned_to_setup');
               setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
+              broadcastGameState({ ...gameState, activeScreen: 'setup' });
             }}
           >
             ⚙️ Mission Settings
@@ -569,6 +622,7 @@ export default function BoardStage({
           teams={gameState.teams}
           onPlayAgain={() => {
             setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
+            broadcastGameState({ ...gameState, activeScreen: 'setup' });
           }}
           onReturnHub={() => {
             window.location.href = 'index.html';
@@ -604,6 +658,42 @@ export default function BoardStage({
         teams={pendingAttack ? pendingAttack.teamsCopy.filter((t, idx) => idx !== gameState.currentTeamIndex) : []}
         onSelect={handleAttackTargetSelect}
         onCancel={handleAttackCancel}
+      />
+
+      {orbitResult && (
+        <OrbitResultModal
+          orbitResult={orbitResult}
+          onContinue={() => {
+            const teamsCopy = orbitResult.teams.map(t => ({ ...t }));
+            teamsCopy.forEach(t => {
+              t.position = 0;
+              t.startPos = 0;
+            });
+            const nextRound = orbitResult.orbitNumber + 1;
+            const shuffled = shuffleTiles(gameState.tiles);
+            const updatedState = {
+              ...gameState,
+              teams: teamsCopy,
+              tiles: shuffled,
+              round: nextRound,
+              currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsCopy.length
+            };
+            setGameState(updatedState);
+            broadcastGameState(updatedState);
+            setOrbitResult(null);
+          }}
+        />
+      )}
+
+      <VictoryModal
+        isOpen={activeModal === 'victory'}
+        teams={gameState.teams}
+        orbitCount={gameState.orbitCount}
+        onPlayAgain={() => {
+          setActiveModal(null);
+          setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
+        }}
+        playSound={playSound}
       />
     </div>
   );

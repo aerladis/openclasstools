@@ -54,13 +54,29 @@ test('Kelime hides setup UI when a round starts', async () => {
     assert.match(source, /setSetupVisible\(false\)/);
 });
 
-test('hub has a concise native teacher-key guide wired to the key modal', async () => {
+test('hub header places the glass Teacher Guide before the API status control', async () => {
     const source = await read('frontend/src/components/Hub/GameHub.jsx');
-    assert.match(source, /<details[^>]*className=\{styles\.teacherGuide\}/);
-    assert.match(source, /temporary/i);
-    assert.match(source, /secure/i);
-    assert.match(source, /quota/i);
-    assert.match(source, /setIsApiKeyModalOpen\(true\)/);
+    const styles = await read('frontend/src/components/Hub/GameHub.module.css');
+    const headerStart = source.indexOf('<header className={styles.hubHeader}>');
+    const headerEnd = source.indexOf('</header>', headerStart);
+    const header = source.slice(headerStart, headerEnd);
+    const hubHeaderStyles = styles.match(/\.hubHeader\s*\{([^}]*)\}/)?.[1] ?? '';
+
+    assert.ok(headerStart >= 0 && headerEnd > headerStart);
+    assert.match(header, /<details[^>]*className=\{styles\.teacherGuide\}/);
+    assert.match(header, /<summary>[\s\S]*Teacher Guide[\s\S]*<\/summary>/);
+    assert.ok(
+        header.indexOf('className={styles.teacherGuide}') <
+        header.indexOf('className={styles.btnApiKey}'),
+        'Teacher Guide must appear to the left of the API status button'
+    );
+    assert.match(header, /Google AI Studio/i);
+    assert.match(header, /temporary/i);
+    assert.match(header, /Name decks clearly/i);
+    assert.match(header, /setIsApiKeyModalOpen\(true\)/);
+    assert.doesNotMatch(source, /Why use your own API key\?/i);
+    assert.match(hubHeaderStyles, /position:\s*relative/, 'header must establish a positioned layer');
+    assert.match(hubHeaderStyles, /z-index:\s*[1-9]\d*/, 'header must paint above the following game grid');
 });
 
 test('active styles and configuration contain no room-code or administrator remnants', async () => {

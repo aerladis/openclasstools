@@ -8,6 +8,7 @@ const SAFE_ERROR_MESSAGES = Object.freeze({
     INVALID_TEACHER_NAME: 'Teacher name is invalid',
     TEACHER_AI_KEY_REQUIRED: 'A teacher Gemini API key is required',
     TEACHER_KEY_GENERATION_FAILED: 'Generation failed with the teacher API key. Check the key or its quota and try again.',
+    GEMINI_QUOTA_EXCEEDED: 'Gemini API quota or rate limit exceeded (HTTP 429). Please check your Gemini API key usage limit or try again later.',
     INVALID_DECK_CONTENT: 'The AI returned invalid game content'
 });
 

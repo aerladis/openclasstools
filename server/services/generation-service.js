@@ -57,7 +57,16 @@ export function createGenerationService({ deckRepository }) {
                     apiKey: teacherContext.apiKey,
                     keySource: teacherContext.keySource
                 });
-            } catch {
+            } catch (err) {
+                console.error('[GenerationService] AI generation error:', err.message || err);
+                const isQuota = err?.quotaExceeded || err?.message?.includes('RESOURCE_EXHAUSTED') || err?.message?.includes('429') || err?.message?.includes('Quota') || err?.message?.includes('quota');
+                if (isQuota) {
+                    throw new GenerationServiceError(
+                        'Gemini API quota or rate limit exceeded (HTTP 429). Please check your Gemini API key usage limit or try again later.',
+                        'GEMINI_QUOTA_EXCEEDED',
+                        429
+                    );
+                }
                 throw safeGenerationFailure();
             }
 

@@ -151,7 +151,59 @@ export default function GameHub() {
           <p>Next-Gen AI-Powered Classroom Party Games & Widescreen Interactive Board Suite</p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+        <div className={styles.headerActions}>
+          <details className={styles.teacherGuide}>
+            <summary>
+              <span aria-hidden="true">🎓</span>
+              Teacher Guide
+            </summary>
+            <div className={styles.teacherGuideBody}>
+              <div className={styles.guideIntro}>
+                <span aria-hidden="true">✨</span>
+                <div>
+                  <strong>Build classroom-ready activities</strong>
+                  <p>Choose a game, match your lesson objective, and reuse shared decks.</p>
+                </div>
+              </div>
+
+              <div className={styles.guideSteps}>
+                <div className={styles.guideStep}>
+                  <span className={styles.guideStepNumber}>1</span>
+                  <div>
+                    <strong>Add your API key</strong>
+                    <p>
+                      Get a Gemini key from{' '}
+                      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">
+                        Google AI Studio
+                      </a>
+                      . It is temporary and stays only in this browser tab.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.guideStep}>
+                  <span className={styles.guideStepNumber}>2</span>
+                  <div>
+                    <strong>Choose a game</strong>
+                    <p>Select the activity that best supports your lesson objective and class level.</p>
+                  </div>
+                </div>
+
+                <div className={styles.guideStep}>
+                  <span className={styles.guideStepNumber}>3</span>
+                  <div>
+                    <strong>Name decks clearly</strong>
+                    <p>Include the topic and CEFR level so other teachers can find and reuse them.</p>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" onClick={() => setIsApiKeyModalOpen(true)}>
+                {keyActive ? 'Change API key' : 'Add API key'}
+              </button>
+            </div>
+          </details>
+
           <button
             className={styles.btnApiKey}
             onClick={() => setIsApiKeyModalOpen(true)}
@@ -165,16 +217,6 @@ export default function GameHub() {
           </div>
         </div>
       </header>
-
-      <details className={styles.teacherGuide}>
-        <summary>Why use your own API key?</summary>
-        <div className={styles.teacherGuideBody}>
-          <p>Your key is temporary, kept secure in this browser tab, and helps avoid shared quota limits.</p>
-          <button type="button" onClick={() => setIsApiKeyModalOpen(true)}>
-            Add API key
-          </button>
-        </div>
-      </details>
 
       <section className={styles.gamesGrid}>
         {games.map(game => {

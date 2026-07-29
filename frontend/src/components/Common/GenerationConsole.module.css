@@ -1,28 +1,67 @@
+.overlay {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .console {
-  background: rgba(4, 2, 16, 0.75);
-  border: 1px solid rgba(168, 85, 247, 0.35);
+  width: 380px;
+  max-width: calc(100vw - 2rem);
+  background: rgba(8, 6, 26, 0.94);
+  border: 1px solid rgba(168, 85, 247, 0.45);
   border-radius: 16px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   overflow: hidden;
-  margin-top: 1rem;
-  box-shadow: 0 0 24px rgba(168, 85, 247, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 24px rgba(168, 85, 247, 0.3);
+  pointer-events: auto;
 }
 
 .header {
-  background: rgba(168, 85, 247, 0.15);
+  background: rgba(168, 85, 247, 0.18);
   padding: 0.6rem 1rem;
   font-size: 0.85rem;
   font-weight: 800;
   color: #c4b5fd;
   border-bottom: 1px solid rgba(168, 85, 247, 0.25);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.closeBtn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .logList {
   list-style: none;
   margin: 0;
   padding: 0.6rem 1rem;
-  max-height: 160px;
+  max-height: 180px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -35,10 +74,23 @@
   color: #e2e8f0;
   display: flex;
   gap: 0.6rem;
+  line-height: 1.4;
 }
 
 .logItem.error {
   color: #fca5a5;
+}
+
+.logItem.warn {
+  color: #fde047;
+}
+
+.logItem.success {
+  color: #86efac;
+}
+
+.logItem.info {
+  color: #7dd3fc;
 }
 
 .time {
@@ -49,3 +101,26 @@
 .message {
   word-break: break-word;
 }
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+  .console {
+    width: 100%;
+  }
+}
+

@@ -174,7 +174,8 @@ function normalizeLingoParty(content) {
         'grammar',
         'speed',
         'roleplay',
-        'truefalse'
+        'truefalse',
+        'ordering'
     ]);
 
     return content.map((entry, index) => {
@@ -233,9 +234,15 @@ export function normalizeDeckContent(gameType, content) {
     if (!normalizer) {
         throw new DeckValidationError(`Unsupported deck game: ${gameType}`);
     }
-    if (!Array.isArray(content) || content.length < 1 || content.length > 200) {
-        throw new DeckValidationError('Deck must contain between 1 and 200 entries');
+    if (!Array.isArray(content) || content.length < 1 || content.length > 400) {
+        console.warn(`[DeckValidation] ${gameType}: invalid content length/shape`, Array.isArray(content) ? content.length : typeof content);
+        throw new DeckValidationError('Deck must contain between 1 and 400 entries');
     }
 
-    return normalizer(content);
+    try {
+        return normalizer(content);
+    } catch (error) {
+        console.warn(`[DeckValidation] ${gameType}: ${error.message}`, JSON.stringify(content.slice(0, 3)));
+        throw error;
+    }
 }

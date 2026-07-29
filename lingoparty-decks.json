@@ -1,1 +1,390 @@
-[]
+[
+  {
+    "id": "deck-ms6enf1i-z8dl8y",
+    "teacherName": "Berkay",
+    "title": "Ps2 ps3 games",
+    "theme": "Ps2 ps3 games",
+    "cefr": "C1",
+    "mode": "crew",
+    "createdAt": "2026-07-29T18:15:19.782Z",
+    "cards": [
+      {
+        "type": "riddle",
+        "answer": "Kratos",
+        "prompt": "I am a legendary Spartan warrior, often covered in ash, wielding twin blades. My rage is as boundless as my quest for vengeance against the gods of Olympus. Who am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Los Santos",
+        "prompt": "I am a sprawling, criminal metropolis where you can steal cars, complete missions for various factions, and live a life of digital anarchy. Which fictional city am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "The One Ring",
+        "prompt": "I am a powerful ring that grants invisibility and corrupts my wearer, sought after by many in a fantastical world rife with conflict. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Solid Snake",
+        "prompt": "I am a tactical espionage operative, known for my stealth, codec calls, and a distinctive eye patch. My missions often involve Metal Gear. Who am I?"
+      },
+      {
+        "clue": "This ancient Roman fighter often faced perilous combat in an arena, a theme explored in many action games.",
+        "type": "scramble",
+        "targetWord": "GLADIATOR",
+        "scrambledWord": "I - A - T - D - O - L - A - G - R"
+      },
+      {
+        "clue": "Members of this clandestine order are highly skilled in stealth and parkour, often operating from the shadows to achieve their objectives.",
+        "type": "scramble",
+        "targetWord": "ASSASSIN",
+        "scrambledWord": "A - S - A - S - S - S - I - N"
+      },
+      {
+        "clue": "In many games, players must gather resources, manage health, and overcome hostile environments to continue their journey; this is the core objective.",
+        "type": "scramble",
+        "targetWord": "SURVIVAL",
+        "scrambledWord": "U - V - R - A - V - I - S - L"
+      },
+      {
+        "clue": "A digital reward or achievement earned by players for completing specific in-game tasks or milestones on PlayStation consoles.",
+        "type": "scramble",
+        "targetWord": "TROPHY",
+        "scrambledWord": "H - O - R - Y - T - P"
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Nathan Drake frequently finds ancient artifacts, fearlessly facing formidable foes in forgotten tombs."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "In Liberty City, ambitious protagonists perpetually pursue power, piloting diverse vehicles through daring pursuits."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Kratos's chaotic Blades of Chaos relentlessly cleave through countless creatures, conquering colossal Titans with catastrophic force."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Solid Snake's stealthy infiltration strategies systematically circumvent security systems, successfully suppressing enemy surveillance."
+      },
+      {
+        "type": "association",
+        "answer": "Drive, steal, shoot",
+        "prompt": "Name three verbs associated with playing 'Grand Theft Auto'."
+      },
+      {
+        "type": "association",
+        "answer": "Eerie, unsettling, psychological",
+        "prompt": "Name three adjectives to describe the atmosphere of 'Silent Hill'."
+      },
+      {
+        "type": "association",
+        "answer": "Blades of Chaos, Keyblade, Hidden Blade",
+        "prompt": "Name three iconic weapons from PlayStation 2/3 games."
+      },
+      {
+        "type": "association",
+        "answer": "Tidus, Vaan, Sora",
+        "prompt": "Name three characters who are protagonists in PS2/PS3 RPGs."
+      },
+      {
+        "type": "grammar",
+        "answer": "The protagonist, who was a skilled mercenary, had to complete a series of dangerous contracts.",
+        "prompt": "The protagonist, which was a skilled mercenary, had to complete a series of dangerous contracts."
+      },
+      {
+        "type": "grammar",
+        "answer": "Despite the console's age, the graphics for Shadow of the Colossus still look remarkably impressive.",
+        "prompt": "Despite the console's age, the graphics for Shadow of the Colossus still looks remarkably impressive."
+      },
+      {
+        "type": "grammar",
+        "answer": "for",
+        "prompt": "The developers have been working on the next iteration of the franchise ___ five years, promising a groundbreaking experience."
+      },
+      {
+        "type": "grammar",
+        "answer": "despite",
+        "prompt": "Many players often debate whether the original PlayStation 2 version is superior to the PlayStation 3 remastered edition, ___ the graphical enhancements."
+      },
+      {
+        "type": "speed",
+        "answer": "Action-adventure, RPG, survival horror",
+        "prompt": "In 15 seconds, name three different game genres popular on PS2/PS3 consoles."
+      },
+      {
+        "type": "speed",
+        "answer": "Kratos, Athena, Zeus",
+        "prompt": "In 15 seconds, list three iconic characters from the 'God of War' series."
+      },
+      {
+        "type": "speed",
+        "answer": "God of War, Uncharted, Ratchet & Clank",
+        "prompt": "In 15 seconds, name three different PlayStation 2/3 exclusive game series."
+      },
+      {
+        "type": "roleplay",
+        "answer": "We could implement..., From a technical standpoint..., This feature would resonate with..., How feasible is it to..., The challenge would be..., It could attract players who..., Let's brainstorm some mechanics..., We'll need to allocate resources for...",
+        "prompt": "You and your team (three people) are game developers discussing a new feature for your upcoming PS3 action-adventure title. One person is the lead designer, another is the programmer, and the third is the marketing specialist. Discuss how to integrate a new 'karma' system that affects the game's narrative and player choices. The lead designer needs to explain the concept, the programmer needs to discuss feasibility, and the marketing specialist needs to consider its appeal."
+      },
+      {
+        "type": "roleplay",
+        "answer": "I'm leaning towards..., It offers unparalleled..., The replayability is immense..., But what about a game where we can..., I remember spending hours..., It would be a great bonding experience..., Perhaps we could compromise with..., Let's weigh the pros and cons...",
+        "prompt": "Imagine you are three friends debating which PS2 game to replay this weekend. One person wants to play a classic RPG, another prefers a fast-paced racing game, and the third is keen on a cooperative action title. Persuade each other why your choice is the best, discussing game merits, nostalgia, and collaborative potential."
+      },
+      {
+        "type": "roleplay",
+        "answer": "The graphical fidelity is a significant improvement..., I found the enhancements rather superficial..., While the textures are sharper, the core mechanics feel dated..., They've truly breathed new life into..., It feels like a missed opportunity to..., The updated controls are a welcome change..., Does it justify the price point?, My main reservation is...",
+        "prompt": "Three game critics are reviewing a newly remastered PS3 title. One critic believes it's a phenomenal upgrade, another finds it largely unnecessary, and the third has mixed feelings, highlighting both improvements and missed opportunities. Discuss your perspectives, referring to graphics, gameplay, and overall value."
+      },
+      {
+        "type": "roleplay",
+        "answer": "According to this map..., We'll need to be wary of..., Our primary objective is..., Do we have enough supplies for..., I've deciphered the inscription..., This route seems perilous..., We should pack extra..., Let's cross-reference this with...",
+        "prompt": "You are three characters from 'Uncharted' (e.g., Nathan, Elena, Sully) planning your next expedition to uncover a legendary PS2-era artifact. Discuss the clues you've gathered, potential dangers, and the equipment you'll need. Assign roles and strategize your approach."
+      },
+      {
+        "type": "grammar",
+        "answer": "2, 4, 3, 1",
+        "prompt": "Put this conversation in order:1. Oh, definitely! The storyline was so gripping, and the character development was exceptional.2. I'm trying to remember if I ever finished Final Fantasy X on PS2. That was such a monumental game.3. You absolutely should! It's considered a masterpiece for a reason. What did you like most about it?4. Ah, FFX! I spent hundreds of hours on that. Are you thinking of replaying it?"
+      },
+      {
+        "type": "grammar",
+        "answer": "2, 4, 1, 3",
+        "prompt": "Put this conversation in order:1. I completely agree. The sense of scale was incredible, especially with those massive boss battles.2. Speaking of PS2 classics, Shadow of the Colossus always stands out for me.3. Exactly! And the art direction was so unique, even by today's standards.4. Yes, that game was truly a work of art. What made it so memorable for you?"
+      },
+      {
+        "type": "grammar",
+        "answer": "3, 1, 4, 2",
+        "prompt": "Put this conversation in order:1. I think the original Metal Gear Solid 3 on PS2 still holds up better in terms of atmosphere.2. It's a tough call, but the Subsistence version with its improved camera was a game-changer for me.3. Which version of Metal Gear Solid 3 do you prefer, the original or the Subsistence edition?4. That's true, but the fixed camera angles could be a bit frustrating at times."
+      }
+    ]
+  },
+  {
+    "id": "deck-ms4y2gat-iz5tw1",
+    "teacherName": "Berkay",
+    "title": "environmental catasthrophies",
+    "theme": "environmental catasthrophies",
+    "cefr": "B1+",
+    "mode": "crew",
+    "createdAt": "2026-07-28T17:43:21.605Z",
+    "cards": [
+      {
+        "type": "riddle",
+        "answer": "Drought",
+        "prompt": "I grow hotter and drier, turning green lands brown. Farmers fear me, and water supplies dwindle. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Hurricane",
+        "prompt": "I rage with fury, tearing down homes and trees. My eye is calm, but my winds spin destructively. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Wildfire",
+        "prompt": "I creep silently, swallowing forests whole. Smoke fills the air, and creatures flee my path. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Tsunami",
+        "prompt": "I rise from the sea, a giant wave after a deep tremor. Coastal towns disappear beneath my might. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Earthquake",
+        "prompt": "I shake the ground violently, making buildings crack and fall. I am sudden and unpredictable. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Flood",
+        "prompt": "I fall from the sky in torrents, making rivers overflow. Homes are submerged, and roads become canals. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Desertification",
+        "prompt": "I am a slow killer, making once fertile lands barren and dusty. My advance creates deserts. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Smog",
+        "prompt": "I am a thick, grey blanket, choking cities with harmful particles. I make it hard to breathe. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Landslide",
+        "prompt": "I make mountainsides crumble, sending earth and rocks sliding downwards. Rain often triggers my destructive path. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Ozone Depletion",
+        "prompt": "I am a hole in the sky's protective layer, letting in harmful rays. Chemicals are my cause. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Deforestation",
+        "prompt": "I am the permanent loss of forests, often for farming or development. My presence contributes to climate change. What am I?"
+      },
+      {
+        "type": "riddle",
+        "answer": "Climate Change",
+        "prompt": "I am the long-term shift in global weather patterns, leading to more extreme events. What am I?"
+      },
+      {
+        "clue": "A long period when there is little or no rain, causing a shortage of water.",
+        "type": "scramble",
+        "targetWord": "DROUGHT",
+        "scrambledWord": "T - U - G - R - O - D - H"
+      },
+      {
+        "clue": "An extremely large wave caused by an earthquake under the sea.",
+        "type": "scramble",
+        "targetWord": "TSUNAMI",
+        "scrambledWord": "T - I - N - U - M - S - A"
+      },
+      {
+        "clue": "Large amounts of water covering an area that is usually dry.",
+        "type": "scramble",
+        "targetWord": "FLOODS",
+        "scrambledWord": "D - L - O - O - S - F"
+      },
+      {
+        "clue": "The process by which the surface of the earth is worn away by the action of water, glaciers, winds, waves, etc.",
+        "type": "scramble",
+        "targetWord": "EROSION",
+        "scrambledWord": "O - N - R - O - I - S - E"
+      },
+      {
+        "clue": "The process of making air, water, soil, etc., dirty and harmful.",
+        "type": "scramble",
+        "targetWord": "POLLUTION",
+        "scrambledWord": "O - L - T - N - I - U - P - L - O"
+      },
+      {
+        "clue": "A large, destructive fire that spreads quickly over wild land or forests.",
+        "type": "scramble",
+        "targetWord": "WILDFIRE",
+        "scrambledWord": "I - I - F - R - E - L - D - W"
+      },
+      {
+        "clue": "A powerful tropical storm with very strong winds and heavy rain.",
+        "type": "scramble",
+        "targetWord": "HURRICANE",
+        "scrambledWord": "R - E - A - H - C - R - I - U - N"
+      },
+      {
+        "clue": "A large mass of earth and rocks that slides down the side of a mountain or cliff.",
+        "type": "scramble",
+        "targetWord": "LANDSLIDE",
+        "scrambledWord": "D - E - S - L - N - D - L - A - I"
+      },
+      {
+        "clue": "The cutting down of trees in a large area, or the destruction of forests by people.",
+        "type": "scramble",
+        "targetWord": "DEFORESTATION",
+        "scrambledWord": "D - S - E - R - O - E - T - O - I - N - T - A - F"
+      },
+      {
+        "clue": "Gases or radiation sent out into the air, especially by cars or factories.",
+        "type": "scramble",
+        "targetWord": "EMISSIONS",
+        "scrambledWord": "S - E - S - M - N - S - I - O - I"
+      },
+      {
+        "clue": "A large mass of snow, ice, and rocks falling rapidly down a mountainside.",
+        "type": "scramble",
+        "targetWord": "AVALANCHE",
+        "scrambledWord": "C - V - N - H - A - A - A - E - L"
+      },
+      {
+        "clue": "A significant and lasting change in the global or regional climate patterns.",
+        "type": "scramble",
+        "targetWord": "CLIMATE CHANGE",
+        "scrambledWord": "G - A - E - A - M - C - C - I - T - E - N - H - L"
+      },
+      {
+        "clue": "The process of converting waste materials into new materials and objects.",
+        "type": "scramble",
+        "targetWord": "RECYCLING",
+        "scrambledWord": "L - N - Y - G - I - C - C - E - R"
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "The catastrophic consequences of climate change require urgent mitigation strategies."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Environmental organizations emphasize the urgency of sustainable development."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "The destruction of ecosystems makes many species vulnerable to extinction."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Prolonged droughts can lead to widespread desertification across continents."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Rapid deforestation severely impacts biodiversity and carbon absorption."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Government initiatives promote resilience against unpredictable natural disasters."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Industrial emissions contribute significantly to atmospheric pollution and smog."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "The scientific community unanimously agrees on the gravity of global warming."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Coastal communities are particularly susceptible to rising sea levels and storm surges."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Implementing effective waste management systems is crucial for environmental protection."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Volcanic eruptions can have devastating, far-reaching effects on the climate."
+      },
+      {
+        "type": "pronunciation",
+        "prompt": "Preventing widespread wildfires requires careful land management and public awareness."
+      },
+      {
+        "type": "association",
+        "answer": "dry, water shortage, arid",
+        "prompt": "Name three words associated with a 'drought'."
+      },
+      {
+        "type": "association",
+        "answer": "water, submerged, rescue",
+        "prompt": "Name three words associated with a 'flood'."
+      },
+      {
+        "type": "association",
+        "answer": "smoke, ash, blaze",
+        "prompt": "Name three words associated with a 'wildfire'."
+      },
+      {
+        "type": "association",
+        "answer": "wave, coast, ocean",
+        "prompt": "Name three words associated with a 'tsunami'."
+      },
+      {
+        "type": "association",
+        "answer": "tremor, shake, collapse",
+        "prompt": "Name three words associated with an 'earthquake'."
+      },
+      {
+        "type": "association",
+        "answer": "waste, air, water",
+        "prompt": "Name three words associated with 'pollution'."
+      }
+    ]
+  }
+]

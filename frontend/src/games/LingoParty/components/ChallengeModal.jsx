@@ -117,7 +117,7 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
       <div className={`glass-card ${styles.challengeCard}`}>
         <div className={styles.headerRow}>
           <span className={styles.typeBadge} style={challenge.isBoss ? { background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: '#fff', fontWeight: 'bold' } : {}}>
-            {challenge.isBoss ? '👑 BOSS CHALLENGE' : challenge.type === 'roleplay' ? '🎭 ROLEPLAY SCENARIO' : challenge.type === 'truefalse' ? '🔄 TRUE OR FALSE' : (challenge.type || 'Challenge').toUpperCase()}
+            {challenge.isBoss ? '👑 BOSS CHALLENGE' : challenge.type === 'roleplay' ? '🎭 ROLEPLAY SCENARIO' : challenge.type === 'truefalse' ? '🔄 TRUE OR FALSE' : challenge.type === 'ordering' ? '🔢 CONVERSATION ORDER' : (challenge.type || 'Challenge').toUpperCase()}
           </span>
           <span className={styles.coinsBadge} style={challenge.isBoss ? { background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38bdf8', color: '#38bdf8' } : {}}>
             {challenge.isBoss ? '🧊 +1 Gibel Cube' : '+1 🏆 Trophy'}
@@ -127,10 +127,23 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
         <h2 className={styles.mainPrompt}>
           {challenge.type === 'scramble' ? (
             `🔤 Scrambled Word: ${getGuaranteedScramble(challenge.scrambledWord, challenge.targetWord || challenge.word)}`
+          ) : challenge.type === 'ordering' ? (
+            '🔢 Put this conversation in the correct order:'
           ) : (
             challenge.prompt || challenge.question || challenge.word || 'Complete the language challenge!'
           )}
         </h2>
+
+        {/* Ordering Question: show jumbled lines */}
+        {challenge.type === 'ordering' && challenge.prompt && (
+          <div className={styles.subcontentBox} style={{ background: 'rgba(249, 115, 22, 0.12)', borderColor: 'rgba(249, 115, 22, 0.35)', textAlign: 'left' }}>
+            {challenge.prompt.split('\n').filter(line => line.trim()).map((line, idx) => (
+              <div key={idx} style={{ padding: '0.3rem 0', fontSize: '1.35rem', fontWeight: 700, color: '#fed7aa' }}>
+                {line}
+              </div>
+            ))}
+          </div>
+        )}
 
         {challenge.type === 'roleplay' && (
           <div className={styles.subcontentBox} style={{ background: 'rgba(168, 85, 247, 0.15)', borderColor: 'rgba(168, 85, 247, 0.4)' }}>

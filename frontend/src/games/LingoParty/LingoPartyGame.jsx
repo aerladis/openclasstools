@@ -83,6 +83,7 @@ export default function LingoPartyGame() {
     currentTeamIndex: 0,
     round: 1,
     boardLength: 42,
+    orbitCount: 3,
     tiles: [],
     deck: [],
     mode: 'crew',
@@ -135,6 +136,7 @@ export default function LingoPartyGame() {
     baseColor,
     deck,
     mode,
+    orbitCount,
     deckId,
     deckVersionId,
   }) => {
@@ -166,6 +168,7 @@ export default function LingoPartyGame() {
       tiles,
       deck: deck || [],
       mode: mode || 'crew',
+      orbitCount: orbitCount || 3,
       deckId,
       deckVersionId,
       currentTeamIndex: 0,
@@ -179,8 +182,8 @@ export default function LingoPartyGame() {
     if (!playSessionId) return;
     const rankedTeams = [...teams]
       .sort((left, right) => (
-        (right.trophies || 0) - (left.trophies || 0) ||
-        (right.coins || 0) - (left.coins || 0)
+        (right.gibelCubes || 0) - (left.gibelCubes || 0) ||
+        (right.trophies || 0) - (left.trophies || 0)
       ));
     completeSession(playSessionId, {
       reason,

@@ -126,6 +126,13 @@
   box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
 }
 
+.apiKeyBtn {
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: center;}
+
 .selectField option {
   background: #0a0818;
   color: #e2e8f0;

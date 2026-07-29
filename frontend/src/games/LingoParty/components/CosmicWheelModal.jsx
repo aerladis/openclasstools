@@ -8,13 +8,15 @@ const WHEEL_SEGMENTS = [
   { type: 'pronunciation', label: 'Speech', color: '#14b8a6', icon: '🗣️' },
   { type: 'grammar', label: 'Grammar', color: '#f43f5e', icon: '✍️' },
   { type: 'speed', label: 'Speed Trivia', color: '#eab308', icon: '⚡' },
-  { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬' }
+  { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬' },
+  { type: 'ordering', label: 'Ordering', color: '#f97316', icon: '🔢' }
 ];
 
 export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, playSound }) {
   const canvasRef = useRef(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedResult, setSelectedResult] = useState(null);
+  const [pointerColor, setPointerColor] = useState('#f59e0b');
   const currentAngleRef = useRef(0);
 
   const triggerConfetti = () => {
@@ -35,6 +37,14 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  const getSegmentAtAngle = (angle) => {
+    const n = WHEEL_SEGMENTS.length;
+    const arc = (2 * Math.PI) / n;
+    const pointerAngle = ((-Math.PI / 2 - angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    const idx = Math.floor(pointerAngle / arc) % n;
+    return WHEEL_SEGMENTS[idx];
   };
 
   const drawWheel = (angle) => {
@@ -142,6 +152,12 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       currentAngleRef.current = current;
       drawWheel(current);
 
+      // Update pointer color to match current segment
+      const curSeg = getSegmentAtAngle(current);
+      if (curSeg) {
+        setPointerColor(curSeg.color);
+      }
+
       // Sound ticker tick when crossing segments
       const pointerAngle = ((-Math.PI / 2 - current) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
       const curSegIdx = Math.floor(pointerAngle / arc) % n;
@@ -159,13 +175,15 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
         const winner = WHEEL_SEGMENTS[winningIdx];
 
         setSelectedResult(winner);
-        setIsSpinning(false);
+        setPointerColor(winner.color);
 
         if (playSound) playSound('trophy');
         triggerConfetti();
 
+        // Keep isSpinning true so button stays disabled until modal closes
         setTimeout(() => {
           onSpinResult(winner);
+          // isSpinning stays true — modal will unmount
         }, 1600);
       }
     };
@@ -184,8 +202,13 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
         </div>
 
         <div className={styles.canvasContainer}>
-          {/* Top Ticker Pointer */}
-          <div className={styles.pointer}>▼</div>
+          {/* Top Ticker Pointer — crisp SVG arrow with thick black border */}
+          <div className={styles.pointer} style={{ color: pointerColor }}>
+            <svg width="48" height="48" viewBox="0 0 44 44" fill="none" style={{ filter: `drop-shadow(0 0 14px ${pointerColor})` }}>
+              <path d="M22 40 L6 8 C6 8, 13 4, 22 4 C31 4, 38 8, 38 8 Z" fill="currentColor" stroke="#000000" strokeWidth="4.5" strokeLinejoin="round" />
+              <path d="M22 40 L6 8 C6 8, 13 4, 22 4 C31 4, 38 8, 38 8 Z" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+          </div>
 
           <canvas ref={canvasRef} className={styles.wheelCanvas} />
 

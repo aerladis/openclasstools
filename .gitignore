@@ -6,3 +6,7 @@ node_modules/
 list.txt
 deploy.tar.gz
 deploy.zip
+.playwright-mcp/
+.claude/
+ssh keys/
+

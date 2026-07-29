@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import useDeckLibrary from '../../../hooks/useDeckLibrary';
 import DeckLibraryPanel from './DeckLibraryPanel';
+import GenerationConsole from '../../../components/Common/GenerationConsole';
+import ApiKeyModal from '../../../components/Common/ApiKeyModal';
+import {
+  getTeacherContext,
+  hasTeacherKey,
+  saveTeacherSettings,
+} from '../../../services/platformApi';
 import styles from './SetupScreen.module.css';
 
 const DEFAULT_DECK = [
@@ -64,7 +71,15 @@ const DEFAULT_DECK = [
 
   // --- True/False C1 ---
   { type: 'truefalse', prompt: '"Whom" is used as a subject pronoun in formal English.', answer: false },
-  { type: 'truefalse', prompt: 'A dangling modifier is a grammatical error where the modifier doesn\'t clearly refer to the intended word.', answer: true }
+  { type: 'truefalse', prompt: 'A dangling modifier is a grammatical error where the modifier doesn\'t clearly refer to the intended word.', answer: true },
+
+  // --- Conversation Ordering ---
+  { type: 'ordering', prompt: 'Put this conversation in the correct order:\n1. "Nice to meet you too!"\n2. "Hi, my name is Sarah."\n3. "Nice to meet you, Sarah. I\'m Tom."', answer: '2, 3, 1' },
+  { type: 'ordering', prompt: 'Put this conversation in the correct order:\n1. "It\'s on Main Street, next to the bank."\n2. "Excuse me, where is the library?"\n3. "Thank you very much!"', answer: '2, 1, 3' },
+  { type: 'ordering', prompt: 'Put this conversation in the correct order:\n1. "I\'d like a coffee, please."\n2. "That\'ll be $3.50."\n3. "Welcome! What can I get you?"\n4. "Here you go. Keep the change."', answer: '3, 1, 2, 4' },
+  { type: 'ordering', prompt: 'Put this phone call in the correct order:\n1. "Hold on, I\'ll put you through."\n2. "Good morning, how can I help you?"\n3. "Thank you. I\'ll wait."\n4. "Could I speak to Dr. Smith, please?"', answer: '2, 4, 1, 3' },
+  { type: 'ordering', prompt: 'Put this restaurant dialogue in the correct order:\n1. "Could we have the bill, please?"\n2. "Are you ready to order?"\n3. "Yes, I\'ll have the pasta, please."\n4. "Of course. Here it is."\n5. "A table for two, please."', answer: '5, 2, 3, 1, 4' },
+  { type: 'ordering', prompt: 'Put this conversation in the correct order:\n1. "Actually, I prefer dogs. Do you have any pets?"\n2. "Do you like cats?"\n3. "Yes, I have a golden retriever named Max."', answer: '2, 1, 3' },
 ];
 
 const EMOJI_PALETTE = ['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬', '👽', '🛸', '⭐', '🪐', '👾', '👑', '🔥', '💎', '🦄', '🐅', '🦅', '🦈'];
@@ -80,6 +95,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [mode, setMode] = useState('crew');
   const [teamCount, setTeamCount] = useState(3);
   const [boardLength, setBoardLength] = useState(30);
+  const [orbitCount, setOrbitCount] = useState(3);
   const [cefr, setCefr] = useState('B1');
   const [topic, setTopic] = useState('General Classroom Vocabulary & Idioms');
   const [deckName, setDeckName] = useState('');
@@ -87,8 +103,16 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [customNames, setCustomNames] = useState(['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H']);
   const [customPawns, setCustomPawns] = useState(['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬']);
   const [customColors, setCustomColors] = useState(TEAM_COLORS);
-  const [teacherName, setTeacherName] = useState(() => localStorage.getItem('berkai_teacher_name') || localStorage.getItem('oct_teacher_name') || '');
+  const [teacherName, setTeacherName] = useState(() => {
+    const context = getTeacherContext();
+    return context.teacherDisplayName
+      || localStorage.getItem('berkai_teacher_name')
+      || localStorage.getItem('oct_teacher_name')
+      || '';
+  });
   const [deckTitle, setDeckTitle] = useState('');
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [keyActive, setKeyActive] = useState(hasTeacherKey());
   const [aiView, setAiView] = useState('generate'); // 'generate' | 'saved'
   const [savedDecks, setSavedDecks] = useState([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
@@ -97,7 +121,14 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
   const [showDeckLibrary, setShowDeckLibrary] = useState(false);
+  const [activeGeneratedDeck, setActiveGeneratedDeck] = useState(null);
   const deckLibrary = useDeckLibrary('lingoparty');
+
+  const addLog = (message, type = 'info') => {
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    setDebugLogs((current) => [...current, { time, message, type }]);
+  };
 
   const handleNameChange = (index, value) => {
     const next = [...customNames];
@@ -150,6 +181,14 @@ export default function SetupScreen({ onStartGame, playSound }) {
     const cleaned = value.trim() || 'Anonymous Teacher';
     localStorage.setItem('berkai_teacher_name', cleaned);
     localStorage.setItem('oct_teacher_name', cleaned);
+    window.sessionStorage.setItem('oct_teacher_name', cleaned);
+    if (hasTeacherKey()) {
+      try {
+        saveTeacherSettings({ teacherDisplayName: cleaned, geminiApiKey: getTeacherContext().geminiApiKey });
+      } catch {
+        // ignore validation errors if key is missing
+      }
+    }
   };
 
   const launchSavedDeck = (deck) => {
@@ -157,22 +196,99 @@ export default function SetupScreen({ onStartGame, playSound }) {
     const deckMode = ['solo', 'duo', 'crew'].includes(deck.mode) ? deck.mode : 'crew';
     setMode(deckMode);
     if (playSound) playSound('correct');
-    onStartGame({ teams: buildTeams(), boardLength, baseColor, deck: deck.cards, mode: deckMode });
+    onStartGame({
+      teams: buildTeams(),
+      boardLength,
+      baseColor,
+      deck: deck.cards,
+      mode: deckMode,
+      orbitCount,
+      deckId: deck.id || deck.deckId,
+      deckVersionId: deck.versionId || deck.currentVersionId || deck.currentVersion?.id,
+    });
   };
 
-  const handleStart = async (useAi = false) => {
+  const handleLaunchClick = (e) => {
+    const isShiftDebug = Boolean(e && e.shiftKey);
     const teams = buildTeams();
+    const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system')) || deckLibrary.decks[0];
 
-    if (!useAi) {
+    if (isShiftDebug) {
       if (playSound) playSound('correct');
-      onStartGame({ teams, boardLength, baseColor, deck: DEFAULT_DECK, mode });
+      addLog('🛠️ Debug: Shift+Click detected! Launching with default debug deck.', 'warn');
+      onStartGame({
+        teams,
+        boardLength,
+        baseColor,
+        deck: DEFAULT_DECK,
+        mode,
+        orbitCount,
+        deckId: systemDeck?.id,
+        deckVersionId: systemDeck?.currentVersion?.id,
+      });
       return;
     }
 
+    if (activeGeneratedDeck) {
+      const cards = activeGeneratedDeck.currentVersion?.content || activeGeneratedDeck.cards || [];
+      if (cards.length > 0) {
+        if (playSound) playSound('correct');
+        onStartGame({
+          teams,
+          boardLength,
+          baseColor,
+          deck: cards,
+          mode,
+          orbitCount,
+          deckId: activeGeneratedDeck.id,
+          deckVersionId: activeGeneratedDeck.currentVersion?.id || activeGeneratedDeck.versionId || activeGeneratedDeck.currentVersionId,
+        });
+        return;
+      }
+    }
+
+    if (deckLibrary.selectedDeck?.currentVersion?.content) {
+      if (playSound) playSound('correct');
+      onStartGame({
+        teams,
+        boardLength,
+        baseColor,
+        deck: deckLibrary.selectedDeck.currentVersion.content,
+        mode,
+        orbitCount,
+        deckId: deckLibrary.selectedDeck.id,
+        deckVersionId: deckLibrary.selectedDeck.currentVersion.id,
+      });
+      return;
+    }
+
+    if (systemDeck?.currentVersion?.content) {
+      if (playSound) playSound('correct');
+      onStartGame({
+        teams,
+        boardLength,
+        baseColor,
+        deck: systemDeck.currentVersion.content,
+        mode,
+        orbitCount,
+        deckId: systemDeck.id,
+        deckVersionId: systemDeck.currentVersion.id,
+      });
+      return;
+    }
+
+    setLaunchError('Generate an AI deck or select a saved deck first! (Debug: Shift+Click to launch default deck)');
+    if (playSound) playSound('wrong');
+  };
+
+  const handleGenerateAiDeck = async () => {
     setIsGenerating(true);
     setDebugLogs([]);
+    deckLibrary.clearLogs();
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
-    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Mode: ${mode.toUpperCase()} | Target: 30 Challenges`, 'info');
+
+    const cardCount = 30;
+    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Challenges`, 'info');
 
     const startTime = Date.now();
 
@@ -183,7 +299,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
         deckName: deckTitle.trim() || `${topic} — ${mode.toUpperCase()} Mission`,
         theme: topic,
         cefr,
-        count: 30,
+        count: cardCount,
         mode
       });
 
@@ -194,22 +310,18 @@ export default function SetupScreen({ onStartGame, playSound }) {
       const counts = {};
       cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
       addLog(`📊 Category Breakdown: ${Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(', ')}`, 'info');
-      addLog(`📚 Deck registered as "${deck.name}" and copied to the shared library`, 'success');
+      addLog(`📚 Deck registered as "${deck.name}" and saved to library`, 'success');
+      addLog('🎉 Ready! Click "🚀 Launch Mission!" below whenever you are ready.', 'success');
 
       if (playSound) playSound('correct');
-      setTimeout(() => {
-        setIsGenerating(false);
-        launchDeck(deck);
-      }, 1200);
+      setActiveGeneratedDeck(deck);
+      setLaunchError('');
     } catch (err) {
       addLog(`❌ AI Generation Error: ${err.message}`, 'error');
       addLog('💡 Set your teacher name (and Gemini key) via 🔑 Teacher Settings, then retry!', 'warn');
-      addLog('🔄 Falling back to standard challenge deck', 'warn');
       if (playSound) playSound('wrong');
-      setTimeout(() => {
-        setIsGenerating(false);
-        onStartGame({ teams: buildTeams(), boardLength, baseColor, deck: DEFAULT_DECK, mode });
-      }, 2200);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -227,6 +339,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
         baseColor,
         deck: deck.currentVersion.content,
         mode,
+        orbitCount,
         deckId: deck.id,
         deckVersionId: deck.currentVersion.id,
       });
@@ -303,6 +416,28 @@ export default function SetupScreen({ onStartGame, playSound }) {
                 className={styles.stepperBtn}
                 onClick={() => setTeamCount(c => Math.min(6, c + 1))}
                 disabled={teamCount >= 6}
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div className={styles.formGroup}>
+            <label>Orbits to Win</label>
+            <div className={styles.stepper}>
+              <button
+                type="button"
+                className={styles.stepperBtn}
+                onClick={() => setOrbitCount(c => Math.max(2, c - 1))}
+                disabled={orbitCount <= 2}
+              >
+                −
+              </button>
+              <span className={styles.stepperValue}>{orbitCount} {orbitCount === 1 ? 'Orbit' : 'Orbits'}</span>
+              <button
+                type="button"
+                className={styles.stepperBtn}
+                onClick={() => setOrbitCount(c => Math.min(5, c + 1))}
+                disabled={orbitCount >= 5}
               >
                 +
               </button>
@@ -402,6 +537,17 @@ export default function SetupScreen({ onStartGame, playSound }) {
                     </div>
 
                     <div className={styles.formGroup}>
+                      <label>AI Key</label>
+                      <button
+                        type="button"
+                        className={`${styles.inputField} ${styles.apiKeyBtn}`}
+                        onClick={() => setIsApiKeyModalOpen(true)}
+                      >
+                        {keyActive ? '🟢 AI Key Active' : '🔴 Set Gemini Key'}
+                      </button>
+                    </div>
+
+                    <div className={styles.formGroup}>
                       <label>Deck Title</label>
                       <input
                         type="text"
@@ -442,10 +588,10 @@ export default function SetupScreen({ onStartGame, playSound }) {
 
                   <button
                     className={`btn-accent ${styles.btnStart}`}
-                    onClick={() => handleStart(true)}
+                    onClick={handleGenerateAiDeck}
                     disabled={isGenerating}
                   >
-                    {isGenerating ? '⚡ Generating AI Challenge Deck & Charting Course...' : `✨ Generate ${mode.toUpperCase()} Deck & Launch!`}
+                    {isGenerating ? '⚡ Generating AI Challenge Deck...' : '✨ Generate AI Deck'}
                   </button>
                 </>
               ) : (
@@ -484,20 +630,14 @@ export default function SetupScreen({ onStartGame, playSound }) {
                 </div>
               )}
 
-              {debugLogs.length > 0 && (
-                <div className={styles.debugBox}>
-                  <div className={styles.debugHeader}>
-                    <span>🛠️ AI Generation Live Debug Log</span>
-                    <button type="button" className={styles.debugClearBtn} onClick={() => setDebugLogs([])}>Clear</button>
-                  </div>
-                  <div className={styles.debugLogList}>
-                    {debugLogs.map((log, idx) => (
-                      <div key={idx} className={`${styles.debugLine} ${styles[log.type] || ''}`}>
-                        <span className={styles.debugTime}>[{log.time}]</span> {log.msg}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {(isGenerating || debugLogs.length > 0 || deckLibrary.logs.length > 0) && (
+                <GenerationConsole
+                  logs={debugLogs.length > 0 ? debugLogs : deckLibrary.logs}
+                  onClose={() => {
+                    setDebugLogs([]);
+                    deckLibrary.clearLogs();
+                  }}
+                />
               )}
             </div>
           </div>
@@ -506,12 +646,20 @@ export default function SetupScreen({ onStartGame, playSound }) {
         <div className={styles.btnRow}>
           <button
             className={`btn-primary ${styles.btnStart}`}
-            onClick={() => handleStart(false)}
+            onClick={(e) => handleLaunchClick(e)}
             disabled={isGenerating || launching}
           >
-            🚀 Launch with Default Deck!
+            {activeGeneratedDeck
+              ? `🚀 Launch "${activeGeneratedDeck.name || activeGeneratedDeck.title}"`
+              : '🚀 Launch Mission!'}
           </button>
         </div>
+
+        {launchError && (
+          <div style={{ color: '#ef4444', textAlign: 'center', fontWeight: 700, marginTop: '0.4rem', fontSize: '0.9rem' }}>
+            {launchError}
+          </div>
+        )}
 
         <div className={styles.btnRow}>
           <button
@@ -539,6 +687,20 @@ export default function SetupScreen({ onStartGame, playSound }) {
           />
         )}
       </div>
+
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => {
+          setIsApiKeyModalOpen(false);
+          setKeyActive(hasTeacherKey());
+          const context = getTeacherContext();
+          if (context.teacherDisplayName) {
+            setTeacherName(context.teacherDisplayName);
+            localStorage.setItem('berkai_teacher_name', context.teacherDisplayName);
+            localStorage.setItem('oct_teacher_name', context.teacherDisplayName);
+          }
+        }}
+      />
     </div>
   );
 }

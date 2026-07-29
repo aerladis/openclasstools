@@ -185,3 +185,40 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ── Gibel Cube Item ── */
+.cubeItemCard {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  background: rgba(10, 20, 35, 0.8) !important;
+  box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.08);
+}
+
+.cubeItemCard:hover {
+  border-color: rgba(56, 189, 248, 0.75) !important;
+  box-shadow: 0 8px 25px rgba(56, 189, 248, 0.25) !important;
+}
+
+.cubeBuyBtn {
+  width: 100%;
+  padding: 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-top: 0.3rem;
+  background: linear-gradient(135deg, #0891b2, #38bdf8);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+  transition: all 0.2s ease;
+}
+
+.cubeBuyBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.6);
+}
+
+.cubeBuyBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
