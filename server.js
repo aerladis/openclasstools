@@ -5,8 +5,6 @@
 
 import 'dotenv/config';
 import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -18,40 +16,14 @@ import { createGenerationService } from './server/services/generation-service.js
 import { createGenerationHandler } from './server/routes/generation-handler.js';
 import { createSessionRepository } from './server/repositories/session-repository.js';
 import { createSessionRouter } from './server/routes/sessions.js';
-import { createAdminSessionManager } from './server/security/admin-session.js';
-import {
-    attachAdminSocketAuthorization,
-    requireAuthorizedAdminSocket
-} from './server/security/admin-socket.js';
-import { createAdminAuthRouter } from './server/routes/admin-auth.js';
-import { createAdminDataRouter } from './server/routes/admin-data.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
-
-// Security: Configure CORS
-const io = new Server(server, {
-    cors: {
-        origin: process.env.ALLOWED_ORIGINS?.split(',') || [
-            "http://localhost:8090",
-            "http://play.metrix.dpdns.org",
-            "https://play.metrix.dpdns.org"
-        ],
-        methods: ["GET", "POST"],
-        credentials: true
-    }
-});
 
 const PORT = process.env.PORT || 8090;
 const platformConfig = loadConfig(process.env);
-const adminSessionManager = createAdminSessionManager({
-    passcode: platformConfig.adminPasscode,
-    secret: platformConfig.adminSessionSecret,
-    secure: platformConfig.cookieSecure
-});
 
 const platformDatabase = platformConfig.supabaseUrl && platformConfig.supabaseServiceRoleKey
     ? createSupabaseRestClient({
@@ -100,12 +72,6 @@ const sessionRepository = platformDatabase
         },
         async abandonStale() {
             return 0;
-        },
-        async listAdmin() {
-            const error = new Error('Session persistence is not configured');
-            error.status = 503;
-            error.code = 'SESSION_SERVICE_UNAVAILABLE';
-            throw error;
         }
     };
 
@@ -194,14 +160,6 @@ app.use(rateLimitMiddleware);
 // Request size limits
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use('/api/admin', createAdminAuthRouter({
-    sessionManager: adminSessionManager
-}));
-app.use('/api/admin', createAdminDataRouter({
-    sessionManager: adminSessionManager,
-    sessionRepository,
-    deckRepository
-}));
 app.use('/api/decks', createDeckRouter({ repository: deckRepository }));
 app.use('/api/sessions', createSessionRouter({ repository: sessionRepository }));
 
@@ -209,27 +167,12 @@ app.use('/api/sessions', createSessionRouter({ repository: sessionRepository }))
 // Session Tracking
 // ============================================
 
-const activeGames = new Map(); // gameId -> { hostSocketId, createdAt, lastActivity, type }
-const MAX_GAME_AGE = 24 * 60 * 60 * 1000; // 24 hours
-const MAX_GAMES = 1000; // Maximum concurrent games
+const MAX_SESSION_AGE = 24 * 60 * 60 * 1000;
 
-// Cleanup old games periodically
 setInterval(async () => {
-    const now = Date.now();
-    let cleaned = 0;
-    for (const [gameId, data] of activeGames.entries()) {
-        const lastSeenAt = data.lastActivity || data.createdAt;
-        if (now - lastSeenAt > MAX_GAME_AGE) {
-            activeGames.delete(gameId);
-            cleaned++;
-        }
-    }
-    if (cleaned > 0) {
-        console.log(`🧹 Cleaned up ${cleaned} expired games`);
-    }
     try {
         const abandoned = await sessionRepository.abandonStale(
-            new Date(now - MAX_GAME_AGE)
+            new Date(Date.now() - MAX_SESSION_AGE)
         );
         if (abandoned > 0) {
             console.log(`Marked ${abandoned} expired play sessions as abandoned`);
@@ -237,200 +180,7 @@ setInterval(async () => {
     } catch {
         console.warn('Unable to classify expired play sessions');
     }
-}, 60 * 60 * 1000); // Every hour
-
-// ============================================
-// Socket.IO Connection Handling
-// ============================================
-
-io.on('connection', (socket) => {
-    attachAdminSocketAuthorization(socket, adminSessionManager);
-    console.log('🔌 User connected:', socket.id);
-
-    // Host joins a game room
-    socket.on('hostJoin', (gameId, callback) => {
-        if (!gameId || typeof gameId !== 'string' || !/^[A-Z0-9]{4}$/i.test(gameId)) {
-            if (callback) callback({ success: false, error: 'Invalid game ID format' });
-            return;
-        }
-        
-        const upperGameId = gameId.toUpperCase();
-        const existingGame = activeGames.get(upperGameId);
-        const now = Date.now();
-        
-        // Check if another host already controls this game
-        if (existingGame) {
-            if (existingGame.hostSocketId !== socket.id) {
-                // Check if existing host is still connected
-                const hostSocket = io.sockets.sockets.get(existingGame.hostSocketId);
-                if (hostSocket && hostSocket.connected) {
-                    if (callback) callback({ 
-                        success: false, 
-                        error: 'Game ID already in use by another host',
-                        gameId: upperGameId
-                    });
-                    return;
-                }
-            }
-        }
-        
-        // Register/Update this game
-        activeGames.set(upperGameId, {
-            hostSocketId: socket.id,
-            createdAt: existingGame?.createdAt || now,
-            lastActivity: now,
-            type: existingGame?.type || 'unknown',
-            disconnectedAt: null
-        });
-        
-        socket.join(upperGameId);
-        socket.gameId = upperGameId;
-        socket.isHost = true;
-        
-        console.log(`🎮 Host joined game: ${upperGameId}`);
-        if (callback) callback({ success: true, gameId: upperGameId });
-    });
-
-    // Admin joins a game room
-    socket.on('adminJoin', (gameId, callback) => {
-        if (!requireAuthorizedAdminSocket(socket, callback)) return;
-        if (!gameId || typeof gameId !== 'string' || !/^[A-Z0-9]{4}$/i.test(gameId)) {
-            if (callback) callback({ success: false, error: 'Invalid game ID format' });
-            return;
-        }
-        
-        const upperGameId = gameId.toUpperCase();
-        
-        // Check if game exists
-        if (!activeGames.has(upperGameId)) {
-            if (callback) callback({ success: false, error: 'Game not found' });
-            return;
-        }
-
-        const game = activeGames.get(upperGameId);
-        game.lastActivity = Date.now();
-        
-        socket.join(upperGameId);
-        socket.gameId = upperGameId;
-        socket.isAdmin = true;
-        
-        console.log(`📱 Admin joined game: ${upperGameId}`);
-        if (callback) callback({ success: true, message: `Joined ${upperGameId}` });
-    });
-
-    // Host broadcasts updates to admins
-    socket.on('hostUpdate', (data) => {
-        if (!data || typeof data !== 'object') return;
-        
-        const gameId = data.gameId?.toUpperCase();
-        if (!gameId || !socket.gameId || socket.gameId !== gameId) return;
-        
-        // Update game type if provided
-        if (data.type && activeGames.has(gameId)) {
-            const game = activeGames.get(gameId);
-            game.type = data.type;
-            game.lastActivity = Date.now();
-        }
-        
-        socket.to(gameId).emit('adminUpdate', { ...data, gameId });
-    });
-
-    // Admin requests current state from host
-    socket.on('requestState', (gameId) => {
-        if (!requireAuthorizedAdminSocket(socket)) return;
-        if (!gameId || typeof gameId !== 'string') return;
-        
-        const upperGameId = gameId.toUpperCase();
-        if (!socket.gameId || socket.gameId !== upperGameId || !socket.isAdmin) return;
-
-        const game = activeGames.get(upperGameId);
-        if (game) game.lastActivity = Date.now();
-        
-        socket.to(upperGameId).emit('hostSendState');
-    });
-
-    // Host syncs word list to admins
-    socket.on('syncWordList', (data) => {
-        if (!data || typeof data !== 'object') return;
-        
-        const gameId = data.gameId?.toUpperCase();
-        if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isHost) return;
-        
-        // Update game type
-        if (data.type && activeGames.has(gameId)) {
-            const game = activeGames.get(gameId);
-            game.type = data.type;
-            game.lastActivity = Date.now();
-        }
-        
-        socket.to(gameId).emit('adminWordListSync', { ...data, gameId });
-    });
-
-    // Admin updates the word list on the host
-    socket.on('updateWordListAdmin', (data) => {
-        if (!requireAuthorizedAdminSocket(socket)) return;
-        if (!data || typeof data !== 'object') return;
-        
-        const gameId = data.gameId?.toUpperCase();
-        if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isAdmin) return;
-
-        const game = activeGames.get(gameId);
-        if (game) game.lastActivity = Date.now();
-        
-        socket.to(gameId).emit('hostWordListUpdate', { ...data, gameId });
-    });
-
-    // Admin sends commands to host (for Kelime Oyunu and similar games)
-    socket.on('adminUpdateHost', (data) => {
-        if (!requireAuthorizedAdminSocket(socket)) return;
-        if (!data || typeof data !== 'object') return;
-        
-        const gameId = data.gameId?.toUpperCase();
-        if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isAdmin) return;
-
-        const game = activeGames.get(gameId);
-        if (game) game.lastActivity = Date.now();
-        
-        socket.to(gameId).emit('adminUpdate', { ...data, gameId });
-    });
-
-    // LingoParty real-time mobile classroom action (e.g., student rolling dice from phone or grading)
-    socket.on('lingoAction', (data) => {
-        if (!requireAuthorizedAdminSocket(socket)) return;
-        if (!data || typeof data !== 'object') return;
-        const gameId = data.gameId?.toUpperCase();
-        if (!gameId || !socket.gameId || socket.gameId !== gameId) return;
-        const game = activeGames.get(gameId);
-        if (game) game.lastActivity = Date.now();
-        socket.to(gameId).emit('lingoActionHost', { ...data, gameId });
-    });
-
-    // LingoParty real-time state sync from host to all mobile participants
-    socket.on('lingoSync', (data) => {
-        if (!data || typeof data !== 'object') return;
-        const gameId = data.gameId?.toUpperCase();
-        if (!gameId || !socket.gameId || socket.gameId !== gameId || !socket.isHost) return;
-        const game = activeGames.get(gameId);
-        if (game) game.lastActivity = Date.now();
-        socket.to(gameId).emit('lingoSyncClient', { ...data, gameId });
-    });
-
-    // Handle disconnect
-    socket.on('disconnect', () => {
-        console.log('🔌 User disconnected:', socket.id);
-        
-        // If host disconnects, mark game for cleanup but keep it briefly for reconnection
-        if (socket.isHost && socket.gameId) {
-            const game = activeGames.get(socket.gameId);
-            if (game && game.hostSocketId === socket.id) {
-                // Preserve the game so the host can reconnect without losing the room state.
-                game.disconnectedAt = Date.now();
-                game.lastActivity = Date.now();
-                console.log(`⏳ Host disconnected from ${socket.gameId}, preserving game until inactivity cleanup`);
-            }
-        }
-    });
-});
+}, 60 * 60 * 1000);
 
 // ============================================
 // API Rate Limiting (stricter for AI endpoints)
@@ -1640,13 +1390,8 @@ app.get('/api/lingoparty-decks', apiRateLimit, (req, res) => {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        timestamp: new Date().toISOString(),
-        activeGames: activeGames.size
+        timestamp: new Date().toISOString()
     });
-});
-
-app.get(['/admin', '/admin.html'], (_req, res) => {
-    res.redirect(302, '/control-center');
 });
 
 // ---- Serve static files (React + Vite build & legacy html) ----
@@ -1658,7 +1403,7 @@ app.use(express.static(__dirname));
 
 // SPA Wildcard Route (serves React app for client-side routes like /lingoparty)
 app.get('*', (req, res, next) => {
-    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
+    if (req.originalUrl.startsWith('/api')) {
         return next();
     }
     const indexHtmlPath = path.join(frontendDist, 'index.html');
@@ -1680,10 +1425,9 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-server.listen(PORT, () => {
+app.listen(PORT, () => {
     console.log(`🎮 BerkAI Game Hub running → http://localhost:${PORT}`);
-    console.log(`🔒 Security: Rate limiting enabled, CORS configured`);
-    console.log(`📊 Max concurrent games: ${MAX_GAMES}`);
+    console.log('🔒 Security: Rate limiting enabled');
     if (AI_PROVIDER === 'anthropic') {
         console.log(`🤖 AI Provider: Anthropic (${ANTHROPIC_MODEL}) — paid`);
     } else if (AI_PROVIDER === 'openai') {
