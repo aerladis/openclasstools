@@ -14,15 +14,15 @@ test('LingoParty setup launches an exact registered deck version', async () => {
     assert.doesNotMatch(source, /berkai_gemini_api_key|fallback/i);
 });
 
-test('LingoParty records real custom teams against the socket room code', async () => {
+test('LingoParty records real custom teams without a room code', async () => {
     const source = await readFile(
         new URL('../frontend/src/games/LingoParty/LingoPartyGame.jsx', import.meta.url),
         'utf8'
     );
     assert.match(source, /startSessionSafely\(/);
-    assert.match(source, /roomCode:\s*gameId/);
     assert.match(source, /participantNames:\s*teams\.map/);
     assert.match(source, /deckVersionId/);
     assert.match(source, /completeSession\(/);
+    assert.doesNotMatch(source, /roomCode|gameId|useSocketGame/);
     assert.doesNotMatch(source, /Dragons|Rockets|Androids/);
 });
