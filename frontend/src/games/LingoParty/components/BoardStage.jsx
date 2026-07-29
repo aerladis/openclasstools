@@ -16,7 +16,6 @@ const ITEM_ICONS = { shield: '🛡️' };
 export default function BoardStage({
   gameState,
   setGameState,
-  broadcastGameState,
   playSound,
   onGameComplete
 }) {
@@ -66,7 +65,6 @@ export default function BoardStage({
       round: nextRound
     };
     setGameState(updatedState);
-    broadcastGameState(updatedState);
   };
 
   const shuffleTiles = (currentTiles) => {
@@ -265,7 +263,6 @@ export default function BoardStage({
             currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsCopy.length
           };
           setGameState(updatedState);
-          broadcastGameState(updatedState);
 
           setActiveModal(null);
           setCurrentChallenge(null);
@@ -546,7 +543,6 @@ export default function BoardStage({
             onClick={() => {
               onGameComplete?.(gameState.teams, 'returned_to_setup');
               setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
-              broadcastGameState({ ...gameState, activeScreen: 'setup' });
             }}
           >
             ⚙️ Mission Settings
@@ -573,7 +569,6 @@ export default function BoardStage({
           teams={gameState.teams}
           onPlayAgain={() => {
             setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
-            broadcastGameState({ ...gameState, activeScreen: 'setup' });
           }}
           onReturnHub={() => {
             window.location.href = 'index.html';

@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import SetupScreen from './components/SetupScreen';
 import BoardStage from './components/BoardStage';
-import { useSocketGame } from '../../hooks/useSocketGame';
 import {
   completeSession,
   startSessionSafely,
@@ -75,12 +74,10 @@ export function playSound(type = 'roll') {
 }
 
 export default function LingoPartyGame() {
-  const { gameId, broadcastGameState } = useSocketGame();
   const [playSessionId, setPlaySessionId] = useState(null);
   const [trackingWarning, setTrackingWarning] = useState('');
 
   const [gameState, setGameState] = useState({
-    gameId,
     activeScreen: 'setup',
     teams: [],
     currentTeamIndex: 0,
@@ -144,7 +141,6 @@ export default function LingoPartyGame() {
     setTrackingWarning('');
     const session = await startSessionSafely({
       gameType: 'lingoparty',
-      roomCode: gameId,
       participantNames: teams.map((team) => team.name),
       deckId,
       deckVersionId,
@@ -163,7 +159,6 @@ export default function LingoPartyGame() {
     }));
 
     const newState = {
-      gameId,
       activeScreen: 'board',
       teams: initTeams,
       boardLength,
@@ -178,8 +173,7 @@ export default function LingoPartyGame() {
     };
     setPlaySessionId(session?.id || null);
     setGameState(newState);
-    broadcastGameState(newState);
-  }, [gameId, broadcastGameState]);
+  }, []);
 
   const handleGameComplete = useCallback((teams, reason = 'victory') => {
     if (!playSessionId) return;
@@ -273,7 +267,6 @@ export default function LingoPartyGame() {
         <BoardStage
           gameState={gameState}
           setGameState={setGameState}
-          broadcastGameState={broadcastGameState}
           playSound={playSound}
           onGameComplete={handleGameComplete}
         />

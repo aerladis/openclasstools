@@ -9,7 +9,7 @@ import {
 } from '../../services/platformApi';
 
 export default function GameHub() {
-  const [serverHealth, setServerHealth] = useState({ status: 'checking', activeGames: 0 });
+  const [serverHealth, setServerHealth] = useState({ status: 'checking' });
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
   const [keyActive, setKeyActive] = useState(hasTeacherKey());
@@ -17,14 +17,11 @@ export default function GameHub() {
   useEffect(() => {
     fetch('/api/health')
       .then(res => res.json())
-      .then(data => {
-        setServerHealth({
-          status: 'online',
-          activeGames: data?.activeGames || 1
-        });
+      .then(() => {
+        setServerHealth({ status: 'online' });
       })
       .catch(() => {
-        setServerHealth({ status: 'offline', activeGames: 0 });
+        setServerHealth({ status: 'offline' });
       });
 
     setShowKeyPrompt(!hasTeacherKey() && wantsAiFeatures());
@@ -164,10 +161,20 @@ export default function GameHub() {
 
           <div className={styles.statusBadge}>
             <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>
-            <span>Server: {serverHealth.status === 'offline' ? 'Offline' : `Online (${serverHealth.activeGames} Active Games)`}</span>
+            <span>Server: {serverHealth.status === 'offline' ? 'Offline' : 'Online'}</span>
           </div>
         </div>
       </header>
+
+      <details className={styles.teacherGuide}>
+        <summary>Why use your own API key?</summary>
+        <div className={styles.teacherGuideBody}>
+          <p>Your key is temporary, kept secure in this browser tab, and helps avoid shared quota limits.</p>
+          <button type="button" onClick={() => setIsApiKeyModalOpen(true)}>
+            Add API key
+          </button>
+        </div>
+      </details>
 
       <section className={styles.gamesGrid}>
         {games.map(game => {
