@@ -32,6 +32,10 @@ Historical database migrations may retain existing nullable `room_code` columns 
 
 The unfinished Kelime task will be completed as part of the simplification. When a registered or default deck starts, the setup controls and mounted deck-library section will be hidden. Gameplay action controls remain available. Starting a new round through the existing page flow restores only the setup state that remains supported.
 
+## Minimal Teacher API-Key Guide
+
+The main game hub will include a compact, collapsed-by-default teacher guide beneath the header. Its short copy will explain only that a teacher's Gemini API key is temporary, kept securely in the current browser tab, and used to avoid shared-quota limits. An action inside the expanded guide will open the existing API-key dialog. The guide will use native disclosure behavior and will not add a long tutorial or a separate screen.
+
 ## Architecture and Data Flow
 
 Express will use its normal HTTP server directly, without a Socket.IO wrapper. Browser games will manage all game state locally. Deck loading and generation continue through HTTP APIs. A game may create and complete a play-session record through the existing HTTP platform client, but it will no longer attach a room code.
@@ -45,6 +49,7 @@ Standalone play must continue if session telemetry cannot be recorded. Existing 
 ## Testing
 
 - Add or update contract tests to assert that Kelime hides its deck library when play starts.
+- Add a frontend contract test for the collapsed teacher API-key guide and its key-dialog action.
 - Add negative inventory assertions for Socket.IO dependencies, imports, browser scripts, server handlers, game-code UI, and Control Center routes.
 - Update affected existing tests so they cover retained HTTP composition only.
 - Run the complete root Node test suite.
