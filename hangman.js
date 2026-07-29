@@ -2,54 +2,6 @@
    HANGMAN – Game Logic
    ============================================ */
 
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = typeof io !== 'undefined' ? io() : null;
-
-if (socket) {
-    socket.emit('hostJoin', gameId, (response) => {
-        if (response && response.success) {
-            console.log('✅ Connected to game:', response.gameId);
-        } else {
-            console.error('❌ Failed to join game:', response?.error || 'Unknown error');
-        }
-    });
-
-    socket.on('hostSendState', () => {
-        // Admin joined, send current state and full word list
-        emitGameState(gameActive ? 'playing' : (gameOverEl.style.display !== 'none' ? 'gameOver' : 'waiting'));
-        socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
-    });
-
-    socket.on('hostWordListUpdate', (data) => {
-        if (data.words) {
-            wordList = normalizeWordList(data.words, 'Synced');
-            usedWords = [];
-            // Optionally clear used words if list changed significantly
-        }
-    });
-}
-
-function emitGameState(status = 'playing', won = false) {
-    if (!socket) return;
-
-    // Format revealed word
-    const stateStr = [...currentWord].map(ch => {
-        if (ch === ' ') return '  '; // Double space for visual separation
-        return guessedLetters.has(ch) ? ch : '_';
-    }).join(' ');
-
-    socket.emit('hostUpdate', {
-        gameId: gameId,
-        game: 'Hangman',
-        status: status,
-        won: won,
-        word: currentWord,
-        category: currentCat,
-        wrongCount: wrongCount,
-        currentState: stateStr
-    });
-}
-
 // ---- Default word list with categories ----
 const DEFAULT_WORDS = [
     { word: "ELEPHANT", cat: "Animals" },
@@ -249,7 +201,6 @@ function handleGuess(letter, btn) {
         if (allGuessed) {
             endGame(true);
         } else {
-            emitGameState('playing');
         }
     } else {
         btn.classList.add('wrong');
@@ -258,7 +209,6 @@ function handleGuess(letter, btn) {
         if (wrongCount >= MAX_WRONG) {
             endGame(false);
         } else {
-            emitGameState('playing');
         }
     }
 }
@@ -288,7 +238,6 @@ async function startGame() {
     }
     const session = await window.OpenClassPlatform.startSessionSafely({
         gameType: 'hangman',
-        roomCode: gameId,
         participantNames: [],
         ...selectedDeckRef
     }, error => {
@@ -311,7 +260,6 @@ async function startGame() {
     categoryHint.textContent = currentCat ? `Category: ${currentCat}` : '';
     gameOverEl.style.display = 'none';
     showScreen(screenGame);
-    emitGameState('playing');
 }
 
 // ---- End game ----
@@ -325,7 +273,6 @@ function endGame(won) {
     // Disable all keys
     keyboard.querySelectorAll('.key-btn').forEach(b => b.disabled = true);
 
-    emitGameState('gameOver', won);
     if (playSessionId) {
         window.OpenClassPlatform.completeSession(playSessionId, {
             won,
@@ -389,9 +336,6 @@ function restoreGeneratedWords() {
     generateStatus.textContent = `Restored ${wordList.length} words from saved content.`;
     generateStatus.className = 'generate-status success';
 
-    if (socket) {
-        socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
-    }
 }
 
 btnGenerate.addEventListener('click', async () => {
@@ -431,10 +375,6 @@ btnGenerate.addEventListener('click', async () => {
             generateStatus.textContent = `✓ Generated ${data.words.length} words!`;
             generateStatus.className = 'generate-status success';
 
-            // Sync new list to admin
-            if (socket) {
-                socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
-            }
         } else {
             throw new Error('No words returned');
         }
@@ -449,13 +389,7 @@ btnGenerate.addEventListener('click', async () => {
     }
 });
 
-// ---- Game ID UI ----
 document.addEventListener('DOMContentLoaded', () => {
-    const idDisplay = document.createElement('div');
-    idDisplay.className = 'game-id-badge';
-    idDisplay.textContent = `Game ID: ${gameId}`;
-    document.body.appendChild(idDisplay);
-
     btnReuseGenerated?.addEventListener('click', restoreGeneratedWords);
     updateReuseButton();
 
@@ -478,12 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
             usedWords = [];
             generateStatus.textContent = `Using registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`;
             generateStatus.className = 'generate-status success';
-            if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
         }
     });
-
-    // Sync initial word list to admin if already connected
-    if (socket) socket.emit('syncWordList', { gameId, type: 'hangman', words: wordList });
 });
 
 (function () {

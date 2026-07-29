@@ -87,11 +87,7 @@ document.getElementById('btn-clear-debug')?.addEventListener('click', () => {
 });
 
 /* === Section: Game State & Configuration === */
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = io();
-
 let gameState = {
-    gameId,
     activeScreen: 'setup',
     teams: [],
     currentTeamIndex: 0,
@@ -132,9 +128,6 @@ const DEFAULT_DECK = [
 /* === Section: DOM Elements === */
 const setupScreenEl = document.getElementById('setup-screen');
 const gameScreenEl = document.getElementById('game-screen');
-const gameIdBadgeEl = document.getElementById('game-id-badge');
-const gameIdTextEl = document.getElementById('game-id-text');
-
 // Setup inputs
 const teamCountSelect = document.getElementById('team-count-select');
 const boardLengthSelect = document.getElementById('board-length');
@@ -179,62 +172,6 @@ const mysteryEventDescEl = document.getElementById('mystery-event-desc');
 const mysteryTeamSubtitleEl = document.getElementById('mystery-team-subtitle');
 const btnMysteryAction = document.getElementById('btn-mystery-action');
 const btnMysteryClose = document.getElementById('btn-mystery-close');
-
-/* === Section: Socket.IO Initialization === */
-socket.emit('hostJoin', gameId, (res) => {
-    if (res && res.success) {
-        console.log(`📡 LingoParty host joined: ${gameId}`);
-        gameIdTextEl.textContent = `ID: ${gameId}`;
-        gameIdBadgeEl.classList.remove('hidden');
-        broadcastState();
-    } else {
-        console.error('Failed to join room as host:', res?.error);
-    }
-});
-
-function broadcastState() {
-    socket.emit('hostUpdate', {
-        gameId,
-        type: 'LingoParty',
-        game: 'LingoParty',
-        activeScreen: gameState.activeScreen,
-        teams: gameState.teams,
-        currentTeamIndex: gameState.currentTeamIndex,
-        round: gameState.round,
-        boardLength: gameState.boardLength,
-        activeChallenge: gameState.activeChallenge
-    });
-
-    socket.emit('lingoSync', {
-        gameId,
-        gameState
-    });
-}
-
-// Handle incoming commands from admin/mobile
-socket.on('adminUpdate', (data) => {
-    if (!data || data.gameId !== gameId) return;
-    handleRemoteAction(data);
-});
-
-socket.on('lingoActionHost', (data) => {
-    if (!data || data.gameId !== gameId) return;
-    handleRemoteAction(data);
-});
-
-function handleRemoteAction(data) {
-    if (data.action === 'ROLL_DICE') {
-        if (!gameState.isRolling && gameState.activeScreen === 'game') {
-            rollDice();
-        }
-    } else if (data.action === 'GRADE_ANSWER') {
-        if (data.grade === 'correct') gradeChallenge(true);
-        else if (data.grade === 'wrong') gradeChallenge(false);
-        else if (data.grade === 'pass') passChallenge();
-    } else if (data.action === 'BUY_ITEM' && typeof data.itemIndex === 'number') {
-        buyShopItem(data.itemIndex);
-    }
-}
 
 /* === Section: Setup & Initialization === */
 teamCountSelect.addEventListener('change', () => {
@@ -352,7 +289,6 @@ function startGameWithDeck(deck) {
     renderLeaderboard();
     renderBoardTrack();
     renderInventory();
-    broadcastState();
 }
 
 /* === Section: Board Generation & Rendering === */
@@ -596,7 +532,6 @@ function updateTurnHeader() {
     roundCounterEl.textContent = `Round ${gameState.round}`;
     renderLeaderboard();
     renderInventory();
-    broadcastState();
 }
 
 function renderInventory() {
@@ -656,7 +591,6 @@ async function rollDice() {
     }
 
     gameState.isRolling = false;
-    broadcastState();
 
     // Trigger Top Flashing Category Banner & Show Question button
     const destinationTile = gameState.tiles[currentTeam.position];
@@ -831,7 +765,6 @@ function openChallengeModal(card, team) {
         startTimer(45);
     }
 
-    broadcastState();
 }
 
 function startTimer(seconds) {
@@ -1026,7 +959,6 @@ function usePowerUpItem(itemIdx) {
         updatePawnPositions();
     }
     renderInventory();
-    broadcastState();
 }
 
 /* === Section: Mystery Box / Chance Events === */

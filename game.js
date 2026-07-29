@@ -2,42 +2,6 @@
    WHO AM I? – Game Logic
    ============================================ */
 
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = typeof io !== 'undefined' ? io() : null;
-
-if (socket) {
-  socket.emit('hostJoin', gameId, (response) => {
-    if (response && response.success) {
-      console.log('✅ Connected to game:', response.gameId);
-    } else {
-      console.error('❌ Failed to join game:', response?.error || 'Unknown error');
-    }
-  });
-
-  socket.on('hostSendState', () => {
-    emitGameState();
-    socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
-  });
-
-  socket.on('hostWordListUpdate', (data) => {
-    if (data.characters) {
-      CHARACTERS = data.characters;
-      bag = []; // Reset bag to include new characters
-    }
-  });
-}
-
-function emitGameState() {
-  if (!socket) return;
-  const isShowingChar = document.getElementById('screen-character').classList.contains('active');
-  socket.emit('hostUpdate', {
-    gameId: gameId,
-    game: 'Who Am I',
-    character: isShowingChar ? characterName.textContent : null,
-    active: isShowingChar
-  });
-}
-
 // ---- Characters (loaded dynamically from list.txt) ----
 let CHARACTERS = [];
 let deckLibrary = null;
@@ -53,9 +17,7 @@ async function loadCharacters() {
 }
 
 // Load on startup
-loadCharacters().then(() => {
-  if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
-});
+loadCharacters();
 
 // ---- DOM refs ----
 const screenStart = document.getElementById('screen-start');
@@ -73,7 +35,6 @@ const RING_CIRC = 339.292; // 2πr where r = 54
 function showScreen(target) {
   [screenStart, screenCountdown, screenCharacter].forEach(s => s.classList.remove('active'));
   target.classList.add('active');
-  emitGameState();
 }
 
 // ---- Random character (no repeat until all used) ----
@@ -115,7 +76,6 @@ function startCountdown() {
 function revealCharacter() {
   characterName.textContent = pickCharacter();
   showScreen(screenCharacter);
-  emitGameState();
 }
 
 const btnReplay = document.getElementById('btn-replay');
@@ -143,7 +103,6 @@ async function startTrackedRound() {
   }
   const session = await window.OpenClassPlatform.startSessionSafely({
     gameType: 'who',
-    roomCode: gameId,
     participantNames: [],
     ...selectedDeckRef
   }, error => {
@@ -198,7 +157,6 @@ function restoreGeneratedCharacters() {
   generateStatus.textContent = `Restored ${CHARACTERS.length} characters from saved content.`;
   generateStatus.className = 'generate-status success';
 
-  if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
 }
 
 btnGenerate.addEventListener('click', async () => {
@@ -239,7 +197,6 @@ btnGenerate.addEventListener('click', async () => {
     await loadCharacters();
     saveGeneratedCharacters(CHARACTERS, { source: 'ai', theme, count: CHARACTERS.length });
     bag = []; // reset shuffle bag
-    if (socket) socket.emit('syncWordList', { gameId, type: 'whoami', characters: CHARACTERS });
   } catch (err) {
     window.GenerationConsole?.log(`Error: ${err.message}`, 'error');
     generateStatus.textContent = `✗ ${err.message}`;
@@ -251,15 +208,7 @@ btnGenerate.addEventListener('click', async () => {
   }
 });
 
-// ============================================
-// Add Game ID UI
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
-  const idDisplay = document.createElement('div');
-  idDisplay.className = 'game-id-badge';
-  idDisplay.textContent = `Game ID: ${gameId}`;
-  document.body.appendChild(idDisplay);
-
   btnReuseGenerated?.addEventListener('click', restoreGeneratedCharacters);
   updateReuseButton();
 
@@ -281,11 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
       bag = [];
       generateStatus.textContent = `Using registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`;
       generateStatus.className = 'generate-status success';
-      if (socket) socket.emit('syncWordList', {
-        gameId,
-        type: 'whoami',
-        characters: CHARACTERS
-      });
     }
   });
 });

@@ -2,9 +2,6 @@
    VOCABULARY FLASHCARDS GAME LOGIC
    ============================================ */
 
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = typeof io !== 'undefined' ? io() : null;
-
 const DEFAULT_DECK = [
     { word: 'egg', meaning: 'yumurta' },
     { word: 'book', meaning: 'kitap' },
@@ -362,53 +359,8 @@ async function generateWithAI(theme, count = 20) {
     }
 }
 
-// Socket.IO Integration
-function initSocket() {
-    if (!socket) return;
-
-    socket.emit('hostJoin', gameId, (res) => {
-        if (res?.success) {
-            console.log('Flashcards host connected:', res.gameId);
-        }
-    });
-
-    socket.on('adminUpdate', (data) => {
-        if (data?.game !== 'Vocabulary Flashcards') return;
-        if (data.action === 'NEXT_CARD') nextCard();
-        else if (data.action === 'PREV_CARD') prevCard();
-        else if (data.action === 'FLIP_CARD') toggleFlip();
-    });
-
-    socket.on('hostWordListUpdate', (data) => {
-        if (Array.isArray(data?.cards)) {
-            loadDeck(data.cards, false);
-            setStatusMessage('Flashcard deck synchronized from admin panel.', '#22c55e');
-        }
-    });
-}
-
-function emitGameState() {
-    if (!socket) return;
-    socket.emit('hostUpdate', {
-        gameId,
-        type: 'flashcards',
-        game: 'Vocabulary Flashcards',
-        cards: gameState.allCards,
-        currentIndex: gameState.currentIndex,
-        isFlipped: gameState.isFlipped,
-        masteredCount: gameState.masteredSet.size,
-        reviewCount: gameState.reviewSet.size
-    });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // particles.js auto-initializes via OptimizedParticles; no manual call needed
-
-    // ID Badge
-    const idDisplay = document.createElement('div');
-    idDisplay.className = 'game-id-badge';
-    idDisplay.textContent = `ID: ${gameId}`;
-    document.body.appendChild(idDisplay);
 
     // Cache elements
     flashcard = document.getElementById('flashcard');
@@ -424,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load initial default deck
     loadDeck(DEFAULT_DECK, false);
-    initSocket();
 
     // Event Listeners
     flashcard?.addEventListener('click', toggleFlip);
@@ -465,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const session = await window.OpenClassPlatform.startSessionSafely({
             gameType: 'flashcards',
-            roomCode: gameId,
             participantNames: [],
             ...selectedDeckRef
         }, error => {

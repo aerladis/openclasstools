@@ -1,6 +1,6 @@
 /* ============================================
    WHO WANTS TO BE A MILLIONAIRE
-   Game Logic with Socket.IO Integration
+   Game Logic
    ============================================ */
 
 let notificationTimeout = null;
@@ -210,123 +210,6 @@ function initSoundControls() {
 }
 
 // ============================================
-// Socket.IO Setup
-// ============================================
-
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = typeof io !== 'undefined' ? io() : null;
-let emitTimeout = null;
-
-function syncQuestionList() {
-    if (!socket) return;
-
-    socket.emit('syncWordList', {
-        gameId,
-        type: 'millionaire',
-        questions: gameState.questions.map(cloneQuestion)
-    });
-}
-
-if (socket) {
-    socket.emit('hostJoin', gameId, (response) => {
-        if (response?.success) {
-            console.log('Millionaire host connected:', response.gameId);
-        } else {
-            console.error('Failed to join:', response?.error);
-        }
-    });
-
-    socket.on('hostSendState', () => {
-        emitGameState();
-        syncQuestionList();
-    });
-
-    socket.on('adminUpdate', (data) => {
-        console.log('Received adminUpdate:', data);
-        if (data.game !== 'Who Wants to Be a Millionaire') {
-            console.log('Ignored - wrong game:', data.game);
-            return;
-        }
-
-        switch (data.action) {
-            case 'USE_LIFELINE':
-                if (data.lifeline) {
-                    useLifeline(data.lifeline);
-                }
-                break;
-            case 'TOGGLE_TIMER':
-                toggleTimer();
-                break;
-            case 'START_GAME':
-                startGame(data.questions && data.questions.length > 0 ? data.questions : gameState.questions);
-                break;
-            case 'NEXT_QUESTION':
-                if (gameState.gameActive && gameState.currentLevel < 14) {
-                    gameState.currentLevel++;
-                    loadQuestion();
-                }
-                break;
-            case 'SELECT_ANSWER':
-                if (Number.isInteger(data.answerIndex)) {
-                    selectAnswer(data.answerIndex);
-                }
-                break;
-        }
-    });
-
-    socket.on('hostWordListUpdate', (data) => {
-        if (!data || data.type !== 'millionaire' || !Array.isArray(data.questions)) {
-            return;
-        }
-
-        gameState.questions = normalizeQuestions(data.questions);
-
-        if (gameState.currentLevel >= gameState.questions.length) {
-            gameState.currentLevel = 0;
-        }
-
-        syncQuestionList();
-
-        if (gameState.gameActive) {
-            loadQuestion();
-        }
-
-        showNotification('Questions updated from admin.', 'success');
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
-    });
-}
-
-function emitGameState() {
-    if (!socket || !gameState.gameActive) return;
-
-    clearTimeout(emitTimeout);
-
-    emitTimeout = setTimeout(() => {
-        const currentQuestion = gameState.questions[gameState.currentLevel];
-        const currentPrize = gameState.currentLevel > 0 ? PRIZE_LADDER[gameState.currentLevel - 1] : 0;
-
-        socket.emit('hostUpdate', {
-            gameId,
-            type: 'millionaire',
-            game: 'Who Wants to Be a Millionaire',
-            level: gameState.currentLevel + 1,
-            prize: currentPrize,
-            targetPrize: PRIZE_LADDER[gameState.currentLevel],
-            question: currentQuestion?.question,
-            options: currentQuestion?.options,
-            hiddenAnswers: [...gameState.hiddenAnswers],
-            lifelines: gameState.lifelines,
-            timeRemaining: gameState.timeRemaining,
-            selectedAnswer: gameState.selectedAnswer,
-            state: gameState.isProcessing ? 'processing' : gameState.timer ? 'playing' : 'paused'
-        });
-    }, 100);
-}
-
-// ============================================
 // DOM Elements
 // ============================================
 
@@ -480,7 +363,6 @@ async function startSelectedDeck() {
     }
     const session = await window.OpenClassPlatform.startSessionSafely({
         gameType: 'millionaire',
-        roomCode: gameId,
         participantNames: [],
         ...selectedDeckRef
     }, error => {
@@ -608,7 +490,6 @@ function startGame(questions = DEFAULT_QUESTIONS) {
 
     createPrizeLadder();
     updateLifelineButtons();
-    syncQuestionList();
     playSound('start');
     loadQuestion();
     showScreen('game');
@@ -687,7 +568,6 @@ function loadQuestion() {
         playSound('question');
     }
     startTimer(true);
-    emitGameState();
 }
 
 function stopTimer() {
@@ -711,7 +591,6 @@ function stopTimer() {
     elements.timerCircle.classList.add('stopped');
 
     showNotification('Timer stopped for this question', 'info');
-    emitGameState();
 }
 
 function startTimer(resetTime = false) {
@@ -790,7 +669,6 @@ function toggleTimer() {
         showNotification('Timer Resumed', 'info');
     }
 
-    emitGameState();
 }
 
 function updateTimerDisplay() {
@@ -799,7 +677,6 @@ function updateTimerDisplay() {
         elements.timerCircle.style.setProperty('--timer-progress', 1);
         elements.timerCircle.classList.remove('danger', 'warning');
         elements.timerCircle.classList.add('stopped');
-        emitGameState();
         return;
     }
 
@@ -828,7 +705,6 @@ function updateTimerDisplay() {
         playSound('tick');
     }
 
-    emitGameState();
 }
 
 function timeUp() {
@@ -855,7 +731,6 @@ function selectAnswer(index) {
     gameState.selectedAnswer = index;
     elements.answerBtns[index].classList.add('selected');
     playSound('select');
-    emitGameState();
 
     setTimeout(() => {
         const question = gameState.questions[gameState.currentLevel];
@@ -899,7 +774,6 @@ function useLifeline(lifeline) {
     gameState.lifelines[lifeline].used = true;
     updateLifelineButtons();
     playSound('lifeline');
-    emitGameState();
 
     switch (lifeline) {
         case 'fiftyFifty':
@@ -942,7 +816,6 @@ function useFiftyFifty() {
         elements.answerBtns[index].style.display = 'none';
     });
 
-    emitGameState();
 }
 
 function usePhoneFriend() {
@@ -1102,16 +975,6 @@ function endGame(won, reason = '', walkAwayAmount = null) {
 
     showScreen('result');
 
-    if (socket) {
-        socket.emit('hostUpdate', {
-            gameId,
-            type: 'millionaire',
-            game: 'Who Wants to Be a Millionaire',
-            state: 'finished',
-            finalAmount: amount,
-            won
-        });
-    }
     if (playSessionId) {
         window.OpenClassPlatform.completeSession(playSessionId, {
             won,
@@ -1155,15 +1018,7 @@ function resetGame() {
     if (window.OptimizedParticles) { window.OptimizedParticles.init('particles'); return; }
 })();
 
-// ============================================
-// Add Game ID Badge
-// ============================================
-
 document.addEventListener('DOMContentLoaded', () => {
-    const idDisplay = document.createElement('div');
-    idDisplay.className = 'game-id-badge';
-    idDisplay.textContent = `Game ID: ${gameId}`;
-    document.body.appendChild(idDisplay);
     initSoundControls();
     updateReuseButton();
 

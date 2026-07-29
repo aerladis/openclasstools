@@ -2,9 +2,6 @@
    WORD GAME LOGIC (SMARTBOARD)
    ============================================ */
 
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = typeof io !== 'undefined' ? io() : null;
-
 const DEFAULT_QUESTIONS = [
     { question: 'What is the capital of France?', answer: 'PARIS' },
     { question: 'What is the largest ocean on Earth?', answer: 'PACIFIC' },
@@ -49,8 +46,15 @@ let roundResultKicker;
 let roundResultTitle;
 let roundResultMessage;
 let roundResultScore;
+let setupControls;
+let deckLibraryMount;
 let deckLibrary = null;
 let playSessionId = null;
+
+function setSetupVisible(visible) {
+    if (setupControls) setupControls.hidden = !visible;
+    if (deckLibraryMount) deckLibraryMount.hidden = !visible;
+}
 
 function ensureAudioContext() {
     if (!soundState.enabled) return null;
@@ -248,7 +252,6 @@ function startTimer() {
             showRoundResult('failed', 'Time Is Up', 'The shared round timer reached zero before the pack was finished.');
         }
 
-        broadcastState();
     }, 1000);
 }
 
@@ -365,13 +368,11 @@ function loadQuestion(index, options = {}) {
         startTimer();
     }
 
-    broadcastState();
 }
 
 function nextQuestion() {
     if (gameState.currentIndex >= gameState.questions.length - 1) {
         showRoundResult('finished', 'Round Finished', 'You completed all questions in the pack.');
-        broadcastState();
         return;
     }
 
@@ -391,7 +392,6 @@ function revealLetter(index) {
     gameState.potentialScore = Math.max(0, gameState.potentialScore - 100);
     renderLetters();
     playSound('reveal');
-    broadcastState();
 }
 
 function revealRandomLetter() {
@@ -437,100 +437,6 @@ function handlePassQuestion() {
     }
 }
 
-function addPoints(points) {
-    gameState.currentScore += points;
-
-    if (scoreDisplay) {
-        scoreDisplay.textContent = String(gameState.currentScore);
-    }
-}
-
-function broadcastState() {
-    if (!socket) return;
-
-    const currentQuestion = gameState.questions[gameState.currentIndex];
-
-    socket.emit('hostUpdate', {
-        gameId,
-        game: 'Word Game',
-        type: 'kelime',
-        currentIndex: gameState.currentIndex,
-        totalQuestions: gameState.questions.length,
-        currentWord: gameState.currentWord,
-        question: currentQuestion ? currentQuestion.question : '',
-        revealedLetters: gameState.revealedLetters,
-        revealedCount: gameState.revealedLetters.filter(Boolean).length,
-        score: gameState.currentScore,
-        potentialScore: gameState.potentialScore,
-        timeRemaining: gameState.timeRemaining,
-        isTimerRunning: gameState.isTimerRunning,
-        state: gameState.roundState
-    });
-
-    socket.emit('syncWordList', {
-        gameId,
-        type: 'kelime',
-        questions: gameState.questions
-    });
-}
-
-function handleAdminAction(data) {
-    if (waitingMsg) {
-        waitingMsg.style.display = 'none';
-    }
-
-    switch (data.action) {
-        case 'START_GAME':
-            if (Array.isArray(data.questions) && data.questions.length > 0) {
-                gameState.questions = normalizeQuestions(data.questions);
-            }
-            if (gameState.questions.length > 0) {
-                gameState.currentScore = 0;
-                gameState.currentIndex = -1;
-                if (scoreDisplay) {
-                    scoreDisplay.textContent = '0';
-                }
-                playSound('start');
-                loadQuestion(0, { resetRoundTimer: true, startTimer: true });
-            }
-            break;
-        case 'NEW_QUESTION':
-            loadQuestion(data.index || 0);
-            break;
-        case 'NEXT_QUESTION':
-            nextQuestion();
-            break;
-        case 'PREV_QUESTION':
-            prevQuestion();
-            break;
-        case 'REVEAL_LETTER':
-            revealRandomLetter();
-            break;
-        case 'REVEAL_SPECIFIC':
-            revealLetter(data.index);
-            break;
-        case 'TOGGLE_TIMER':
-            toggleTimer();
-            break;
-        case 'RESET_TIMER':
-            resetTimer();
-            gameState.roundState = 'playing';
-            hideRoundResult();
-            break;
-        case 'CORRECT_ANSWER':
-            handleCorrectAnswer();
-            break;
-        case 'PASS_QUESTION':
-            handlePassQuestion();
-            break;
-        case 'ADD_POINTS':
-            addPoints(data.points || 0);
-            break;
-    }
-
-    broadcastState();
-}
-
 async function generateWithAI(theme, count = 20) {
     if (window.GenerationConsole) {
         window.GenerationConsole.clear();
@@ -572,6 +478,7 @@ async function generateWithAI(theme, count = 20) {
             playSound('sync');
             window.GenerationConsole?.log('Done');
             setStatusMessage(`${questions.length} AI questions generated and started!`, '#22c55e');
+            setSetupVisible(false);
             loadQuestion(0, { resetRoundTimer: true, startTimer: true });
             return true;
         }
@@ -587,66 +494,9 @@ async function generateWithAI(theme, count = 20) {
     }
 }
 
-function initSocket() {
-    if (!socket) return;
-
-    socket.emit('hostJoin', gameId, (response) => {
-        if (response?.success) {
-            console.log('Word Game host connected:', response.gameId);
-        } else {
-            console.error('Failed to join:', response?.error);
-        }
-    });
-
-    socket.on('hostSendState', () => {
-        broadcastState();
-    });
-
-    socket.on('hostWordListUpdate', (data) => {
-        if (!Array.isArray(data?.questions)) return;
-
-        gameState.questions = normalizeQuestions(data.questions);
-        console.log('Word list updated:', gameState.questions.length, 'questions');
-        playSound('sync');
-
-        if (gameState.questions.length === 0) {
-            if (questionText) {
-                questionText.textContent = 'The question list is empty. Add questions from the admin panel.';
-            }
-            gameState.currentIndex = -1;
-            gameState.currentWord = '';
-            gameState.revealedLetters = [];
-            gameState.roundState = 'waiting';
-            stopTimer();
-            hideRoundResult();
-            renderLetters();
-            broadcastState();
-            return;
-        }
-
-        const nextIndex = gameState.currentIndex >= 0
-            ? Math.min(gameState.currentIndex, gameState.questions.length - 1)
-            : 0;
-
-        loadQuestion(nextIndex);
-        setStatusMessage('Question pack updated from the admin panel.', '#22c55e');
-        broadcastState();
-    });
-
-    socket.on('adminUpdate', (data) => {
-        if (data?.game !== 'Word Game') return;
-        handleAdminAction(data);
-    });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initSoundControls();
-
-    const idDisplay = document.createElement('div');
-    idDisplay.className = 'game-id-badge';
-    idDisplay.textContent = `ID: ${gameId}`;
-    document.body.appendChild(idDisplay);
 
     questionText = document.getElementById('question-text');
     lettersContainer = document.getElementById('letters-container');
@@ -659,14 +509,14 @@ document.addEventListener('DOMContentLoaded', () => {
     roundResultTitle = document.getElementById('round-result-title');
     roundResultMessage = document.getElementById('round-result-message');
     roundResultScore = document.getElementById('round-result-score');
+    setupControls = document.getElementById('setup-controls');
+    deckLibraryMount = document.getElementById('deck-library-mount');
     gameState.questions = normalizeQuestions(DEFAULT_QUESTIONS);
 
     updateTimerDisplay();
     if (scoreDisplay) {
         scoreDisplay.textContent = '0';
     }
-
-    initSocket();
 
     const generateButton = document.getElementById('btn-generate-ai');
     if (generateButton) generateButton.hidden = true;
@@ -711,7 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const session = await window.OpenClassPlatform.startSessionSafely({
             gameType: 'kelime',
-            roomCode: gameId,
             participantNames: [],
             ...selectedDeckRef
         }, error => {
@@ -723,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scoreDisplay) scoreDisplay.textContent = '0';
         playSound('start');
         setStatusMessage('Registered question deck started!', '#22c55e');
+        setSetupVisible(false);
         loadQuestion(0, { resetRoundTimer: true, startTimer: true });
     });
 

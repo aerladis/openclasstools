@@ -2,45 +2,6 @@
    TABOO – Game Logic
    ============================================ */
 
-const gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
-const socket = typeof io !== 'undefined' ? io() : null;
-
-if (socket) {
-    socket.emit('hostJoin', gameId, (response) => {
-        if (response && response.success) {
-            console.log('✅ Connected to game:', response.gameId);
-        } else {
-            console.error('❌ Failed to join game:', response?.error || 'Unknown error');
-        }
-    });
-
-    socket.on('hostSendState', () => {
-        emitGameState();
-        socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
-    });
-
-    socket.on('hostWordListUpdate', (data) => {
-        if (data.cards) {
-            cards = data.cards.map(normalizeCard).filter(card => card.word && card.forbidden.length >= 3);
-            shuffleDeck();
-            saveGeneratedCards(cards, { source: 'ai', theme: generationContext.theme, count: cards.length });
-        }
-    });
-}
-
-function emitGameState() {
-    if (!socket || !state.currentCard) return;
-    socket.emit('hostUpdate', {
-        gameId: gameId,
-        game: 'Taboo',
-        word: state.currentCard.word,
-        forbidden: state.currentCard.forbidden,
-        team: state.teams[state.currentTeam],
-        timeLeft: state.timeLeft,
-        active: state.timerInterval !== null
-    });
-}
-
 // ---- Default cards (~100 Taboo cards) ----
 const DEFAULT_CARDS = [
     { word: "Pizza", forbidden: ["Cheese", "Italian", "Slice", "Dough", "Oven"] },
@@ -259,9 +220,6 @@ function restoreGeneratedCards() {
     els.generateStatus.textContent = `Restored ${cards.length} cards from saved content.`;
     els.generateStatus.className = 'generate-status success';
 
-    if (socket) {
-        socket.emit('syncWordList', { gameId, type: 'taboo', cards });
-    }
 }
 
 function setGenerationContext(context) {
@@ -297,10 +255,6 @@ function appendGeneratedCards(newCards) {
 
     cards.push(...additions);
     state.deck.push(...additions.sort(() => Math.random() - 0.5));
-
-    if (socket) {
-        socket.emit('syncWordList', { gameId, type: 'taboo', cards });
-    }
 
     return additions.length;
 }
@@ -355,7 +309,6 @@ async function nextCard() {
 
     state.currentCard = state.deck.pop();
     renderCard();
-    emitGameState();
 
     if (state.deck.length <= AUTO_CARD_REFILL_THRESHOLD) {
         void maybeTopUpDeck();
@@ -405,7 +358,6 @@ els.btnStart.addEventListener('click', async () => {
     });
     const session = await window.OpenClassPlatform.startSessionSafely({
         gameType: 'taboo',
-        roomCode: gameId,
         participantNames: [...state.teams],
         ...selectedDeckRef
     }, error => {
@@ -453,7 +405,6 @@ async function startTurn() {
             endTurn();
         } else if (state.timeLeft % 5 === 0) {
             // Periodically sync time to admin
-            emitGameState();
         }
     }, 1000);
 }
@@ -461,7 +412,6 @@ async function startTurn() {
 function endTurn() {
     clearInterval(state.timerInterval);
     state.timerInterval = null;
-    emitGameState(); // Sync that turn ended
     state.scores[state.currentTeam] += state.turnPoints;
     state.turnsPlayed++;
 
@@ -575,10 +525,6 @@ els.btnGenerate.addEventListener('click', async () => {
             els.generateStatus.textContent = `✓ Generated ${data.cards.length} cards!`;
             els.generateStatus.className = 'generate-status success';
 
-            // Sync new list to admin
-            if (socket) {
-                socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
-            }
         } else {
             throw new Error('No cards returned');
         }
@@ -593,16 +539,7 @@ els.btnGenerate.addEventListener('click', async () => {
     }
 });
 
-// ============================================
-// Add Game ID UI
-// ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    const idDisplay = document.createElement('div');
-    idDisplay.className = 'game-id-badge';
-    idDisplay.textContent = `Game ID: ${gameId}`;
-    document.body.appendChild(idDisplay);
-
-    if (socket) socket.emit('syncWordList', { gameId, type: 'taboo', cards: cards });
     els.btnReuseGenerated?.addEventListener('click', restoreGeneratedCards);
     updateReuseButton();
 
@@ -624,7 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
             shuffleDeck();
             els.generateStatus.textContent = `Using registered deck “${deck.name}” (v${deck.currentVersion.versionNumber}).`;
             els.generateStatus.className = 'generate-status success';
-            if (socket) socket.emit('syncWordList', { gameId, type: 'taboo', cards });
         }
     });
 });
