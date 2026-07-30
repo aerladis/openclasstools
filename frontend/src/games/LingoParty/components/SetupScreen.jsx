@@ -318,7 +318,15 @@ export default function SetupScreen({ onStartGame, playSound }) {
       setLaunchError('');
     } catch (err) {
       addLog(`❌ AI Generation Error: ${err.message}`, 'error');
-      addLog('💡 Set your teacher name (and Gemini key) via 🔑 Teacher Settings, then retry!', 'warn');
+      if (err.code === 'TEACHER_AI_KEY_REQUIRED' || err.code === 'TEACHER_NAME_REQUIRED') {
+        addLog('💡 Set your teacher name (and Gemini key) via 🔑 Teacher Settings, then retry!', 'warn');
+      } else if (err.code === 'GEMINI_QUOTA_EXCEEDED' || err.status === 429) {
+        addLog('💡 Gemini API rate limit / quota reached (HTTP 429). Check your usage in Google AI Studio.', 'warn');
+      } else if (err.code === 'INVALID_GEMINI_KEY' || err.status === 400) {
+        addLog('💡 Invalid Gemini API key. Verify your key in 🔑 Teacher Settings.', 'warn');
+      } else {
+        addLog(`💡 Server status ${err.status || 0}: ${err.message || 'Check server logs or retry.'}`, 'warn');
+      }
       if (playSound) playSound('wrong');
     } finally {
       setIsGenerating(false);
