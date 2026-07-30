@@ -1469,6 +1469,12 @@ app.get('*', (req, res, next) => {
     if (req.originalUrl.startsWith('/api')) {
         return next();
     }
+    // A missing asset must 404, not fall through to the SPA shell. Crawlers and
+    // link unfurlers request /favicon.ico and /robots.txt directly, and a 200
+    // text/html answer makes them treat the icon as broken.
+    if (path.extname(req.path)) {
+        return res.status(404).type('txt').send('Not found');
+    }
     const indexHtmlPath = path.join(frontendDist, 'index.html');
     if (fs.existsSync(indexHtmlPath)) {
         res.sendFile(indexHtmlPath);
