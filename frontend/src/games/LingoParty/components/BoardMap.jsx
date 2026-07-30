@@ -231,13 +231,21 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
           const tileColor = isIconicTile ? conf.color : orbitColor;
           const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
 
+          // Distinct cosmic color palette for each planet sphere
+          const PLANET_SPHERE_COLORS = [
+            '#8b5cf6', '#06b6d4', '#3b82f6', '#ec4899', '#10b981',
+            '#f59e0b', '#6366f1', '#14b8a6', '#a855f7', '#f97316',
+            '#0284c7', '#d946ef'
+          ];
+          const sphereColor = isIconicTile ? conf.color : PLANET_SPHERE_COLORS[tp.idx % PLANET_SPHERE_COLORS.length];
+
           const total = tiles.length || 42;
           const hexRadius = 120;
 
           const baseRadius = total > 36 ? 56 : (total > 24 ? 64 : 72);
           const radius = isSpecial ? baseRadius + 12 : baseRadius;
+          const sphereRadius = Math.round(radius * 1.3);
           const cssClass = conf.cssClass || '';
-          const sphereTexture = SPHERE_TEXTURES[tp.idx % SPHERE_TEXTURES.length];
 
           return (
             <g
@@ -256,18 +264,33 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                   <stop offset="60%" stopColor={tileColor} />
                   <stop offset="100%" stopColor={darkenColor(tileColor, 35)} />
                 </radialGradient>
+                <radialGradient id={`sphere-planet-${tp.idx}`} cx="35%" cy="35%" r="65%">
+                  <stop offset="0%" stopColor={lightenColor(sphereColor, 40)} />
+                  <stop offset="55%" stopColor={sphereColor} />
+                  <stop offset="100%" stopColor={darkenColor(sphereColor, 40)} />
+                </radialGradient>
               </defs>
 
-              {/* ── STYLE 1: SPHERE (Classic Cosmic Orbital Spheres) ── */}
+              {/* ── STYLE 1: SPHERE (Classic Cosmic Orbital Spheres — 1.3x Bigger with Varied Colors) ── */}
               {tileStyle === 'sphere' && (
                 <>
-                  <circle r={radius + 10} fill={tileColor} opacity="0.1" className={styles.tileGlowOuter} />
-                  <circle r={radius} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
-                  {isIconicTile && <text y="0" className={styles.tileEmoji}>{conf.icon}</text>}
+                  <circle r={sphereRadius + 12} fill={sphereColor} opacity="0.18" className={styles.tileGlowOuter} />
+                  <circle
+                    r={sphereRadius}
+                    className={styles.tilePlanet}
+                    fill={`url(#sphere-planet-${tp.idx})`}
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth="2.5"
+                  />
+                  {isIconicTile ? (
+                    <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={sphereRadius * 0.65}>{conf.icon}</text>
+                  ) : (
+                    <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={sphereRadius * 0.45}>🪐</text>
+                  )}
                 </>
               )}
 
-              {/* ── STYLE 2: HONEYCOMB SURFACE (Hex Floor Grid) ── */}
+              {/* ── STYLE 2: HONEYCOMB SURFACE (Hex Floor Grid — Untouched) ── */}
               {tileStyle === 'hex' && (
                 <>
                   <polygon points={getHexPoints(hexRadius)} className={styles.tilePlanet} fill={`url(#planet-${tp.idx})`} stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
