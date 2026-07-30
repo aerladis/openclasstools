@@ -1302,14 +1302,15 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
         theme: sanitizeTheme(body.theme) || 'General English',
-        count: sanitizeCount(body.count, 100),
+        count: sanitizeCount(body.count, 200),
         cefr: sanitizeCEFR(body.cefr),
         mode: sanitizeGameMode(body.mode),
         deckTitle: sanitizeTheme(body.deckTitle)
     }),
     generate: async ({ theme, count, cefr, mode }, { apiKey }) => {
         const cefrInstruction = getCEFRInstruction(cefr);
-        const prompt = loadPrompt('lingoparty', { count, theme, cefrInstruction })
+        const perCategoryCount = Math.max(1, Math.floor(count / 8));
+        const prompt = loadPrompt('lingoparty', { count, perCategoryCount, theme, cefrInstruction })
             + `\n\n${getModeInstruction(mode)}`;
         const rawResult = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
             apiKey,

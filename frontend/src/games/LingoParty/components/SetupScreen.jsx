@@ -243,8 +243,9 @@ export default function SetupScreen({ onStartGame, playSound }) {
     deckLibrary.clearLogs();
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
 
-    const cardCount = 30;
-    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Challenges`, 'info');
+    const perCategory = 10 * orbitCount;
+    const cardCount = 80 * orbitCount;
+    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Orbits: ${orbitCount} (${perCategory}/category) | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Challenges`, 'info');
 
     const startTime = Date.now();
 
@@ -321,12 +322,13 @@ export default function SetupScreen({ onStartGame, playSound }) {
     setLaunching(true);
     setLaunchError('');
     try {
+      const cardCount = 80 * orbitCount;
       const deck = await deckLibrary.generate({
         endpoint: '/api/generate-lingoparty',
         deckName,
         theme: topic,
         cefr,
-        count: 30,
+        count: cardCount,
         mode,
       });
       setDeckName('');
