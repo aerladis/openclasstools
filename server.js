@@ -1302,27 +1302,41 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     aiModel: GEMINI_MODEL,
     parseInput: body => ({
         theme: sanitizeTheme(body.theme) || 'General English',
-        count: sanitizeCount(body.count, 200),
+        count: sanitizeCount(body.count, 300),
         cefr: sanitizeCEFR(body.cefr),
         mode: sanitizeGameMode(body.mode),
         deckTitle: sanitizeTheme(body.deckTitle)
     }),
     generate: async ({ theme, count, cefr, mode }, { apiKey }) => {
         const cefrInstruction = getCEFRInstruction(cefr);
-        const perCategoryCount = Math.max(1, Math.floor(count / 8));
-        const prompt = loadPrompt('lingoparty', { count, perCategoryCount, theme, cefrInstruction })
-            + `\n\n${getModeInstruction(mode)}`;
-        const rawResult = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
-            apiKey,
-            temperature: 0.7,
-            validate: (result) => {
-                const list = Array.isArray(result) ? result : (result?.cards || result?.items || result?.challenges || []);
-                return (!list || list.length === 0) ? 'Invalid response format - expected non-empty array of challenge objects' : null;
-            }
+        const BATCH_SIZE = 24;
+        const numBatches = Math.max(1, Math.ceil(count / BATCH_SIZE));
+        const perBatchTarget = Math.ceil(count / numBatches);
+
+        const batchPrompts = Array.from({ length: numBatches }, () => {
+            const perCategoryCount = Math.max(1, Math.floor(perBatchTarget / 8));
+            return loadPrompt('lingoparty', { count: perBatchTarget, perCategoryCount, theme, cefrInstruction })
+                + `\n\n${getModeInstruction(mode)}`;
         });
 
-        const cards = Array.isArray(rawResult) ? rawResult : (rawResult?.cards || rawResult?.items || rawResult?.challenges || []);
-        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'truefalse'];
+        const batchResults = await Promise.all(
+            batchPrompts.map(prompt =>
+                callJsonAI(prompt, LINGOPARTY_SCHEMA, {
+                    apiKey,
+                    temperature: 0.75,
+                    validate: (result) => {
+                        const list = Array.isArray(result) ? result : (result?.cards || result?.items || result?.challenges || []);
+                        return (!list || list.length === 0) ? 'Invalid response format - expected non-empty array of challenge objects' : null;
+                    }
+                }).catch(() => [])
+            )
+        );
+
+        const cards = batchResults.flatMap(res =>
+            Array.isArray(res) ? res : (res?.cards || res?.items || res?.challenges || [])
+        );
+
+        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse'];
         const validCards = cards.filter(c => c && typeof c === 'object' && c.type && validTypes.includes(c.type)).map(c => {
             if (c.type === 'riddle') {
                 return {
@@ -1361,6 +1375,12 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
                     type: 'speed',
                     prompt: String(c.prompt || 'Name 3 words related to the topic in 15 seconds.').trim(),
                     answer: String(c.answer || 'Any 3 valid words').trim()
+                };
+            } else if (c.type === 'ordering') {
+                return {
+                    type: 'ordering',
+                    prompt: String(c.prompt || 'B: Fine, thanks!\nA: Hello, how are you?\nB: I am doing great!').trim(),
+                    answer: String(c.answer || 'A: Hello, how are you? -> B: Fine, thanks! -> B: I am doing great!').trim()
                 };
             } else if (c.type === 'truefalse') {
                 return {
