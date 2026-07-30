@@ -92,6 +92,25 @@
             return getTeacherContext();
         }
 
+        async function verifyTeacherKey(settings) {
+            const teacherDisplayName = cleanText(settings?.teacherDisplayName, 'Teacher name', 120);
+            const geminiApiKey = typeof settings?.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '';
+            if (!geminiApiKey) {
+                throw new PlatformApiError('Gemini API key is required', {
+                    status: 400,
+                    code: 'TEACHER_AI_KEY_REQUIRED'
+                });
+            }
+            return request('/api/ai/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-teacher-name': teacherDisplayName,
+                    'x-gemini-api-key': geminiApiKey
+                }
+            });
+        }
+
         function requireTeacherContext() {
             const context = getTeacherContext();
             cleanText(context.teacherDisplayName, 'Teacher name', 120);
@@ -336,6 +355,7 @@
             wantsAiFeatures: function wantsAiFeatures() {
                 return session.getItem('oct_ai_declined') !== 'true';
             },
+            verifyTeacherKey,
             listDecks,
             generateDeck,
             startSession,

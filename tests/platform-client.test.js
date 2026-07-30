@@ -218,3 +218,34 @@ test('session logging failures warn without blocking an already loaded game', as
     assert.equal(session, null);
     assert.deepEqual(warnings, ['Unable to reach the game server']);
 });
+
+test('verifyTeacherKey calls /api/ai/verify and returns verification result', async () => {
+    const createPlatformClient = await loadFactory();
+    let requestedUrl = '';
+    let requestedHeaders = {};
+    const client = createPlatformClient({
+        localStorage: memoryStorage(),
+        sessionStorage: memoryStorage(),
+        fetch: async (url, options) => {
+            requestedUrl = url;
+            requestedHeaders = options.headers;
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ success: true, status: 'ok', message: 'Verified' })
+            };
+        }
+    });
+
+    const result = await client.verifyTeacherKey({
+        teacherDisplayName: 'Mr. Smith',
+        geminiApiKey: 'test-api-key-999'
+    });
+
+    assert.equal(requestedUrl, '/api/ai/verify');
+    assert.equal(requestedHeaders['x-teacher-name'], 'Mr. Smith');
+    assert.equal(requestedHeaders['x-gemini-api-key'], 'test-api-key-999');
+    assert.equal(result.success, true);
+    assert.equal(result.message, 'Verified');
+});
+

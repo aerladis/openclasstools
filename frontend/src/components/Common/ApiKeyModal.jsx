@@ -3,6 +3,7 @@ import styles from './ApiKeyModal.module.css';
 import {
   getTeacherContext,
   saveTeacherSettings,
+  verifyTeacherKey,
 } from '../../services/platformApi';
 
 export default function ApiKeyModal({ isOpen, onClose }) {
@@ -10,6 +11,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
   const [teacherName, setTeacherName] = useState('');
   const [savedStatus, setSavedStatus] = useState(false);
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifiedSuccess, setVerifiedSuccess] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -18,19 +21,58 @@ export default function ApiKeyModal({ isOpen, onClose }) {
       setTeacherName(context.teacherDisplayName);
       setSavedStatus(false);
       setError('');
+      setVerifying(false);
+      setVerifiedSuccess('');
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || !apiKey || apiKey.length < 10 || !teacherName.trim()) {
+      setVerifiedSuccess('');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setVerifying(true);
+      setError('');
+      setVerifiedSuccess('');
+      try {
+        const res = await verifyTeacherKey({
+          teacherDisplayName: teacherName,
+          geminiApiKey: apiKey,
+        });
+        setVerifiedSuccess(res.message || 'Game server connected & Gemini key verified!');
+      } catch (err) {
+        setError(err.message);
+        setVerifiedSuccess('');
+      } finally {
+        setVerifying(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [apiKey, teacherName, isOpen]);
+
   if (!isOpen) return null;
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    setError('');
+    setSavedStatus(false);
+    setVerifying(true);
+
     try {
+      await verifyTeacherKey({
+        teacherDisplayName: teacherName,
+        geminiApiKey: apiKey,
+      });
+
       saveTeacherSettings({
         teacherDisplayName: teacherName,
         geminiApiKey: apiKey,
       });
-      setError('');
+
+      setVerifiedSuccess('Game server connected & Gemini key verified!');
       setSavedStatus(true);
       setTimeout(() => {
         onClose();
@@ -38,6 +80,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     } catch (settingsError) {
       setError(settingsError.message);
       setSavedStatus(false);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -45,6 +89,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     window.sessionStorage.removeItem('oct_gemini_key');
     setApiKey('');
     setSavedStatus(false);
+    setError('');
+    setVerifiedSuccess('');
   };
 
   return (
@@ -89,10 +135,20 @@ export default function ApiKeyModal({ isOpen, onClose }) {
             </span>
           </div>
 
-          {error && <div className={styles.errorBadge}>{error}</div>}
-          {savedStatus && (
+          {verifying && (
+            <div className={styles.verifyingBadge}>
+              📡 Testing game server connection & Gemini API key...
+            </div>
+          )}
+          {verifiedSuccess && !verifying && (
             <div className={styles.successBadge}>
-              ✅ Settings & API Key saved!
+              ✅ {verifiedSuccess}
+            </div>
+          )}
+          {error && !verifying && <div className={styles.errorBadge}>{error}</div>}
+          {savedStatus && !verifying && (
+            <div className={styles.successBadge}>
+              ✅ Preferences saved!
             </div>
           )}
 
@@ -102,8 +158,8 @@ export default function ApiKeyModal({ isOpen, onClose }) {
                 Clear Key
               </button>
             )}
-            <button type="submit" className={styles.btnSave}>
-              Save Preferences
+            <button type="submit" className={styles.btnSave} disabled={verifying}>
+              {verifying ? 'Verifying...' : 'Save Preferences'}
             </button>
           </div>
         </form>
@@ -111,3 +167,4 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     </div>
   );
 }
+

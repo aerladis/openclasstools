@@ -96,6 +96,24 @@ function requiredTeacherContext() {
   return context;
 }
 
+export async function verifyTeacherKey({ teacherDisplayName, geminiApiKey }) {
+  const name = String(teacherDisplayName || '').trim();
+  const key = String(geminiApiKey || '').trim();
+  if (!name) throw new PlatformApiError('Teacher name is required', { status: 400 });
+  if (!key) throw new PlatformApiError('Gemini API key is required', { status: 400 });
+
+  const body = await request('/api/ai/verify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-teacher-name': name,
+      'x-gemini-api-key': key,
+    },
+  });
+
+  return body;
+}
+
 export async function listDecks(gameType) {
   const query = new URLSearchParams({ gameType });
   return (await request(`/api/decks?${query}`)).decks || [];

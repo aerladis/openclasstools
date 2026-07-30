@@ -47,3 +47,15 @@ test('all content generators register named decks through the shared handler', a
     assert.doesNotMatch(source, /KeyPrefix/);
     assert.doesNotMatch(source, /berkai2026|function extractTeacherContext|function logGameSessionToSupabase|function logGameActivityToSupabase/);
 });
+
+test('server mounts /api/ai/verify endpoint for key & connectivity checks before static files', async () => {
+    const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+    const verifyMount = source.indexOf("app.post('/api/ai/verify'");
+    const staticFiles = source.indexOf('express.static');
+
+    assert.ok(verifyMount >= 0, '/api/ai/verify endpoint mount is missing');
+    assert.ok(verifyMount < staticFiles, '/api/ai/verify must be mounted before static middleware');
+    assert.match(source, /GEMINI_QUOTA_EXCEEDED/);
+    assert.match(source, /INVALID_GEMINI_KEY/);
+});
+

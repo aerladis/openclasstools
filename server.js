@@ -1394,6 +1394,56 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Verification endpoint for teacher API key & server connectivity
+app.post('/api/ai/verify', apiRateLimit, async (req, res) => {
+    const teacherName = String(req.headers['x-teacher-name'] || req.body?.teacherName || '').trim();
+    const apiKey = String(req.headers['x-gemini-api-key'] || req.body?.geminiApiKey || '').trim();
+
+    if (!teacherName) {
+        return res.status(400).json({
+            success: false,
+            code: 'TEACHER_NAME_REQUIRED',
+            error: 'Teacher name is required'
+        });
+    }
+    if (!apiKey) {
+        return res.status(400).json({
+            success: false,
+            code: 'TEACHER_AI_KEY_REQUIRED',
+            error: 'Gemini API key is required'
+        });
+    }
+
+    try {
+        await callGemini('Ping test', { apiKey, maxOutputTokens: 1, temperature: 0.1 });
+        return res.json({
+            success: true,
+            status: 'ok',
+            message: 'Game server connected & Gemini API key verified'
+        });
+    } catch (err) {
+        if (err.quotaExceeded) {
+            return res.status(429).json({
+                success: false,
+                code: 'GEMINI_QUOTA_EXCEEDED',
+                error: 'Gemini API quota or rate limit exceeded (HTTP 429). Please check your Gemini account usage.'
+            });
+        }
+        if (err.retryable === false || String(err.message).includes('400') || String(err.message).includes('403') || String(err.message).includes('API key')) {
+            return res.status(400).json({
+                success: false,
+                code: 'INVALID_GEMINI_KEY',
+                error: 'Invalid Gemini API key. Please check your key in Google AI Studio.'
+            });
+        }
+        return res.status(502).json({
+            success: false,
+            code: 'GEMINI_UNAVAILABLE',
+            error: 'Gemini API service is currently unavailable. Please try again later.'
+        });
+    }
+});
+
 // ---- Serve static files (React + Vite build & legacy html) ----
 const frontendDist = path.join(__dirname, 'frontend', 'dist');
 if (fs.existsSync(frontendDist)) {
