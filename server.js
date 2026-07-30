@@ -1300,22 +1300,32 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     contentKey: 'cards',
     generationService,
     aiModel: GEMINI_MODEL,
-    parseInput: body => ({
-        theme: sanitizeTheme(body.theme) || 'General English',
-        count: sanitizeCount(body.count, 300),
-        cefr: sanitizeCEFR(body.cefr),
-        mode: sanitizeGameMode(body.mode),
-        deckTitle: sanitizeTheme(body.deckTitle)
-    }),
+    parseInput: body => {
+        const playerCount = sanitizeCount(body.playerCount || body.teamCount, 8) || 3;
+        const orbitCount = sanitizeCount(body.orbitCount, 5) || 1;
+        const calculatedCount = 5 * playerCount * orbitCount * 8;
+        const count = sanitizeCount(body.count || calculatedCount, 400);
+
+        return {
+            theme: sanitizeTheme(body.theme) || 'General English',
+            count,
+            playerCount,
+            orbitCount,
+            cefr: sanitizeCEFR(body.cefr),
+            mode: sanitizeGameMode(body.mode),
+            deckTitle: sanitizeTheme(body.deckTitle)
+        };
+    },
     generate: async ({ theme, count, cefr, mode }, { apiKey }) => {
         const cefrInstruction = getCEFRInstruction(cefr);
         const BATCH_SIZE = 24;
         const numBatches = Math.max(1, Math.ceil(count / BATCH_SIZE));
         const perBatchTarget = Math.ceil(count / numBatches);
 
-        const batchPrompts = Array.from({ length: numBatches }, () => {
+        const batchPrompts = Array.from({ length: numBatches }, (_, i) => {
             const perCategoryCount = Math.max(1, Math.floor(perBatchTarget / 8));
-            return loadPrompt('lingoparty', { count: perBatchTarget, perCategoryCount, theme, cefrInstruction })
+            const batchIndex = i + 1;
+            return loadPrompt('lingoparty', { count: perBatchTarget, perCategoryCount, batchIndex, numBatches, theme, cefrInstruction })
                 + `\n\n${getModeInstruction(mode)}`;
         });
 
@@ -1332,14 +1342,28 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
             )
         );
 
-        const cards = batchResults.flatMap(res =>
+        const rawCards = batchResults.flatMap(res =>
             Array.isArray(res) ? res : (res?.cards || res?.items || res?.challenges || [])
         );
 
         const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse'];
-        const validCards = cards.filter(c => c && typeof c === 'object' && c.type && validTypes.includes(c.type)).map(c => {
+        const seenKeys = new Set();
+        const validCards = [];
+
+        for (const c of rawCards) {
+            if (!c || typeof c !== 'object' || !c.type || !validTypes.includes(c.type)) continue;
+
+            const rawText = c.prompt || c.scrambledWord || c.targetWord || c.word || '';
+            const key = String(rawText).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            if (key && seenKeys.has(key)) {
+                continue; // Strictly filter out duplicate questions!
+            }
+            if (key) seenKeys.add(key);
+
+            let normalized;
             if (c.type === 'riddle') {
-                return {
+                normalized = {
                     type: 'riddle',
                     prompt: String(c.prompt || 'Solve the linguistic riddle.').trim(),
                     answer: String(c.answer || 'Answer').trim()
@@ -1347,55 +1371,56 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
             } else if (c.type === 'scramble') {
                 const targetWord = String(c.targetWord || c.word || 'WORD').toUpperCase().trim();
                 const scrambledWord = jumbleWord(targetWord);
-                return {
+                normalized = {
                     type: 'scramble',
                     scrambledWord,
                     targetWord,
                     clue: String(c.clue || c.prompt || 'Unscramble the letters to reveal the target word.').trim()
                 };
             } else if (c.type === 'pronunciation') {
-                return {
+                normalized = {
                     type: 'pronunciation',
                     prompt: String(c.prompt || 'Read this sentence out loud clearly.').trim()
                 };
             } else if (c.type === 'association') {
-                return {
+                normalized = {
                     type: 'association',
                     prompt: String(c.prompt || 'Name 3 words associated with the topic.').trim(),
                     answer: String(c.answer || 'Valid collocations').trim()
                 };
             } else if (c.type === 'grammar') {
-                return {
+                normalized = {
                     type: 'grammar',
                     prompt: String(c.prompt || 'Correct the error in the sentence.').trim(),
                     answer: String(c.answer || 'Correct sentence.').trim()
                 };
             } else if (c.type === 'speed') {
-                return {
+                normalized = {
                     type: 'speed',
                     prompt: String(c.prompt || 'Name 3 words related to the topic in 15 seconds.').trim(),
                     answer: String(c.answer || 'Any 3 valid words').trim()
                 };
             } else if (c.type === 'ordering') {
-                return {
+                normalized = {
                     type: 'ordering',
                     prompt: String(c.prompt || 'B: Fine, thanks!\nA: Hello, how are you?\nB: I am doing great!').trim(),
                     answer: String(c.answer || 'A: Hello, how are you? -> B: Fine, thanks! -> B: I am doing great!').trim()
                 };
             } else if (c.type === 'truefalse') {
-                return {
+                normalized = {
                     type: 'truefalse',
                     prompt: String(c.prompt || 'Decide whether the statement is true or false.').trim(),
                     answer: Boolean(c.answer)
                 };
             } else {
-                return {
+                normalized = {
                     type: 'roleplay',
                     prompt: String(c.prompt || 'Have a short 30-second dialogue about the topic.').trim(),
                     answer: String(c.answer || 'Key dialogue phrases').trim()
                 };
             }
-        });
+            validCards.push(normalized);
+        }
 
         return validCards.slice(0, count);
     },

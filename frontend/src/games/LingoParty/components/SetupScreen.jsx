@@ -243,9 +243,9 @@ export default function SetupScreen({ onStartGame, playSound }) {
     deckLibrary.clearLogs();
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
 
-    const perCategory = 10 * orbitCount;
-    const cardCount = 80 * orbitCount;
-    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Orbits: ${orbitCount} (${perCategory}/category) | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Challenges`, 'info');
+    const perCategory = 5 * teamCount * orbitCount;
+    const cardCount = 8 * perCategory;
+    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Crews: ${teamCount} | Orbits: ${orbitCount} (${perCategory}/category) | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Unique Challenges`, 'info');
 
     const startTime = Date.now();
 
@@ -257,12 +257,14 @@ export default function SetupScreen({ onStartGame, playSound }) {
         theme: topic,
         cefr,
         count: cardCount,
+        playerCount: teamCount,
+        orbitCount,
         mode
       });
 
       const cards = deck?.currentVersion?.content || [];
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-      addLog(`✅ AI Success! ${cards.length} cards generated in ${elapsed}s`, 'success');
+      addLog(`✅ AI Success! ${cards.length} unique cards generated in ${elapsed}s`, 'success');
 
       const counts = {};
       cards.forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
@@ -322,13 +324,15 @@ export default function SetupScreen({ onStartGame, playSound }) {
     setLaunching(true);
     setLaunchError('');
     try {
-      const cardCount = 80 * orbitCount;
+      const cardCount = 5 * teamCount * orbitCount * 8;
       const deck = await deckLibrary.generate({
         endpoint: '/api/generate-lingoparty',
         deckName,
         theme: topic,
         cefr,
         count: cardCount,
+        playerCount: teamCount,
+        orbitCount,
         mode,
       });
       setDeckName('');
