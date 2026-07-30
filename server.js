@@ -392,57 +392,70 @@ async function callGemini(prompt, options = {}) {
         throw new Error('No valid Gemini API key provided. Enter your key in the UI.');
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-    const generationConfig = buildGeminiGenerationConfig(options);
+    const modelsToTry = [GEMINI_MODEL, 'gemini-2.0-flash', 'gemini-1.5-flash'].filter((m, i, a) => a.indexOf(m) === i);
+    let lastErr;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    for (const model of modelsToTry) {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+        const generationConfig = buildGeminiGenerationConfig(options);
 
-    try {
-        console.log(`🤖 [Gemini Request] Model: ${GEMINI_MODEL} | Prompt length: ${prompt.length}`);
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: prompt }]
-                }],
-                generationConfig
-            }),
-            signal: controller.signal
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
 
-        clearTimeout(timeout);
+        try {
+            console.log(`🤖 [Gemini Request] Model: ${model} | Prompt length: ${prompt.length}`);
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }],
+                    generationConfig
+                }),
+                signal: controller.signal
+            });
 
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error(`❌ [Gemini API Error] HTTP ${response.status} ${response.statusText}`);
+            clearTimeout(timeout);
 
-            let apiStatus, apiMessage;
-            try {
-                const parsedErr = JSON.parse(errBody);
-                apiStatus = parsedErr?.error?.status;
-                apiMessage = parsedErr?.error?.message;
-            } catch { /* non-JSON error body */ }
+            if (!response.ok) {
+                const errBody = await response.text();
+                console.error(`❌ [Gemini API Error] HTTP ${response.status} ${response.statusText} for model ${model}`);
 
-            const err = new Error(apiMessage || `Gemini API returned HTTP ${response.status} ${response.statusText}`);
-            err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400;
-            err.quotaExceeded = apiStatus === 'RESOURCE_EXHAUSTED';
-            throw err;
+                let apiStatus, apiMessage;
+                try {
+                    const parsedErr = JSON.parse(errBody);
+                    apiStatus = parsedErr?.error?.status;
+                    apiMessage = parsedErr?.error?.message;
+                } catch { /* non-JSON error body */ }
+
+                if (response.status === 404 && model !== modelsToTry[modelsToTry.length - 1]) {
+                    console.warn(`[Gemini Fallback] Model ${model} returned 404, trying next model...`);
+                    continue;
+                }
+
+                const err = new Error(apiMessage || `Gemini API returned HTTP ${response.status} ${response.statusText}`);
+                err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400 && response.status !== 403;
+                err.quotaExceeded = apiStatus === 'RESOURCE_EXHAUSTED' || response.status === 429;
+                throw err;
+            }
+
+            const data = await response.json();
+            const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+            console.log(`✨ [Gemini Response Success] Model ${model} | Output length: ${textResult.length} characters`);
+            return textResult;
+        } catch (err) {
+            clearTimeout(timeout);
+            if (err.name === 'AbortError') throw new Error('Gemini API generation timed out (60s limit)');
+            if (err.quotaExceeded || err.retryable === false) throw err;
+            lastErr = err;
         }
-
-        const data = await response.json();
-        const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        console.log(`✨ [Gemini Response Success] Output length: ${textResult.length} characters`);
-        return textResult;
-    } catch (err) {
-        clearTimeout(timeout);
-        if (err.name === 'AbortError') throw new Error('Gemini API generation timed out (60s limit)');
-        throw err;
     }
+
+    throw lastErr;
 }
 
 async function callOpenAIProvider(prompt) {
