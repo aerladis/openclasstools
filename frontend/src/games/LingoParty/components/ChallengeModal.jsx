@@ -25,6 +25,30 @@ function getGuaranteedScramble(scrambledWord, targetWord) {
   return scrambleChars.split('').join(' - ');
 }
 
+function parseOrderingLines(rawPrompt) {
+  if (!rawPrompt || typeof rawPrompt !== 'string') return [];
+
+  let text = rawPrompt.trim();
+
+  // Strip common header prefix if present (e.g. "Put this conversation in order:")
+  text = text.replace(/^(put\s+this\s+conversation\s+(in\s+)?(correct\s+)?order\s*:?|reorder\s+(the\s+following\s+)?(conversation\s+)?:?|order\s+the\s+dialogue\s*:?)/i, '').trim();
+
+  let lines = [];
+  if (/(^|\s)[1-9]\.\s+/.test(text)) {
+    lines = text.split(/(?=(?:^|\s)[1-9]\.\s+)/).map(s => s.trim()).filter(Boolean);
+  } else if (text.includes('\n')) {
+    lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+  } else if (/[A-Z][a-z]*\s*:\s*/.test(text)) {
+    lines = text.split(/(?=[A-Z][a-z]*\s*:\s*)/).map(s => s.trim()).filter(Boolean);
+  } else {
+    lines = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+  }
+
+  return lines
+    .map(line => line.replace(/^(put\s+this\s+conversation[^:]*:?)/i, '').replace(/^[1-9]\.\s*/, '').trim())
+    .filter(Boolean);
+}
+
 export default function ChallengeModal({ challenge, activeTeam, onResolve, playSound }) {
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [isClueUnlocked, setIsClueUnlocked] = useState(false);
@@ -39,19 +63,7 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     setTimerActive(true);
 
     if (challenge?.type === 'ordering' && challenge.prompt) {
-      const rawLines = challenge.prompt
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean);
-      
-      const cleanLines = rawLines.filter((line, idx) => {
-        if (idx === 0 && (line.toLowerCase().includes('order') || line.endsWith(':'))) {
-          return false;
-        }
-        return true;
-      });
-
-      setOrderedLines(cleanLines.length > 0 ? cleanLines : rawLines);
+      setOrderedLines(parseOrderingLines(challenge.prompt));
     } else {
       setOrderedLines([]);
     }
