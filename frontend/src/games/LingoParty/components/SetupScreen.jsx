@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import useDeckLibrary from '../../../hooks/useDeckLibrary';
-import DeckLibraryPanel from './DeckLibraryPanel';
 import GenerationConsole from '../../../components/Common/GenerationConsole';
 import ApiKeyModal from '../../../components/Common/ApiKeyModal';
 import {
@@ -120,7 +119,6 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [debugLogs, setDebugLogs] = useState([]);
   const [launching, setLaunching] = useState(false);
   const [launchError, setLaunchError] = useState('');
-  const [showDeckLibrary, setShowDeckLibrary] = useState(false);
   const [activeGeneratedDeck, setActiveGeneratedDeck] = useState(null);
   const deckLibrary = useDeckLibrary('lingoparty');
 
@@ -641,32 +639,6 @@ export default function SetupScreen({ onStartGame, playSound }) {
           <div style={{ color: '#ef4444', textAlign: 'center', fontWeight: 700, marginTop: '0.4rem', fontSize: '0.9rem' }}>
             {launchError}
           </div>
-        )}
-
-        <div className={styles.btnRow}>
-          <button
-            type="button"
-            className={`btn-secondary ${styles.btnToggleLibrary}`}
-            onClick={() => setShowDeckLibrary((show) => !show)}
-          >
-            {showDeckLibrary ? '▲ Hide Registered Decks' : '▼ Registered Challenge Decks'}
-          </button>
-        </div>
-
-        {showDeckLibrary && (
-          <DeckLibraryPanel
-            {...deckLibrary}
-            cefr={cefr}
-            topic={topic}
-            deckName={deckName}
-            launching={launching}
-            launchError={launchError}
-            onCefrChange={setCefr}
-            onTopicChange={setTopic}
-            onDeckNameChange={setDeckName}
-            onLaunch={() => launchDeck(deckLibrary.selectedDeck)}
-            onGenerate={generateAndLaunch}
-          />
         )}
       </div>
 
