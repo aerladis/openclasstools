@@ -99,7 +99,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const [cefr, setCefr] = useState('B1');
   const [topic, setTopic] = useState('General Classroom Vocabulary & Idioms');
   const [deckName, setDeckName] = useState('');
-  const [baseColor, setBaseColor] = useState('#64748b');
+  const [baseColor, setBaseColor] = useState('#0f2752');
   const [customNames, setCustomNames] = useState(['Crew A', 'Crew B', 'Crew C', 'Crew D', 'Crew E', 'Crew F', 'Crew G', 'Crew H']);
   const [customPawns, setCustomPawns] = useState(['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬']);
   const [customColors, setCustomColors] = useState(TEAM_COLORS);

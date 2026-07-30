@@ -227,9 +227,9 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
           const isSpecial = tp.type === 'start' || tp.type === 'trophy';
           const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'vortex', 'asteroid'].includes(tp.type);
 
-          const defaultColor = baseColor || currentOrbitTheme.color;
-          const tileColor = isIconicTile ? conf.color : defaultColor;
-          const tileGlow = isIconicTile ? conf.glow : defaultColor;
+          const orbitColor = currentOrbitTheme.color;
+          const tileColor = isIconicTile ? conf.color : orbitColor;
+          const tileGlow = isIconicTile ? conf.glow : currentOrbitTheme.glow;
 
           const total = tiles.length || 42;
           const hexRadius = 120;
