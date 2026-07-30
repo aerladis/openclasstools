@@ -124,12 +124,41 @@
   border: 1.5px solid rgba(249, 115, 22, 0.4);
   border-radius: 12px;
   padding: 0.75rem 1rem;
-  transition: all 0.2s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
 .orderingItem:hover {
   border-color: rgba(249, 115, 22, 0.8);
   box-shadow: 0 0 16px rgba(249, 115, 22, 0.25);
+}
+
+.orderingItem:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.45;
+  border-color: #f97316 !important;
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.5) !important;
+  transform: scale(0.98);
+}
+
+.dragOver {
+  border-color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.18) !important;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-2px);
+}
+
+.dragHandle {
+  color: rgba(249, 115, 22, 0.7);
+  font-size: 1.15rem;
+  cursor: grab;
+  padding: 0 0.2rem;
+  letter-spacing: -2px;
 }
 
 .orderingIndex {

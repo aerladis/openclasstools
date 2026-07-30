@@ -69,14 +69,80 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     }
   }, [challenge]);
 
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const touchStartIdxRef = useRef(null);
+
   const moveLine = (index, direction) => {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= orderedLines.length) return;
+    reorderLines(index, targetIndex);
+  };
+
+  const reorderLines = (fromIndex, toIndex) => {
+    if (fromIndex < 0 || fromIndex >= orderedLines.length || toIndex < 0 || toIndex >= orderedLines.length) return;
     const copy = [...orderedLines];
-    const [moved] = copy.splice(index, 1);
-    copy.splice(targetIndex, 0, moved);
+    const [moved] = copy.splice(fromIndex, 1);
+    copy.splice(toIndex, 0, moved);
     setOrderedLines(copy);
     if (playSound) playSound('step');
+  };
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    const sourceIndex = draggedIndex != null ? draggedIndex : parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if (sourceIndex !== null && !isNaN(sourceIndex) && sourceIndex !== targetIndex) {
+      reorderLines(sourceIndex, targetIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleTouchStart = (index) => {
+    touchStartIdxRef.current = index;
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchStartIdxRef.current === null) return;
+    const touch = e.touches[0];
+    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (targetElement) {
+      const itemNode = targetElement.closest('[data-ordering-index]');
+      if (itemNode) {
+        const hoverIndex = parseInt(itemNode.getAttribute('data-ordering-index'), 10);
+        if (!isNaN(hoverIndex) && hoverIndex !== dragOverIndex) {
+          setDragOverIndex(hoverIndex);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartIdxRef.current !== null && dragOverIndex !== null && touchStartIdxRef.current !== dragOverIndex) {
+      reorderLines(touchStartIdxRef.current, dragOverIndex);
+    }
+    touchStartIdxRef.current = null;
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   useEffect(() => {
@@ -189,30 +255,47 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
         {challenge.type === 'ordering' && (
           <div className={styles.orderingContainer}>
             <div className={styles.orderingList}>
-              {orderedLines.map((line, idx) => (
-                <div key={idx} className={styles.orderingItem}>
-                  <span className={styles.orderingIndex}>{idx + 1}</span>
-                  <span className={styles.orderingText}>{line}</span>
-                  <div className={styles.orderingControls}>
-                    <button
-                      className={styles.orderBtn}
-                      onClick={() => moveLine(idx, -1)}
-                      disabled={idx === 0}
-                      title="Move line up"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      className={styles.orderBtn}
-                      onClick={() => moveLine(idx, 1)}
-                      disabled={idx === orderedLines.length - 1}
-                      title="Move line down"
-                    >
-                      ▼
-                    </button>
+              {orderedLines.map((line, idx) => {
+                const isDragging = draggedIndex === idx;
+                const isDragOver = dragOverIndex === idx;
+                return (
+                  <div
+                    key={idx}
+                    data-ordering-index={idx}
+                    className={`${styles.orderingItem} ${isDragging ? styles.dragging : ''} ${isDragOver ? styles.dragOver : ''}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    onTouchStart={() => handleTouchStart(idx)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <span className={styles.dragHandle} title="Drag to reorder">⋮⋮</span>
+                    <span className={styles.orderingIndex}>{idx + 1}</span>
+                    <span className={styles.orderingText}>{line}</span>
+                    <div className={styles.orderingControls}>
+                      <button
+                        className={styles.orderBtn}
+                        onClick={() => moveLine(idx, -1)}
+                        disabled={idx === 0}
+                        title="Move line up"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={styles.orderBtn}
+                        onClick={() => moveLine(idx, 1)}
+                        disabled={idx === orderedLines.length - 1}
+                        title="Move line down"
+                      >
+                        ▼
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
