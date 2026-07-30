@@ -5,7 +5,7 @@ import styles from './CosmicWheelModal.module.css';
 const WHEEL_SEGMENTS = [
   { type: 'riddle', label: 'Riddle', color: '#8b5cf6', icon: '🧩' },
   { type: 'scramble', label: 'Scramble', color: '#06b6d4', icon: '🔤' },
-  { type: 'pronunciation', label: 'Speech', color: '#14b8a6', icon: '🗣️' },
+  { type: 'pronunciation', label: 'Tongue-Twister', color: '#14b8a6', icon: '👅' },
   { type: 'grammar', label: 'Grammar', color: '#f43f5e', icon: '✍️' },
   { type: 'speed', label: 'Speed Trivia', color: '#eab308', icon: '⚡' },
   { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬' },

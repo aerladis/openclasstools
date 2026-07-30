@@ -137,8 +137,18 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     <div className={styles.modalOverlay}>
       <div className={`glass-card ${styles.challengeCard}`}>
         <div className={styles.headerRow}>
-          <span className={styles.typeBadge} style={challenge.isBoss ? { background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: '#fff', fontWeight: 'bold' } : {}}>
-            {challenge.isBoss ? '👑 BOSS CHALLENGE' : challenge.type === 'roleplay' ? '🎭 ROLEPLAY SCENARIO' : challenge.type === 'truefalse' ? '🔄 TRUE OR FALSE' : challenge.type === 'ordering' ? '🔢 CONVERSATION ORDER' : (challenge.type || 'Challenge').toUpperCase()}
+          <span className={styles.typeBadge} style={challenge.isBoss ? { background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: '#fff', fontWeight: 'bold' } : (challenge.type === 'pronunciation' || challenge.type === 'speech' ? { background: 'rgba(20, 184, 166, 0.25)', borderColor: '#14b8a6', color: '#2dd4bf' } : {})}>
+            {challenge.isBoss
+              ? '👑 BOSS CHALLENGE'
+              : challenge.type === 'roleplay'
+                ? '🎭 ROLEPLAY SCENARIO'
+                : challenge.type === 'truefalse'
+                  ? '🔄 TRUE OR FALSE'
+                  : challenge.type === 'ordering'
+                    ? '🔢 CONVERSATION ORDER'
+                    : (challenge.type === 'pronunciation' || challenge.type === 'speech')
+                      ? '👅 TONGUE-TWISTER'
+                      : (challenge.type || 'Challenge').toUpperCase()}
           </span>
           <span className={styles.coinsBadge} style={challenge.isBoss ? { background: 'rgba(56, 189, 248, 0.25)', borderColor: '#38bdf8', color: '#38bdf8' } : {}}>
             {challenge.isBoss ? '🧊 +1 Gibel Cube' : '+1 🏆 Trophy'}
@@ -184,6 +194,12 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {(challenge.type === 'pronunciation' || challenge.type === 'speech') && (
+          <div className={styles.subcontentBox} style={{ background: 'rgba(20, 184, 166, 0.15)', borderColor: 'rgba(20, 184, 166, 0.4)' }}>
+            <strong>👅 Tongue-Twister Challenge: </strong>Recite this tongue-twister out loud 3 times quickly without stumbling!
           </div>
         )}
 

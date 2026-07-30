@@ -214,7 +214,8 @@ export default function BoardStage({
       const tileLabels = {
         riddle: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         scramble: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
-        pronunciation: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
+        pronunciation: { text: '👅 TONGUE-TWISTER LANDED!', color: '#14b8a6' },
+        speech: { text: '👅 TONGUE-TWISTER LANDED!', color: '#14b8a6' },
         association: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         grammar: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         speed: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
