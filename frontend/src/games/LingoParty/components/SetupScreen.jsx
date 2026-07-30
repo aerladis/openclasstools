@@ -191,20 +191,18 @@ export default function SetupScreen({ onStartGame, playSound }) {
     }
   };
 
-  const launchSavedDeck = (deck) => {
-    if (!deck || !Array.isArray(deck.cards) || deck.cards.length === 0) return;
-    const deckMode = ['solo', 'duo', 'crew'].includes(deck.mode) ? deck.mode : 'crew';
-    setMode(deckMode);
-    if (playSound) playSound('correct');
+  const launchSavedDeck = (deck, e) => {
+    const isShiftDebug = Boolean(e && e.shiftKey);
     onStartGame({
       teams: buildTeams(),
       boardLength,
       baseColor,
-      deck: deck.cards,
-      mode: deckMode,
+      deck: deck.currentVersion?.content || deck.cards || [],
+      mode,
       orbitCount,
       deckId: deck.id || deck.deckId,
       deckVersionId: deck.versionId || deck.currentVersionId || deck.currentVersion?.id,
+      isTesterMode: isShiftDebug,
     });
   };
 
@@ -213,71 +211,29 @@ export default function SetupScreen({ onStartGame, playSound }) {
     const teams = buildTeams();
     const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system')) || deckLibrary.decks[0];
 
-    if (isShiftDebug) {
-      if (playSound) playSound('correct');
-      addLog('🛠️ Debug: Shift+Click detected! Launching with default debug deck.', 'warn');
-      onStartGame({
-        teams,
-        boardLength,
-        baseColor,
-        deck: DEFAULT_DECK,
-        mode,
-        orbitCount,
-        deckId: systemDeck?.id,
-        deckVersionId: systemDeck?.currentVersion?.id,
-      });
-      return;
-    }
+    const targetDeckObj = activeGeneratedDeck || deckLibrary.selectedDeck || systemDeck;
+    const cards = targetDeckObj?.currentVersion?.content || targetDeckObj?.cards || DEFAULT_DECK;
 
-    if (activeGeneratedDeck) {
-      const cards = activeGeneratedDeck.currentVersion?.content || activeGeneratedDeck.cards || [];
-      if (cards.length > 0) {
-        if (playSound) playSound('correct');
-        onStartGame({
-          teams,
-          boardLength,
-          baseColor,
-          deck: cards,
-          mode,
-          orbitCount,
-          deckId: activeGeneratedDeck.id,
-          deckVersionId: activeGeneratedDeck.currentVersion?.id || activeGeneratedDeck.versionId || activeGeneratedDeck.currentVersionId,
-        });
-        return;
+    if (cards && cards.length > 0) {
+      if (playSound) playSound('correct');
+      if (isShiftDebug) {
+        addLog('🛠️ Shift+Click: Question Tester Panel active!', 'warn');
       }
-    }
-
-    if (deckLibrary.selectedDeck?.currentVersion?.content) {
-      if (playSound) playSound('correct');
       onStartGame({
         teams,
         boardLength,
         baseColor,
-        deck: deckLibrary.selectedDeck.currentVersion.content,
+        deck: cards,
         mode,
         orbitCount,
-        deckId: deckLibrary.selectedDeck.id,
-        deckVersionId: deckLibrary.selectedDeck.currentVersion.id,
+        deckId: targetDeckObj?.id || systemDeck?.id,
+        deckVersionId: targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id,
+        isTesterMode: isShiftDebug,
       });
       return;
     }
 
-    if (systemDeck?.currentVersion?.content) {
-      if (playSound) playSound('correct');
-      onStartGame({
-        teams,
-        boardLength,
-        baseColor,
-        deck: systemDeck.currentVersion.content,
-        mode,
-        orbitCount,
-        deckId: systemDeck.id,
-        deckVersionId: systemDeck.currentVersion.id,
-      });
-      return;
-    }
-
-    setLaunchError('Generate an AI deck or select a saved deck first! (Debug: Shift+Click to launch default deck)');
+    setLaunchError('Generate an AI deck or select a saved deck first!');
     if (playSound) playSound('wrong');
   };
 
@@ -333,7 +289,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
     }
   };
 
-  const launchDeck = async (deck) => {
+  const launchDeck = async (deck, options = {}) => {
     if (!deck?.currentVersion?.id) {
       setLaunchError('Choose or generate a registered deck first.');
       return;
@@ -350,6 +306,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
         orbitCount,
         deckId: deck.id,
         deckVersionId: deck.currentVersion.id,
+        isTesterMode: !!options.isTesterMode,
       });
       playSound?.('correct');
     } catch (error) {

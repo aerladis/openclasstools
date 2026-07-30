@@ -1,0 +1,190 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 2, 12, 0.88);
+  backdrop-filter: blur(10px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.testerCard {
+  max-width: 900px;
+  width: 92vw;
+  max-height: 88vh;
+  padding: 2rem 2.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  background: rgba(10, 8, 24, 0.96) !important;
+  border-color: rgba(168, 85, 247, 0.4) !important;
+  box-shadow: 0 0 60px rgba(168, 85, 247, 0.25) !important;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.header h2 {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #f3e8ff;
+  margin: 0;
+}
+
+.subtext {
+  font-size: 0.85rem;
+  color: #a78bfa;
+  margin-top: 0.3rem;
+}
+
+.closeBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #e2e8f0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+}
+
+.filterRow {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.filterTab {
+  background: rgba(15, 12, 35, 0.7);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 20px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #c4b5fd;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterTab:hover {
+  border-color: rgba(168, 85, 247, 0.6);
+  color: #ffffff;
+}
+
+.filterActive {
+  background: rgba(168, 85, 247, 0.3);
+  border-color: #a855f7;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+}
+
+.searchInput {
+  background: rgba(15, 12, 35, 0.8);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  font-size: 0.92rem;
+  color: #ffffff;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: #a855f7;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+  max-height: 52vh;
+}
+
+.cardItem {
+  background: rgba(15, 12, 35, 0.85);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cardIndex {
+  background: rgba(168, 85, 247, 0.25);
+  color: #d8b4fe;
+  font-weight: 900;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 8px;
+}
+
+.typeBadge {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.testRunBtn {
+  margin-left: auto;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.testRunBtn:hover {
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
+.cardPrompt {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.orderingPre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  background: rgba(249, 115, 22, 0.1);
+  border-left: 3px solid #f97316;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin: 0.3rem 0;
+  color: #fed7aa;
+}
+
+.cardAnswer {
+  color: #34d399;
+  font-size: 0.88rem;
+}

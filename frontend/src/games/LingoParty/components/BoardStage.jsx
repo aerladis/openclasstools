@@ -9,6 +9,7 @@ import GuideModal from './GuideModal';
 import VictoryModal from './VictoryModal';
 import CosmicWheelModal from './CosmicWheelModal';
 import OrbitResultModal from './OrbitResultModal';
+import QuestionTesterModal from './QuestionTesterModal';
 import confetti from 'canvas-confetti';
 
 const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -31,6 +32,7 @@ export default function BoardStage({
   const [hoveredPlanet, setHoveredPlanet] = useState(null);
   const [pendingAttack, setPendingAttack] = useState(null);
   const [orbitResult, setOrbitResult] = useState(null); // { orbitNumber, cubeTeam, teams }
+  const [showQuestionTester, setShowQuestionTester] = useState(!!gameState.isTesterMode);
 
   const usedChallengeKeysRef = useRef(new Set());
 
@@ -627,6 +629,19 @@ export default function BoardStage({
           </button>
           <button
             className="btn-secondary"
+            style={{
+              width: '100%',
+              marginTop: '0.4rem',
+              background: showQuestionTester ? 'rgba(168, 85, 247, 0.35)' : undefined,
+              borderColor: showQuestionTester ? '#a855f7' : undefined,
+              boxShadow: showQuestionTester ? '0 0 12px rgba(168, 85, 247, 0.4)' : undefined,
+            }}
+            onClick={() => setShowQuestionTester(true)}
+          >
+            🔍 Question Tester
+          </button>
+          <button
+            className="btn-secondary"
             style={{ width: '100%', marginTop: '0.4rem' }}
             onClick={() => {
               onGameComplete?.(gameState.teams, 'returned_to_setup');
@@ -731,6 +746,18 @@ export default function BoardStage({
         }}
         playSound={playSound}
       />
+
+      {showQuestionTester && (
+        <QuestionTesterModal
+          deck={gameState.deck || []}
+          onClose={() => setShowQuestionTester(false)}
+          onTestCard={(card) => {
+            setCurrentChallenge(card);
+            setActiveModal('challenge');
+            setShowQuestionTester(false);
+          }}
+        />
+      )}
     </div>
   );
 }
