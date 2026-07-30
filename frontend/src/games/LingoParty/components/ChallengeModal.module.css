@@ -99,6 +99,93 @@
   line-height: 1.4;
 }
 
+/* ── Interactive Conversation Ordering UI ── */
+.orderingContainer {
+  background: rgba(249, 115, 22, 0.08);
+  border: 1.5px solid rgba(249, 115, 22, 0.35);
+  border-radius: 18px;
+  padding: 1.2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.orderingList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.orderingItem {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: rgba(15, 12, 35, 0.9);
+  border: 1.5px solid rgba(249, 115, 22, 0.4);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.orderingItem:hover {
+  border-color: rgba(249, 115, 22, 0.8);
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.25);
+}
+
+.orderingIndex {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+}
+
+.orderingText {
+  flex: 1;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fed7aa;
+  text-align: left;
+}
+
+.orderingControls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.orderBtn {
+  background: rgba(249, 115, 22, 0.2);
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  color: #fdba74;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+}
+
+.orderBtn:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.45);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.orderBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .revealClueBtn {
   width: 100%;
   padding: 1.1rem;

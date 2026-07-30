@@ -30,13 +30,34 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
   const [isClueUnlocked, setIsClueUnlocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45);
   const [timerActive, setTimerActive] = useState(true);
+  const [orderedLines, setOrderedLines] = useState([]);
 
   useEffect(() => {
     setIsAnswerRevealed(false);
     setIsClueUnlocked(false);
     setTimeLeft(45);
     setTimerActive(true);
+
+    if (challenge?.type === 'ordering' && challenge.prompt) {
+      const lines = challenge.prompt
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+      setOrderedLines(lines);
+    } else {
+      setOrderedLines([]);
+    }
   }, [challenge]);
+
+  const moveLine = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= orderedLines.length) return;
+    const copy = [...orderedLines];
+    const [moved] = copy.splice(index, 1);
+    copy.splice(targetIndex, 0, moved);
+    setOrderedLines(copy);
+    if (playSound) playSound('step');
+  };
 
   useEffect(() => {
     if (!challenge || !timerActive || timeLeft <= 0) return;
@@ -134,14 +155,35 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
           )}
         </h2>
 
-        {/* Ordering Question: show jumbled lines */}
-        {challenge.type === 'ordering' && challenge.prompt && (
-          <div className={styles.subcontentBox} style={{ background: 'rgba(249, 115, 22, 0.12)', borderColor: 'rgba(249, 115, 22, 0.35)', textAlign: 'left' }}>
-            {challenge.prompt.split('\n').filter(line => line.trim()).map((line, idx) => (
-              <div key={idx} style={{ padding: '0.3rem 0', fontSize: '1.35rem', fontWeight: 700, color: '#fed7aa' }}>
-                {line}
-              </div>
-            ))}
+        {/* Interactive Conversation Ordering UI */}
+        {challenge.type === 'ordering' && (
+          <div className={styles.orderingContainer}>
+            <div className={styles.orderingList}>
+              {orderedLines.map((line, idx) => (
+                <div key={idx} className={styles.orderingItem}>
+                  <span className={styles.orderingIndex}>{idx + 1}</span>
+                  <span className={styles.orderingText}>{line}</span>
+                  <div className={styles.orderingControls}>
+                    <button
+                      className={styles.orderBtn}
+                      onClick={() => moveLine(idx, -1)}
+                      disabled={idx === 0}
+                      title="Move line up"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      className={styles.orderBtn}
+                      onClick={() => moveLine(idx, 1)}
+                      disabled={idx === orderedLines.length - 1}
+                      title="Move line down"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

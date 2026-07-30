@@ -171,7 +171,11 @@ export default function BoardStage({
       usedChallengeKeysRef.current.add(cardKey(chosen));
     }
 
-    setCurrentChallenge(chosen || { type: winner.type, prompt: `Answer a ${winner.type} question!` });
+    const activeChallenge = chosen
+      ? { ...chosen, type: winner.type }
+      : { type: winner.type, prompt: `Complete the ${winner.label || winner.type} challenge!` };
+
+    setCurrentChallenge(activeChallenge);
     setActiveModal('challenge');
   };
 
