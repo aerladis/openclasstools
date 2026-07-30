@@ -466,12 +466,23 @@ export default function SetupScreen({ onStartGame, playSound }) {
           </div>
           <div className={`${styles.formGroup} ${styles.fullSpan}`}>
             <label>Standard planet color</label>
-            <input
-              type="color"
-              className={styles.inputField}
-              value={baseColor}
-              onChange={(event) => setBaseColor(event.target.value)}
-            />
+            <div className={styles.colorPickerRow}>
+              <input
+                type="color"
+                className={styles.colorInputSquare}
+                value={baseColor}
+                onChange={(event) => setBaseColor(event.target.value)}
+                title="Click to choose standard planet color"
+              />
+              <input
+                type="text"
+                className={styles.inputField}
+                style={{ flex: 1, fontFamily: 'monospace', textTransform: 'uppercase' }}
+                value={baseColor}
+                onChange={(event) => setBaseColor(event.target.value)}
+                placeholder="#0F2752"
+              />
+            </div>
           </div>
 
           {/* Compact Team Rows */}

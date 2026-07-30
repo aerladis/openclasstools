@@ -390,6 +390,37 @@
   cursor: pointer;
 }
 
+.colorPickerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.colorInputSquare {
+  width: 46px;
+  height: 42px;
+  padding: 4px;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 10px;
+  background: rgba(15, 12, 35, 0.9);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+}
+
+.colorInputSquare::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colorInputSquare::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.colorInputSquare::-moz-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
 /* ── AI Mission Center Tabs ── */
 .aiTabs {
   display: flex;
