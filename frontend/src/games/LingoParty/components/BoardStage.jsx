@@ -151,31 +151,62 @@ export default function BoardStage({
 
     let chosen;
     if (unusedMatching.length > 0) {
-      // 1. Unused card of the exact category won on the wheel
       chosen = unusedMatching[Math.floor(Math.random() * unusedMatching.length)];
     } else if (matchingCards.length > 0) {
-      // 2. All cards of this category were shown — reset used tracking for this category & reuse!
       matchingCards.forEach(c => usedChallengeKeysRef.current.delete(cardKey(c)));
       chosen = matchingCards[Math.floor(Math.random() * matchingCards.length)];
     } else {
-      // 3. Fallback only if deck has ZERO cards of this specific category
-      const unusedAny = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
-      if (unusedAny.length > 0) {
-        chosen = unusedAny[Math.floor(Math.random() * unusedAny.length)];
-      } else {
-        chosen = deck[Math.floor(Math.random() * deck.length)];
-      }
+      const TYPE_FALLBACKS = {
+        ordering: {
+          type: 'ordering',
+          prompt: "B: Fine, thanks! And you?\nA: Hello! How are you today?\nB: I am doing great!",
+          answer: "A: Hello! How are you today? -> B: Fine, thanks! And you? -> B: I am doing great!"
+        },
+        scramble: {
+          type: 'scramble',
+          scrambledWord: 'E-X-P-L-O-R-E',
+          targetWord: 'EXPLORE',
+          clue: 'To travel through unfamiliar areas to learn about them.'
+        },
+        pronunciation: {
+          type: 'pronunciation',
+          prompt: 'Six sleek swans swam swiftly southward.',
+          answer: 'Stress words: Six, swans, swam, swiftly, southward'
+        },
+        riddle: {
+          type: 'riddle',
+          prompt: 'I have hands but cannot clap, and a face but no eyes. What am I?',
+          answer: 'A clock'
+        },
+        speed: {
+          type: 'speed',
+          prompt: 'Name 3 items related to the mission theme within 15 seconds!',
+          answer: 'Name 3 items out loud!'
+        },
+        grammar: {
+          type: 'grammar',
+          prompt: 'Fix the error: She do not like cold weather.',
+          answer: 'She does not like cold weather.'
+        },
+        association: {
+          type: 'association',
+          prompt: 'Name 3 action verbs associated with space exploration!',
+          answer: 'Fly, Orbit, Launch'
+        },
+        roleplay: {
+          type: 'roleplay',
+          prompt: 'Order food or drinks at a space station cafe.',
+          answer: 'Use: May I have, Please, Thank you'
+        }
+      };
+      chosen = TYPE_FALLBACKS[winner.type] || { type: winner.type, prompt: `Complete the ${winner.label || winner.type} challenge!` };
     }
 
-    if (chosen) {
+    if (chosen && chosen.prompt) {
       usedChallengeKeysRef.current.add(cardKey(chosen));
     }
 
-    const activeChallenge = chosen
-      ? { ...chosen, type: winner.type }
-      : { type: winner.type, prompt: `Complete the ${winner.label || winner.type} challenge!` };
-
-    setCurrentChallenge(activeChallenge);
+    setCurrentChallenge({ ...chosen });
     setActiveModal('challenge');
   };
 

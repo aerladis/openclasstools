@@ -39,11 +39,19 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     setTimerActive(true);
 
     if (challenge?.type === 'ordering' && challenge.prompt) {
-      const lines = challenge.prompt
+      const rawLines = challenge.prompt
         .split('\n')
         .map(l => l.trim())
         .filter(Boolean);
-      setOrderedLines(lines);
+      
+      const cleanLines = rawLines.filter((line, idx) => {
+        if (idx === 0 && (line.toLowerCase().includes('order') || line.endsWith(':'))) {
+          return false;
+        }
+        return true;
+      });
+
+      setOrderedLines(cleanLines.length > 0 ? cleanLines : rawLines);
     } else {
       setOrderedLines([]);
     }
