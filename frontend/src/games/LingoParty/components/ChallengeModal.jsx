@@ -45,7 +45,11 @@ function parseOrderingLines(rawPrompt) {
   }
 
   return lines
-    .map(line => line.replace(/^(put\s+this\s+conversation[^:]*:?)/i, '').replace(/^[1-9]\.\s*/, '').trim())
+    .map(line => line
+      .replace(/^(put\s+this\s+conversation[^:]*:?)/i, '')
+      .replace(/^([1-9]\d*[\.\)]|step\s*\d+:?|line\s*\d+:?)\s*/i, '')
+      .trim()
+    )
     .filter(Boolean);
 }
 
@@ -182,6 +186,24 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
   const renderHighlightedAnswer = (prompt, targetAnswer) => {
     if (!targetAnswer) return null;
     const answerStr = String(targetAnswer);
+
+    if (challenge.type === 'ordering') {
+      const steps = answerStr.split(/->|\n/).map(s => s.trim()).filter(Boolean);
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'left', marginTop: '0.4rem' }}>
+          {steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ background: '#8b5cf6', color: '#fff', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', flexShrink: 0 }}>
+                {i + 1}
+              </span>
+              <span style={{ fontSize: '1.1rem', color: '#f3e8ff', fontWeight: 600 }}>
+                {step.replace(/^([1-9]\d*[\.\)]|step\s*\d+:?|line\s*\d+:?)\s*/i, '')}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     if (!prompt || typeof prompt !== 'string') {
       return <span>{answerStr}</span>;
