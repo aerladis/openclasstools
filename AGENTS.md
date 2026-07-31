@@ -18,26 +18,62 @@ npm --prefix frontend run build
 
 The default server URL is `http://localhost:8090`.
 
+## Production Deployment
+
+- **Domain**: `https://play.metrix.dpdns.org`
+- **VPS IP**: `89.168.76.182` (User: `ubuntu`)
+- **SSH Key**: `/home/berkay/Desktop/who/ssh keys/.ssh/id_ed25519`
+- **Path on VPS**: `/var/www/play.metrix.dpdns.org`
+- **PM2 App Name**: `openclasstools`
+
+Deployment steps:
+```bash
+rsync -avz -e "ssh -i \"/home/berkay/Desktop/who/ssh keys/.ssh/id_ed25519\" -o StrictHostKeyChecking=no" \
+    --exclude='node_modules' --exclude='.git' --exclude='.worktrees' \
+    ./ ubuntu@89.168.76.182:/var/www/play.metrix.dpdns.org/
+ssh -i "/home/berkay/Desktop/who/ssh keys/.ssh/id_ed25519" ubuntu@89.168.76.182 \
+    "cd /var/www/play.metrix.dpdns.org && npm --prefix frontend run build && pm2 restart openclasstools --update-env"
+```
+
 ## Configuration
 
 ```env
 GEMINI_API_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+KIMI_API_KEY=your_kimi_key
+OPENROUTER_API_KEY=your_openrouter_key
 PORT=8090
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
 ```
 
-Teacher-provided Gemini keys are temporary browser-tab values. Never persist or log them.
+Teacher-provided Gemini keys are temporary browser-tab values and optional. Never persist or log them.
 
-## Conventions
+## Core Conventions & Architecture
 
-- Use ES modules, `const`/`let`, arrow callbacks, and async/await.
-- Keep each game self-contained.
-- Preserve the glassmorphism design tokens and mobile layouts.
-- Use the shared deck library and HTTP session client for deck-backed games.
-- Keep standalone play working when telemetry or AI services are unavailable.
-- Add or update native `node:test` coverage for behavior changes.
+- **Multi-Provider AI Backup Chain**:
+  - Primary: Google Gemini (`gemini-2.5-flash`).
+  - Fallback Chain: Groq (`llama-3.3-70b-versatile`) ➔ Kimi (`moonshot-v1-8k`) ➔ OpenRouter Free Suite.
+  - Teacher API keys are optional. When omitted or failing, generation automatically falls back to the server provider pool (`keySource: 'platform'`).
+  - Always enforce `response_format: { type: 'json_object' }` for non-Gemini providers and clean JSON with `cleanModelJsonText` and `extractBalancedJson`.
+  - Logging: Every generation logs the exact AI Provider (`GEMINI`, `GROQ`, `KIMI`, `OPENROUTER`), Model Name, and Key Source (`Platform Provider Pool` or `Teacher Custom Key`) to the AI console.
+
+- **LingoParty Generation & Rules**:
+  - Target Card Formula: `5 * teamCount * orbitCount` (capped at max 120 to guarantee sub-15s response times and prevent Cloudflare HTTP 524 timeouts).
+  - Batch Execution: Execute AI generation batches sequentially (never parallel `Promise.all` across 10+ calls) to avoid provider rate-limit 429 errors.
+  - Deduplication & Memory Recall: Unshown questions in the deck are prioritized on tile turns. If the deck is cycled and a question repeats, flag it with `isMemoryRecall: true` to display the animated `🧠 MEMORY RECALL` badge in `ChallengeModal`.
+  - Ordering Challenges: Dialogue ordering prompts MUST have strictly logical, chronological conversational flow (`A: Question -> B: Answer -> C: Reaction`). Slot position numbers (`1`, `2`, `3`...) remain fixed on the left while sentence items swap positions. Leading line numbers (`1.`, `2.`) are stripped from sentence text.
+
+- **Game Launch Resilience**:
+  - Launch handlers (React & legacy HTML/JS) MUST transition to active gameplay instantly (0ms delay). Session recording (`startSessionSafely`) runs asynchronously in the background.
+  - Standalone play MUST ALWAYS work cleanly with default starter/system decks even when database or telemetry services are offline or slow.
+
+- **Code Quality**:
+  - Use ES modules, `const`/`let`, arrow callbacks, and async/await.
+  - Preserve glassmorphic design tokens, mobile layouts, and particle patterns.
+  - Maintain 100% passing test coverage using `npm test`.
 
 ## Adding a game
 
 Add the game client, link it from both hubs when applicable, use the shared particle/theme patterns, and keep its state local. Deck-backed games should use the registered-deck HTTP APIs and record optional session lifecycle events.
+
