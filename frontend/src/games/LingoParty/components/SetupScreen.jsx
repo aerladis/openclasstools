@@ -244,9 +244,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
     deckLibrary.clearLogs();
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
 
-    const perCategory = Math.min(6, Math.max(3, Math.ceil((teamCount * orbitCount) / 2)));
-    const cardCount = Math.min(48, 8 * perCategory);
-    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Crews: ${teamCount} | Orbits: ${orbitCount} (${perCategory}/category) | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Unique Challenges`, 'info');
+    const cardCount = Math.min(120, 5 * teamCount * orbitCount);
+    addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Crews: ${teamCount} | Orbits: ${orbitCount} | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Unique Challenges`, 'info');
 
     const startTime = Date.now();
 

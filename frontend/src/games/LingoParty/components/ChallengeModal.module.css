@@ -78,6 +78,33 @@
   color: #fbbf24;
 }
 
+.memoryRecallBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(168, 85, 247, 0.25);
+  border: 1.5px solid rgba(192, 132, 252, 0.7);
+  border-radius: 12px;
+  color: #f3e8ff;
+  font-weight: 800;
+  font-size: 1.05rem;
+  animation: pulseMemory 2s infinite ease-in-out;
+}
+
+.memoryIcon {
+  font-size: 1.3rem;
+}
+
+.memoryText {
+  letter-spacing: 0.3px;
+}
+
+@keyframes pulseMemory {
+  0%, 100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.7); }
+}
+
 /* ── Main Prompt (75% Larger Font) ── */
 .mainPrompt {
   font-size: 2.35rem;

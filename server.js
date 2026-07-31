@@ -1576,8 +1576,8 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     parseInput: body => {
         const playerCount = sanitizeCount(body.playerCount || body.teamCount, 8) || 3;
         const orbitCount = sanitizeCount(body.orbitCount, 5) || 1;
-        const calculatedCount = 4 * playerCount * orbitCount * 2;
-        const count = Math.min(48, Math.max(16, sanitizeCount(body.count || calculatedCount, 48)));
+        const calculatedCount = 5 * playerCount * orbitCount;
+        const count = Math.min(120, Math.max(10, sanitizeCount(body.count || calculatedCount, 120)));
 
         return {
             theme: sanitizeTheme(body.theme) || 'General English',

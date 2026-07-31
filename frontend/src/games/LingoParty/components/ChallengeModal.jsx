@@ -241,6 +241,13 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
           </span>
         </div>
 
+        {challenge.isMemoryRecall && (
+          <div className={styles.memoryRecallBadge}>
+            <span className={styles.memoryIcon}>🧠</span>
+            <span className={styles.memoryText}>MEMORY RECALL — You've seen this question earlier in the mission!</span>
+          </div>
+        )}
+
         <h2 className={styles.mainPrompt}>
           {challenge.type === 'scramble' ? (
             `🔤 Scrambled Word: ${getGuaranteedScramble(challenge.scrambledWord, challenge.targetWord || challenge.word)}`

@@ -148,11 +148,13 @@ export default function BoardStage({
     const unusedMatching = matchingCards.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
 
     let chosen;
+    let isMemoryRecall = false;
+
     if (unusedMatching.length > 0) {
       chosen = unusedMatching[Math.floor(Math.random() * unusedMatching.length)];
     } else if (matchingCards.length > 0) {
-      matchingCards.forEach(c => usedChallengeKeysRef.current.delete(cardKey(c)));
       chosen = matchingCards[Math.floor(Math.random() * matchingCards.length)];
+      isMemoryRecall = true;
     } else {
       const TYPE_FALLBACKS = {
         ordering: {
@@ -203,13 +205,16 @@ export default function BoardStage({
         }
       };
       chosen = TYPE_FALLBACKS[winner.type] || { type: winner.type, prompt: `Complete the ${winner.label || winner.type} challenge!` };
+      if (usedChallengeKeysRef.current.has(cardKey(chosen))) {
+        isMemoryRecall = true;
+      }
     }
 
     if (chosen && cardKey(chosen)) {
       usedChallengeKeysRef.current.add(cardKey(chosen));
     }
 
-    setCurrentChallenge({ ...chosen });
+    setCurrentChallenge({ ...chosen, isMemoryRecall });
     setActiveModal('challenge');
   };
 
