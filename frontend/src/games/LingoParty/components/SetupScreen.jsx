@@ -204,15 +204,18 @@ export default function SetupScreen({ onStartGame, playSound }) {
     });
   };
 
-  const handleLaunchClick = (e) => {
+  const handleLaunchClick = async (e) => {
     const isShiftDebug = Boolean(e && e.shiftKey);
     const teams = buildTeams();
-    const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system') || d.name?.toLowerCase().includes('starter')) || deckLibrary.decks[0];
+    const ensuredDeck = await deckLibrary.ensureDeck();
+    const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system') || d.name?.toLowerCase().includes('starter')) || ensuredDeck || deckLibrary.decks[0];
 
-    const targetDeckObj = activeGeneratedDeck || deckLibrary.selectedDeck || systemDeck;
+    const targetDeckObj = activeGeneratedDeck || deckLibrary.selectedDeck || systemDeck || ensuredDeck;
     const cards = targetDeckObj?.currentVersion?.content || targetDeckObj?.cards || DEFAULT_DECK;
+    const deckId = targetDeckObj?.id || targetDeckObj?.deckId || systemDeck?.id;
+    const deckVersionId = targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id;
 
-    if (cards && cards.length > 0) {
+    if (cards && cards.length > 0 && deckId && deckVersionId) {
       if (playSound) playSound('correct');
       if (isShiftDebug) {
         addLog('🛠️ Shift+Click: Question Tester Panel active!', 'warn');
@@ -224,8 +227,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
         deck: cards,
         mode,
         orbitCount,
-        deckId: targetDeckObj?.id || systemDeck?.id || deckLibrary.decks[0]?.id,
-        deckVersionId: targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id || deckLibrary.decks[0]?.currentVersion?.id,
+        deckId,
+        deckVersionId,
         isTesterMode: isShiftDebug,
       });
       return;
@@ -241,8 +244,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
     deckLibrary.clearLogs();
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
 
-    const perCategory = 5 * teamCount * orbitCount;
-    const cardCount = 8 * perCategory;
+    const perCategory = Math.min(6, Math.max(3, Math.ceil((teamCount * orbitCount) / 2)));
+    const cardCount = Math.min(48, 8 * perCategory);
     addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Crews: ${teamCount} | Orbits: ${orbitCount} (${perCategory}/category) | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Unique Challenges`, 'info');
 
     const startTime = Date.now();

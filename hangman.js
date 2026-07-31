@@ -230,7 +230,7 @@ async function startGame() {
         generateStatus.className = 'generate-status error';
         return;
     }
-    const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+    const selectedDeckRef = (await deckLibrary?.ensureSelectedDeckRef?.()) || deckLibrary?.getSelectedDeckRef();
     if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
         generateStatus.textContent = 'Choose or generate a registered deck first.';
         generateStatus.className = 'generate-status error';

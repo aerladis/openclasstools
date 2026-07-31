@@ -1576,8 +1576,8 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     parseInput: body => {
         const playerCount = sanitizeCount(body.playerCount || body.teamCount, 8) || 3;
         const orbitCount = sanitizeCount(body.orbitCount, 5) || 1;
-        const calculatedCount = 5 * playerCount * orbitCount * 8;
-        const count = sanitizeCount(body.count || calculatedCount, 400);
+        const calculatedCount = 4 * playerCount * orbitCount * 2;
+        const count = Math.min(48, Math.max(16, sanitizeCount(body.count || calculatedCount, 48)));
 
         return {
             theme: sanitizeTheme(body.theme) || 'General English',
@@ -1602,18 +1602,22 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
                 + `\n\n${getModeInstruction(mode)}`;
         });
 
-        const batchResults = await Promise.all(
-            batchPrompts.map(prompt =>
-                callJsonAI(prompt, LINGOPARTY_SCHEMA, {
+        const batchResults = [];
+        for (const prompt of batchPrompts) {
+            try {
+                const res = await callJsonAI(prompt, LINGOPARTY_SCHEMA, {
                     apiKey,
                     temperature: 0.75,
                     validate: (result) => {
                         const list = Array.isArray(result) ? result : (result?.cards || result?.items || result?.challenges || []);
                         return (!list || list.length === 0) ? 'Invalid response format - expected non-empty array of challenge objects' : null;
                     }
-                }).catch(() => [])
-            )
-        );
+                });
+                if (res) batchResults.push(res);
+            } catch (batchErr) {
+                console.warn('[LingoParty Generation Batch Warning]', batchErr.message);
+            }
+        }
 
         const rawCards = batchResults.flatMap(res =>
             Array.isArray(res) ? res : (res?.cards || res?.items || res?.challenges || [])

@@ -315,16 +315,32 @@
                 }
             });
 
-            refresh().catch(function ignored() {});
+            let initialRefreshPromise = refresh().catch(function ignored() {});
             return Object.freeze({
-                refresh,
+                refresh: function refreshWrapper() {
+                    initialRefreshPromise = refresh();
+                    return initialRefreshPromise;
+                },
                 getSelectedDeck: function getSelectedDeck() {
-                    return selectedDeck;
+                    return selectedDeck || decks[0] || null;
                 },
                 getSelectedDeckRef: function getSelectedDeckRef() {
-                    return selectedDeck ? {
-                        deckId: selectedDeck.id,
-                        deckVersionId: selectedDeck.currentVersion.id
+                    const active = selectedDeck || decks[0] || null;
+                    return active && active.id && active.currentVersion ? {
+                        deckId: active.id,
+                        deckVersionId: active.currentVersion.id
+                    } : { deckId: null, deckVersionId: null };
+                },
+                ensureSelectedDeckRef: async function ensureSelectedDeckRef() {
+                    if (!selectedDeck && decks.length === 0) {
+                        try {
+                            await initialRefreshPromise;
+                        } catch (e) {}
+                    }
+                    const active = selectedDeck || decks[0] || null;
+                    return active && active.id && active.currentVersion ? {
+                        deckId: active.id,
+                        deckVersionId: active.currentVersion.id
                     } : { deckId: null, deckVersionId: null };
                 },
                 select: function selectById(deckId) {

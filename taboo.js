@@ -340,7 +340,7 @@ function updatePassCounter() {
 
 // ---- Start game ----
 els.btnStart.addEventListener('click', async () => {
-    const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+    const selectedDeckRef = (await deckLibrary?.ensureSelectedDeckRef?.()) || deckLibrary?.getSelectedDeckRef();
     if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
         els.generateStatus.textContent = 'Choose or generate a registered deck first.';
         els.generateStatus.className = 'generate-status error';

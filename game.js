@@ -89,7 +89,7 @@ const btnReuseGenerated = document.getElementById('btn-reuse-generated');
 const WHOAMI_STORAGE_KEY = 'whoami';
 
 async function startTrackedRound() {
-  const selectedDeckRef = deckLibrary?.getSelectedDeckRef();
+  const selectedDeckRef = (await deckLibrary?.ensureSelectedDeckRef?.()) || deckLibrary?.getSelectedDeckRef();
   if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
     generateStatus.textContent = 'Choose or generate a registered deck first.';
     generateStatus.className = 'generate-status error';

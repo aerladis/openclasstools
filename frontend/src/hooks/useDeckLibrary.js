@@ -71,14 +71,26 @@ export default function useDeckLibrary(gameType) {
     }
   }, [gameType, appendLog]);
 
+  const ensureDeck = useCallback(async () => {
+    let currentDecks = decks;
+    if (currentDecks.length === 0) {
+      try {
+        currentDecks = await refresh();
+      } catch (e) {}
+    }
+    const target = currentDecks.find((deck) => deck.id === selectedId) || currentDecks[0] || null;
+    return target;
+  }, [decks, selectedId, refresh]);
+
   return {
     decks,
-    selectedDeck,
+    selectedDeck: selectedDeck || decks[0] || null,
     loading,
     error,
     logs,
     clearLogs,
     refresh,
+    ensureDeck,
     select: setSelectedId,
     generate,
   };
