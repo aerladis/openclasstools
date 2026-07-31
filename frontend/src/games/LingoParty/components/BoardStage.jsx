@@ -159,8 +159,8 @@ export default function BoardStage({
       const TYPE_FALLBACKS = {
         ordering: {
           type: 'ordering',
-          prompt: "B: Fine, thanks! And you?\nA: Hello! How are you today?\nB: I am doing great!",
-          answer: "A: Hello! How are you today? -> B: Fine, thanks! And you? -> B: I am doing great!"
+          prompt: "B: Fine, thanks! How are you?\nA: Hello! How are you today?\nC: I am doing great as well!",
+          answer: "A: Hello! How are you today? -> B: Fine, thanks! How are you? -> C: I am doing great as well!"
         },
         scramble: {
           type: 'scramble',
