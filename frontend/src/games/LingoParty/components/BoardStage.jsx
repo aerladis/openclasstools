@@ -555,7 +555,7 @@ export default function BoardStage({
             <div className={styles.planetHoverContent}>
               <span className={styles.planetHoverIcon}>
                 {({
-                  start: '🌍', trophy: '⭐', chance: '🪐', shop: '🛸',
+                  start: '🌍', trophy: '⭐', chance: '🎁', shop: '🛸',
                   asteroid: '☄️', vortex: '🌀'
                 })[hoveredPlanet.type] || '🎯'}
               </span>
@@ -575,7 +575,7 @@ export default function BoardStage({
             </div>
           ) : (
             <div className={styles.planetHoverPlaceholder}>
-              🪐 Hover over any planet on the board to view its name & mission details
+              🚀 Hover over any planet on the board to view its name & mission details
             </div>
           )}
         </div>

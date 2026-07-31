@@ -282,10 +282,8 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                     stroke="rgba(255,255,255,0.3)"
                     strokeWidth="2.5"
                   />
-                  {isIconicTile ? (
+                  {isIconicTile && (
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={sphereRadius * 0.65}>{conf.icon}</text>
-                  ) : (
-                    <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={sphereRadius * 0.45}>🪐</text>
                   )}
                 </>
               )}
