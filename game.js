@@ -90,28 +90,26 @@ const WHOAMI_STORAGE_KEY = 'whoami';
 
 async function startTrackedRound() {
   const selectedDeckRef = (await deckLibrary?.ensureSelectedDeckRef?.()) || deckLibrary?.getSelectedDeckRef();
-  if (!selectedDeckRef?.deckId || !selectedDeckRef?.deckVersionId) {
-    generateStatus.textContent = 'Choose or generate a registered deck first.';
-    generateStatus.className = 'generate-status error';
-    return;
-  }
-  if (playSessionId) {
-    await window.OpenClassPlatform.completeSession(playSessionId, {
-      lastCharacter: characterName.textContent || null,
-      reason: 'new_round'
-    }).catch(() => null);
-  }
-  const session = await window.OpenClassPlatform.startSessionSafely({
-    gameType: 'who',
-    participantNames: [],
-    ...selectedDeckRef
-  }, error => {
-    generateStatus.textContent = error.message;
-    generateStatus.className = 'generate-status error';
-    alert(`The round will still start, but it could not be recorded: ${error.message}`);
-  });
-  playSessionId = session?.id || null;
   startCountdown();
+
+  if (selectedDeckRef?.deckId && selectedDeckRef?.deckVersionId) {
+    if (playSessionId) {
+      window.OpenClassPlatform.completeSession(playSessionId, {
+        lastCharacter: characterName.textContent || null,
+        reason: 'new_round'
+      }).catch(() => null);
+    }
+    window.OpenClassPlatform.startSessionSafely({
+      gameType: 'who',
+      participantNames: [],
+      ...selectedDeckRef
+    }, error => {
+      generateStatus.textContent = error.message;
+      generateStatus.className = 'generate-status error';
+    }).then(session => {
+      playSessionId = session?.id || null;
+    });
+  }
 }
 
 btnPlay.addEventListener('click', startTrackedRound);

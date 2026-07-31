@@ -130,7 +130,7 @@ export default function LingoPartyGame() {
     return tiles;
   };
 
-  const handleStartGame = useCallback(async ({
+  const handleStartGame = useCallback(({
     teams,
     boardLength,
     baseColor,
@@ -141,16 +141,6 @@ export default function LingoPartyGame() {
     deckVersionId,
   }) => {
     setTrackingWarning('');
-    const session = await startSessionSafely({
-      gameType: 'lingoparty',
-      participantNames: teams.map((team) => team.name),
-      deckId,
-      deckVersionId,
-    }, (error) => {
-      setTrackingWarning(
-        `Play can continue, but this session is not being recorded: ${error.message}`
-      );
-    });
     const tiles = generateTiles(boardLength);
     const initTeams = teams.map(t => ({
       ...t,
@@ -174,8 +164,22 @@ export default function LingoPartyGame() {
       currentTeamIndex: 0,
       round: 1
     };
-    setPlaySessionId(session?.id || null);
     setGameState(newState);
+
+    if (deckId && deckVersionId) {
+      startSessionSafely({
+        gameType: 'lingoparty',
+        participantNames: teams.map((team) => team.name),
+        deckId,
+        deckVersionId,
+      }, (error) => {
+        setTrackingWarning(
+          `Play can continue, but this session is not being recorded: ${error.message}`
+        );
+      }).then((session) => {
+        setPlaySessionId(session?.id || null);
+      });
+    }
   }, []);
 
   const handleGameComplete = useCallback((teams, reason = 'victory') => {

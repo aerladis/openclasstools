@@ -207,15 +207,15 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const handleLaunchClick = async (e) => {
     const isShiftDebug = Boolean(e && e.shiftKey);
     const teams = buildTeams();
-    const ensuredDeck = await deckLibrary.ensureDeck();
+    const ensuredDeck = await deckLibrary.ensureDeck().catch(() => null);
     const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system') || d.name?.toLowerCase().includes('starter')) || ensuredDeck || deckLibrary.decks[0];
 
     const targetDeckObj = activeGeneratedDeck || deckLibrary.selectedDeck || systemDeck || ensuredDeck;
     const cards = targetDeckObj?.currentVersion?.content || targetDeckObj?.cards || DEFAULT_DECK;
-    const deckId = targetDeckObj?.id || targetDeckObj?.deckId || systemDeck?.id;
-    const deckVersionId = targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id;
+    const deckId = targetDeckObj?.id || targetDeckObj?.deckId || systemDeck?.id || null;
+    const deckVersionId = targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id || null;
 
-    if (cards && cards.length > 0 && deckId && deckVersionId) {
+    if (cards && cards.length > 0) {
       if (playSound) playSound('correct');
       if (isShiftDebug) {
         addLog('🛠️ Shift+Click: Question Tester Panel active!', 'warn');
