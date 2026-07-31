@@ -264,6 +264,11 @@ export default function SetupScreen({ onStartGame, playSound }) {
 
       const cards = deck?.currentVersion?.content || [];
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+      const providerInfo = (deck?.aiProvider || 'gemini').toUpperCase();
+      const modelInfo = deck?.aiModel ? ` (${deck.aiModel})` : '';
+      const keySourceInfo = deck?.teacherKeyUsed ? 'Teacher Custom Key' : 'Platform Provider Pool';
+
+      addLog(`🤖 AI Provider Used: ${providerInfo}${modelInfo} via ${keySourceInfo}`, 'info');
       addLog(`✅ AI Success! ${cards.length} unique cards generated in ${elapsed}s`, 'success');
 
       const counts = {};
