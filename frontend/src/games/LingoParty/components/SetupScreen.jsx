@@ -207,7 +207,7 @@ export default function SetupScreen({ onStartGame, playSound }) {
   const handleLaunchClick = (e) => {
     const isShiftDebug = Boolean(e && e.shiftKey);
     const teams = buildTeams();
-    const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system')) || deckLibrary.decks[0];
+    const systemDeck = deckLibrary.decks.find(d => d.isSystem || d.name?.toLowerCase().includes('system') || d.name?.toLowerCase().includes('starter')) || deckLibrary.decks[0];
 
     const targetDeckObj = activeGeneratedDeck || deckLibrary.selectedDeck || systemDeck;
     const cards = targetDeckObj?.currentVersion?.content || targetDeckObj?.cards || DEFAULT_DECK;
@@ -224,8 +224,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
         deck: cards,
         mode,
         orbitCount,
-        deckId: targetDeckObj?.id || systemDeck?.id,
-        deckVersionId: targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id,
+        deckId: targetDeckObj?.id || systemDeck?.id || deckLibrary.decks[0]?.id,
+        deckVersionId: targetDeckObj?.currentVersion?.id || targetDeckObj?.versionId || systemDeck?.currentVersion?.id || deckLibrary.decks[0]?.currentVersion?.id,
         isTesterMode: isShiftDebug,
       });
       return;

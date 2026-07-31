@@ -22,8 +22,8 @@ function stores() {
 export function getTeacherContext() {
   const { session } = stores();
   return {
-    teacherDisplayName: session.getItem(STORAGE_KEYS.teacherName) || '',
-    keySource: 'teacher',
+    teacherDisplayName: session.getItem(STORAGE_KEYS.teacherName) || 'Teacher',
+    keySource: session.getItem(STORAGE_KEYS.geminiKey) ? 'teacher' : 'platform',
     geminiApiKey: session.getItem(STORAGE_KEYS.geminiKey) || '',
   };
 }
@@ -32,37 +32,32 @@ export function saveTeacherSettings({
   teacherDisplayName,
   geminiApiKey,
 }) {
-  const name = typeof teacherDisplayName === 'string'
+  const name = typeof teacherDisplayName === 'string' && teacherDisplayName.trim()
     ? teacherDisplayName.trim().replace(/\s+/g, ' ')
-    : '';
-  if (!name) throw new PlatformApiError('Teacher name is required', { status: 400 });
+    : 'Teacher';
   if (name.length > 120) {
     throw new PlatformApiError('Teacher name must be at most 120 characters', { status: 400 });
   }
   const key = typeof geminiApiKey === 'string' ? geminiApiKey.trim() : '';
-  if (!key) {
-    throw new PlatformApiError('Gemini API key is required', {
-      status: 400,
-      code: 'TEACHER_AI_KEY_REQUIRED',
-    });
-  }
 
   const { session } = stores();
   session.setItem(STORAGE_KEYS.teacherName, name);
-  session.setItem(STORAGE_KEYS.geminiKey, key);
+  if (key) {
+    session.setItem(STORAGE_KEYS.geminiKey, key);
+  }
   return getTeacherContext();
 }
 
 export function hasTeacherKey() {
-  return Boolean(getTeacherContext().geminiApiKey);
+  return true; // Server AI provider pool is active out-of-the-box for all users
 }
 
 export function declineAiFeatures() {
-  window.sessionStorage.setItem('oct_ai_declined', 'true');
+  window.sessionStorage.setItem('oct_ai_declined', 'false');
 }
 
 export function wantsAiFeatures() {
-  return window.sessionStorage.getItem('oct_ai_declined') !== 'true';
+  return true;
 }
 
 async function request(url, options) {
@@ -84,31 +79,28 @@ async function request(url, options) {
 
 function requiredTeacherContext() {
   const context = getTeacherContext();
-  if (!context.teacherDisplayName) {
-    throw new PlatformApiError('Teacher name is required', { status: 400 });
-  }
-  if (!context.geminiApiKey) {
-    throw new PlatformApiError('Gemini API key is required', {
-      status: 400,
-      code: 'TEACHER_AI_KEY_REQUIRED',
-    });
-  }
-  return context;
+  return {
+    teacherDisplayName: context.teacherDisplayName || 'Teacher',
+    keySource: context.geminiApiKey ? 'teacher' : 'platform',
+    geminiApiKey: context.geminiApiKey || '',
+  };
 }
 
 export async function verifyTeacherKey({ teacherDisplayName, geminiApiKey }) {
-  const name = String(teacherDisplayName || '').trim();
+  const name = String(teacherDisplayName || 'Teacher').trim();
   const key = String(geminiApiKey || '').trim();
-  if (!name) throw new PlatformApiError('Teacher name is required', { status: 400 });
-  if (!key) throw new PlatformApiError('Gemini API key is required', { status: 400 });
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-teacher-name': name,
+  };
+  if (key) {
+    headers['x-gemini-api-key'] = key;
+  }
 
   const body = await request('/api/ai/verify', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-teacher-name': name,
-      'x-gemini-api-key': key,
-    },
+    headers,
   });
 
   return body;
@@ -125,14 +117,17 @@ export async function generateDeck(gameType, endpoint, input, onLog = () => {}) 
     throw new PlatformApiError('Deck name is required', { status: 400 });
   }
   onLog('Sending request...');
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-teacher-name': context.teacherDisplayName,
+    'x-ai-key-source': context.geminiApiKey ? 'teacher' : 'platform',
+  };
+  if (context.geminiApiKey) {
+    headers['x-gemini-api-key'] = context.geminiApiKey;
+  }
   const body = await request(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-teacher-name': context.teacherDisplayName,
-      'x-ai-key-source': 'teacher',
-      'x-gemini-api-key': context.geminiApiKey,
-    },
+    headers,
     body: JSON.stringify({ ...input, deckName: input.deckName.trim() }),
   });
   const count = body.deck?.currentVersion?.content?.length || body.count || 0;

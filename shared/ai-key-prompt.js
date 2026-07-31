@@ -159,13 +159,8 @@
         change.textContent = 'Change Key';
         change.onclick = showPrompt;
 
-        if (platform.hasTeacherKey()) {
-            container.classList.add('ai-key-status--active');
-            text.textContent = 'AI Key Active';
-        } else {
-            container.classList.add('ai-key-status--inactive');
-            text.textContent = 'AI Generation Disabled';
-        }
+        container.classList.add('ai-key-status--active');
+        text.textContent = 'AI Pool Ready';
 
         container.appendChild(info);
         container.appendChild(details);
@@ -192,8 +187,6 @@
 
     function updateAiButtons() {
         if (!root.document) return;
-        const platform = getPlatform();
-        const disabled = !platform || !platform.hasTeacherKey();
         const selectors = [
             '#btn-generate',
             '#btn-generate-ai',
@@ -203,10 +196,8 @@
         selectors.forEach(function eachSelector(selector) {
             root.document.querySelectorAll(selector).forEach(function eachButton(btn) {
                 if (btn.dataset?.aiPurpose === 'start-deck') return;
-                btn.disabled = disabled;
-                btn.title = disabled
-                    ? 'Add a Gemini API key to use AI generation.'
-                    : '';
+                btn.disabled = false;
+                btn.title = 'Generate deck using server AI pool';
             });
         });
     }
@@ -225,22 +216,21 @@
             renderBadge(badge);
         }
         updateAiButtons();
-        const platform = getPlatform();
-        if (platform && !platform.hasTeacherKey() && platform.wantsAiFeatures()) {
-            showPrompt();
-        }
     }
 
     function getGenerationHeaders() {
         const platform = getPlatform();
         if (!platform) return { 'Content-Type': 'application/json' };
         const context = platform.getTeacherContext();
-        return {
+        const headers = {
             'Content-Type': 'application/json',
-            'x-teacher-name': context.teacherDisplayName,
-            'x-ai-key-source': 'teacher',
-            'x-gemini-api-key': context.geminiApiKey
+            'x-teacher-name': context.teacherDisplayName || 'Teacher',
+            'x-ai-key-source': context.geminiApiKey ? 'teacher' : 'platform'
         };
+        if (context.geminiApiKey) {
+            headers['x-gemini-api-key'] = context.geminiApiKey;
+        }
+        return headers;
     }
 
     root.AiKeyPrompt = Object.freeze({

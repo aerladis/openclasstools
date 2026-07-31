@@ -81,9 +81,24 @@ const sessionRepository = platformDatabase
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const KIMI_API_KEY = process.env.KIMI_API_KEY;
+const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1';
+
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-8k';
+
+// OpenRouter Free Models ordered from best to worst performance based on speed, JSON reliability, and rate limit health:
+const OPENROUTER_FREE_MODELS = [
+    'nvidia/nemotron-3-super-120b-a12b:free', // #1 Best Overall (~1.3s, fast & reliable JSON)
+    'inclusionai/ling-3.0-flash:free',        // #2 Fast & High Capacity (~2.5s, 262k context)
+    'openrouter/free',                        // #3 Most Reliable Auto-Router (~8.9s)
+    'openai/gpt-oss-20b:free'                 // #4 Functional Backup (~10.9s)
+];
 
 function getProvider() {
     if (OPENAI_API_KEY && OPENAI_API_KEY.length > 10 && OPENAI_API_KEY !== 'your-api-key-here') {
@@ -91,6 +106,9 @@ function getProvider() {
     }
     if (ANTHROPIC_API_KEY && ANTHROPIC_API_KEY.length > 10 && ANTHROPIC_API_KEY !== 'your-api-key-here') {
         return 'anthropic';
+    }
+    if (OPENROUTER_API_KEY && OPENROUTER_API_KEY.length > 10 && !process.env.GEMINI_API_KEY) {
+        return 'openrouter';
     }
     return 'gemini';
 }
@@ -513,11 +531,250 @@ async function callOpenAIProvider(prompt) {
     }
 }
 
+async function callOpenRouter(prompt, options = {}) {
+    const apiKey = (options.apiKey || OPENROUTER_API_KEY || '').trim();
+    if (!apiKey || apiKey.length < 10) {
+        throw new Error('No valid OpenRouter API key provided.');
+    }
+
+    const modelsToTry = options.model
+        ? [options.model, ...OPENROUTER_FREE_MODELS].filter((m, i, a) => a.indexOf(m) === i)
+        : OPENROUTER_FREE_MODELS;
+
+    let lastErr;
+
+    for (const model of modelsToTry) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+
+        try {
+            console.log(`🌐 [OpenRouter Request] Model: ${model} | Prompt length: ${prompt.length}`);
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': 'https://play.metrix.dpdns.org',
+                    'X-Title': 'LingoParty Deck Generator'
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a JSON deck generator. Output ONLY valid JSON. Do not include markdown code fences or extra commentary.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    response_format: { type: 'json_object' }
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.warn(`⚠️ [OpenRouter Model Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
+                const err = new Error(`OpenRouter model ${model} returned HTTP ${response.status}`);
+                err.quotaExceeded = response.status === 429;
+                lastErr = err;
+                continue;
+            }
+
+            const data = await response.json();
+            const textResult = data.choices?.[0]?.message?.content ?? '';
+            console.log(`✨ [OpenRouter Response Success] Model ${model} | Output length: ${textResult.length} characters`);
+            return textResult;
+        } catch (err) {
+            clearTimeout(timeout);
+            if (err.name === 'AbortError') console.warn(`⏱️ [OpenRouter Model Timeout] Model ${model} timed out`);
+            lastErr = err;
+        }
+    }
+
+    throw lastErr || new Error('All OpenRouter free models failed to respond.');
+}
+
+async function callGroq(prompt, options = {}) {
+    const apiKey = (options.apiKey || GROQ_API_KEY || '').trim();
+    if (!apiKey || apiKey.length < 10) {
+        throw new Error('No valid Groq API key provided.');
+    }
+    const model = options.model || GROQ_MODEL;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+        console.log(`⚡ [Groq Request] Model: ${model} | Prompt length: ${prompt.length}`);
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a JSON deck generator for educational game content. Output ONLY valid JSON. Do not include markdown code fences, preambles, or extra commentary.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                response_format: { type: 'json_object' },
+                temperature: 0.7
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.warn(`⚠️ [Groq Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
+            const err = new Error(`Groq returned HTTP ${response.status}: ${errText}`);
+            err.quotaExceeded = response.status === 429;
+            throw err;
+        }
+
+        const data = await response.json();
+        const textResult = data.choices?.[0]?.message?.content ?? '';
+        console.log(`✨ [Groq Response Success] Model ${model} | Output length: ${textResult.length} characters`);
+        return textResult;
+    } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') throw new Error('Groq API generation timed out (60s limit)');
+        throw err;
+    }
+}
+
+async function callKimi(prompt, options = {}) {
+    const apiKey = (options.apiKey || KIMI_API_KEY || '').trim();
+    if (!apiKey || apiKey.length < 10) {
+        throw new Error('No valid Kimi API key provided.');
+    }
+    const baseUrl = (options.baseUrl || KIMI_BASE_URL || 'https://api.moonshot.ai/v1').replace(/\/+$/, '');
+    const model = options.model || KIMI_MODEL;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    try {
+        console.log(`🌙 [Kimi Request] Model: ${model} | Prompt length: ${prompt.length}`);
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a JSON deck generator for educational game content. Output ONLY valid JSON. Do not include markdown code fences, preambles, or extra commentary.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                response_format: { type: 'json_object' },
+                temperature: 0.7
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.warn(`⚠️ [Kimi Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
+            const err = new Error(`Kimi returned HTTP ${response.status}: ${errText}`);
+            err.quotaExceeded = response.status === 429;
+            throw err;
+        }
+
+        const data = await response.json();
+        const textResult = data.choices?.[0]?.message?.content ?? '';
+        console.log(`✨ [Kimi Response Success] Model ${model} | Output length: ${textResult.length} characters`);
+        return textResult;
+    } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') throw new Error('Kimi API generation timed out (60s limit)');
+        throw err;
+    }
+}
+
 async function callAI(prompt, options = {}) {
-    if (options.apiKey || AI_PROVIDER === 'gemini') return callGemini(prompt, options);
+    const key = String(options.apiKey || '').trim();
+    if (key.startsWith('sk-or-')) {
+        return callOpenRouter(prompt, options);
+    }
+    if (key.startsWith('gsk_')) {
+        return callGroq(prompt, options);
+    }
+    if (key.startsWith('sk-LT') || key.startsWith('sk-kimi-')) {
+        return callKimi(prompt, options);
+    }
+
+    // Provider backup chain starting from Google Gemini down through Groq, Kimi, and OpenRouter
+    let primaryErr;
+
+    // Step 1: Google Gemini (Primary)
+    const geminiKey = options.apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (geminiKey && geminiKey.length > 10) {
+        try {
+            return await callGemini(prompt, options);
+        } catch (err) {
+            console.warn(`[AI Backup Chain] Primary Gemini failed (${err.message}). Trying backup chain...`);
+            primaryErr = err;
+        }
+    }
+
+    // Step 2: Groq (Backup #1)
+    if (GROQ_API_KEY && GROQ_API_KEY.length > 10) {
+        try {
+            console.log('[AI Backup Chain] Attempting backup provider: Groq');
+            return await callGroq(prompt, options);
+        } catch (err) {
+            console.warn(`[AI Backup Chain] Groq failed (${err.message}). Advancing down backup chain...`);
+            if (!primaryErr) primaryErr = err;
+        }
+    }
+
+    // Step 3: Kimi / Moonshot (Backup #2)
+    if (KIMI_API_KEY && KIMI_API_KEY.length > 10) {
+        try {
+            console.log('[AI Backup Chain] Attempting backup provider: Kimi');
+            return await callKimi(prompt, options);
+        } catch (err) {
+            console.warn(`[AI Backup Chain] Kimi failed (${err.message}). Advancing down backup chain...`);
+            if (!primaryErr) primaryErr = err;
+        }
+    }
+
+    // Step 4: OpenRouter Free Models (Backup #3)
+    if (OPENROUTER_API_KEY && OPENROUTER_API_KEY.length > 10) {
+        try {
+            console.log('[AI Backup Chain] Automatically falling back to OpenRouter free models...');
+            return await callOpenRouter(prompt, { ...options, apiKey: OPENROUTER_API_KEY });
+        } catch (err) {
+            console.warn(`[AI Backup Chain] OpenRouter free models failed (${err.message}).`);
+            if (!primaryErr) primaryErr = err;
+        }
+    }
+
     if (AI_PROVIDER === 'openai') return callOpenAIProvider(prompt);
     if (AI_PROVIDER === 'anthropic') return callAnthropicProvider(prompt, options);
-    return callGemini(prompt, options);
+
+    throw primaryErr || new Error('All AI providers in backup chain failed');
 }
 
 async function callTextAI(prompt, options = {}) {
@@ -580,6 +837,8 @@ async function callJsonAI(prompt, responseJsonSchema, options = {}) {
 
 function cleanModelJsonText(text) {
     return String(text ?? '')
+        .replace(/^\uFEFF/, '')
+        .replace(/\u200B/g, '')
         .replace(/```json\s*/gi, '')
         .replace(/```\s*/g, '')
         .replace(/[“”]/g, '"')
@@ -655,30 +914,44 @@ function extractJsonObjects(text) {
 function parseModelJson(text) {
     const cleaned = cleanModelJsonText(text);
 
+    let parsed;
     try {
-        return JSON.parse(cleaned);
+        parsed = JSON.parse(cleaned);
     } catch (err) {
         const arrayJson = extractBalancedJson(cleaned, '[', ']');
         if (arrayJson) {
             try {
-                return JSON.parse(arrayJson);
+                parsed = JSON.parse(arrayJson);
             } catch { /* fall through to object extraction */ }
         }
 
-        const objects = extractJsonObjects(cleaned);
-        if (objects && objects.length > 0) {
-            return objects;
+        if (!parsed) {
+            const objects = extractJsonObjects(cleaned);
+            if (objects && objects.length > 0) {
+                return objects;
+            }
+
+            const objectJson = extractBalancedJson(cleaned, '{', '}');
+            if (objectJson) {
+                try {
+                    parsed = JSON.parse(objectJson);
+                } catch { /* fall through to throw below */ }
+            }
         }
 
-        const objectJson = extractBalancedJson(cleaned, '{', '}');
-        if (objectJson) {
-            try {
-                return JSON.parse(objectJson);
-            } catch { /* fall through to throw below */ }
+        if (!parsed) {
+            throw new Error(`Invalid JSON response from model: ${err.message}`);
         }
-
-        throw new Error(`Invalid JSON response from model: ${err.message}`);
     }
+
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const arrayProp = Object.keys(parsed).find(key => Array.isArray(parsed[key]));
+        if (arrayProp) {
+            return parsed[arrayProp];
+        }
+    }
+
+    return parsed;
 }
 
 // ============================================
@@ -1474,11 +1747,15 @@ app.post('/api/ai/verify', apiRateLimit, async (req, res) => {
     }
 
     try {
-        await callGemini('Ping test', { apiKey, maxOutputTokens: 1, temperature: 0.1 });
+        if (apiKey.startsWith('sk-or-')) {
+            await callOpenRouter('Ping test', { apiKey });
+        } else {
+            await callGemini('Ping test', { apiKey, maxOutputTokens: 1, temperature: 0.1 });
+        }
         return res.json({
             success: true,
             status: 'ok',
-            message: 'Game server connected & Gemini API key verified'
+            message: 'Game server connected & API key verified'
         });
     } catch (err) {
         if (err.quotaExceeded) {
@@ -1501,6 +1778,81 @@ app.post('/api/ai/verify', apiRateLimit, async (req, res) => {
             error: 'Gemini API service is currently unavailable. Please try again later.'
         });
     }
+});
+
+// Endpoint to compare question generation across backup chain providers
+app.post('/api/ai/compare-providers', apiRateLimit, async (req, res) => {
+    const gameType = String(req.body?.gameType || 'who').trim();
+    const theme = String(req.body?.theme || 'Space').trim();
+    const count = Math.min(Math.max(Number(req.body?.count) || 3, 1), 10);
+
+    const replacements = {
+        theme,
+        count: String(count),
+        cefrInstruction: 'Use CEFR B1 level vocabulary.',
+        batchIndex: '1',
+        numBatches: '1',
+        perCategoryCount: '1'
+    };
+
+    let prompt;
+    try {
+        prompt = loadPrompt(gameType, replacements);
+    } catch {
+        prompt = `Generate ${count} questions about "${theme}" as JSON.`;
+    }
+
+    const providersToTest = [
+        { name: 'Google Gemini', fn: () => (GEMINI_API_KEY || GOOGLE_API_KEY) ? callGemini(prompt, { apiKey: GEMINI_API_KEY || GOOGLE_API_KEY }) : null },
+        { name: 'Groq AI', fn: () => GROQ_API_KEY ? callGroq(prompt) : null },
+        { name: 'Kimi / Moonshot', fn: () => KIMI_API_KEY ? callKimi(prompt) : null },
+        { name: 'OpenRouter', fn: () => OPENROUTER_API_KEY ? callOpenRouter(prompt, { apiKey: OPENROUTER_API_KEY }) : null }
+    ];
+
+    const results = [];
+
+    for (const p of providersToTest) {
+        const start = Date.now();
+        try {
+            const rawOutput = await p.fn();
+            if (rawOutput === null) {
+                results.push({ provider: p.name, status: 'skipped', message: 'No API key configured' });
+                continue;
+            }
+            const durationMs = Date.now() - start;
+            let parsed = null;
+            let parseError = null;
+            try {
+                parsed = parseModelJson(rawOutput);
+            } catch (pe) {
+                parseError = pe.message;
+            }
+
+            results.push({
+                provider: p.name,
+                status: parseError ? 'json_parse_error' : 'success',
+                durationMs,
+                rawLength: rawOutput.length,
+                itemCount: Array.isArray(parsed) ? parsed.length : (parsed ? 1 : 0),
+                parseError,
+                sample: parsed ? (Array.isArray(parsed) ? parsed.slice(0, 2) : parsed) : rawOutput.slice(0, 200)
+            });
+        } catch (err) {
+            results.push({
+                provider: p.name,
+                status: 'error',
+                durationMs: Date.now() - start,
+                error: err.message
+            });
+        }
+    }
+
+    return res.json({
+        gameType,
+        theme,
+        promptLength: prompt.length,
+        results
+    });
 });
 
 // ---- Serve static files (React + Vite build & legacy html) ----
@@ -1541,13 +1893,12 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🎮 BerkAI Game Hub running → http://localhost:${PORT}`);
+    console.log(`🎮 OpenClassTools Game Hub running → http://localhost:${PORT}`);
     console.log('🔒 Security: Rate limiting enabled');
-    if (AI_PROVIDER === 'anthropic') {
-        console.log(`🤖 AI Provider: Anthropic (${ANTHROPIC_MODEL}) — paid`);
-    } else if (AI_PROVIDER === 'openai') {
-        console.log(`🤖 AI Provider: OpenAI (${OPENAI_MODEL}) — paid`);
-    } else {
-        console.log(`🤖 AI Provider: Gemini (${GEMINI_MODEL}) — teacher key`);
-    }
+    console.log('🤖 AI Console & Multi-Provider Backup Chain Options:');
+    console.log(`   1. [Primary]  Google Gemini (${GEMINI_MODEL}) -> ${process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY ? 'Configured' : 'Missing key'}`);
+    console.log(`   2. [Backup 1] Groq AI (${GROQ_MODEL}) -> ${GROQ_API_KEY ? 'Configured' : 'Missing key'}`);
+    console.log(`   3. [Backup 2] Kimi / Moonshot (${KIMI_MODEL} @ ${KIMI_BASE_URL}) -> ${KIMI_API_KEY ? 'Configured' : 'Missing key'}`);
+    console.log(`   4. [Backup 3] OpenRouter Free Suite (${OPENROUTER_FREE_MODELS.length} free models) -> ${OPENROUTER_API_KEY ? 'Configured' : 'Missing key'}`);
+    console.log('✨ Strict JSON output formatting & safe JSON unwrapping active across all providers.');
 });

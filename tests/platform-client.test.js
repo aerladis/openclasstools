@@ -52,7 +52,7 @@ test('stores teacher name and key for the tab session only', async () => {
     );
 });
 
-test('requires a teacher name and teacher key', async () => {
+test('defaults teacher name to Teacher and key to platform pool when omitted', async () => {
     const createPlatformClient = await loadFactory();
     const client = createPlatformClient({
         localStorage: memoryStorage(),
@@ -60,20 +60,13 @@ test('requires a teacher name and teacher key', async () => {
         fetch: async () => {}
     });
 
-    assert.throws(
-        () => client.saveTeacherSettings({
-            teacherDisplayName: '',
-            geminiApiKey: 'secret-key-123'
-        }),
-        /Teacher name is required/
-    );
-    assert.throws(
-        () => client.saveTeacherSettings({
-            teacherDisplayName: 'Ms Ada',
-            geminiApiKey: ''
-        }),
-        /Gemini API key is required/
-    );
+    const context = client.saveTeacherSettings({
+        teacherDisplayName: '',
+        geminiApiKey: ''
+    });
+
+    assert.equal(context.teacherDisplayName, 'Teacher');
+    assert.equal(context.keySource, 'platform');
 });
 
 test('sends explicit teacher headers and never falls back key sources', async () => {

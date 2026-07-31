@@ -26,3 +26,12 @@ test('LingoParty records real custom teams without a room code', async () => {
     assert.doesNotMatch(source, /roomCode|gameId|useSocketGame/);
     assert.doesNotMatch(source, /Dragons|Rockets|Androids/);
 });
+
+test('BoardStage contains no stale broadcastGameState socket calls', async () => {
+    const source = await readFile(
+        new URL('../frontend/src/games/LingoParty/components/BoardStage.jsx', import.meta.url),
+        'utf8'
+    );
+    assert.doesNotMatch(source, /broadcastGameState/);
+});
+

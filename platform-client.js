@@ -64,72 +64,64 @@
         }
 
         function getTeacherContext() {
+            const name = session.getItem(STORAGE_KEYS.teacherName) || 'Teacher';
+            const key = session.getItem(STORAGE_KEYS.geminiKey) || '';
             return {
-                teacherDisplayName: session.getItem(STORAGE_KEYS.teacherName) || '',
-                keySource: 'teacher',
-                geminiApiKey: session.getItem(STORAGE_KEYS.geminiKey) || ''
+                teacherDisplayName: name,
+                keySource: key ? 'teacher' : 'platform',
+                geminiApiKey: key
             };
         }
 
         function saveTeacherSettings(settings) {
             const teacherDisplayName = cleanText(
-                settings?.teacherDisplayName,
+                settings?.teacherDisplayName || 'Teacher',
                 'Teacher name',
                 120
             );
             const geminiApiKey = typeof settings?.geminiApiKey === 'string'
                 ? settings.geminiApiKey.trim()
                 : '';
-            if (!geminiApiKey) {
-                throw new PlatformApiError('Gemini API key is required', {
-                    status: 400,
-                    code: 'TEACHER_AI_KEY_REQUIRED'
-                });
-            }
 
             session.setItem(STORAGE_KEYS.teacherName, teacherDisplayName);
-            session.setItem(STORAGE_KEYS.geminiKey, geminiApiKey);
+            if (geminiApiKey) {
+                session.setItem(STORAGE_KEYS.geminiKey, geminiApiKey);
+            }
             return getTeacherContext();
         }
 
         async function verifyTeacherKey(settings) {
-            const teacherDisplayName = cleanText(settings?.teacherDisplayName, 'Teacher name', 120);
+            const teacherDisplayName = cleanText(settings?.teacherDisplayName || 'Teacher', 'Teacher name', 120);
             const geminiApiKey = typeof settings?.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '';
-            if (!geminiApiKey) {
-                throw new PlatformApiError('Gemini API key is required', {
-                    status: 400,
-                    code: 'TEACHER_AI_KEY_REQUIRED'
-                });
-            }
             return request('/api/ai/verify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-teacher-name': teacherDisplayName,
-                    'x-gemini-api-key': geminiApiKey
+                    'x-gemini-api-key': geminiApiKey || ''
                 }
             });
         }
 
         function requireTeacherContext() {
             const context = getTeacherContext();
-            cleanText(context.teacherDisplayName, 'Teacher name', 120);
-            if (!context.geminiApiKey) {
-                throw new PlatformApiError('Gemini API key is required', {
-                    status: 400,
-                    code: 'TEACHER_AI_KEY_REQUIRED'
-                });
-            }
-            return context;
+            return {
+                teacherDisplayName: cleanText(context.teacherDisplayName || 'Teacher', 'Teacher name', 120),
+                keySource: context.geminiApiKey ? 'teacher' : 'platform',
+                geminiApiKey: context.geminiApiKey || ''
+            };
         }
 
         function generationHeaders(context) {
-            return {
+            const headers = {
                 'Content-Type': 'application/json',
-                'x-teacher-name': context.teacherDisplayName,
-                'x-ai-key-source': 'teacher',
-                'x-gemini-api-key': context.geminiApiKey
+                'x-teacher-name': context.teacherDisplayName || 'Teacher',
+                'x-ai-key-source': context.geminiApiKey ? 'teacher' : 'platform'
             };
+            if (context.geminiApiKey) {
+                headers['x-gemini-api-key'] = context.geminiApiKey;
+            }
+            return headers;
         }
 
         async function listDecks(gameType) {

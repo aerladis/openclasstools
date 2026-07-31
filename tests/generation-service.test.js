@@ -44,10 +44,48 @@ test('generates, validates, and persists a named deck', async () => {
     assert.deepEqual(calls[0].generationParameters, { theme: 'Space', count: 1 });
 });
 
-test('teacher generator failure does not invoke a platform fallback or persistence', async () => {
+test('teacher generator failure falls back to server default platform key if available', async () => {
+    const keysUsed = [];
+    let persistedCalls = 0;
+    const service = createGenerationService({
+        platformApiKey: 'server-fallback-key-12345',
+        deckRepository: {
+            createGenerated: async (input) => {
+                persistedCalls += 1;
+                return { id: 'd1', name: input.name, currentVersion: { content: input.content } };
+            }
+        }
+    });
+
+    const deck = await service.generateAndRegister({
+        gameType: 'who',
+        deckName: 'Class Set',
+        generationInput: {},
+        teacherContext: {
+            keySource: 'teacher',
+            apiKey: 'teacher-failing-key',
+            teacherDisplayName: 'Ms Ada',
+            teacherKeyUsed: true
+        },
+        generate: async ({ apiKey }) => {
+            keysUsed.push(apiKey);
+            if (apiKey === 'teacher-failing-key') {
+                throw new Error('429 Quota Exceeded');
+            }
+            return ['Hero Leia'];
+        }
+    });
+
+    assert.deepEqual(keysUsed, ['teacher-failing-key', null]);
+    assert.equal(persistedCalls, 1);
+    assert.equal(deck.id, 'd1');
+});
+
+test('teacher generator failure throws when no platform fallback key is available', async () => {
     let generatedCalls = 0;
     let persistedCalls = 0;
     const service = createGenerationService({
+        platformApiKey: '',
         deckRepository: {
             createGenerated: async () => {
                 persistedCalls += 1;
@@ -73,13 +111,12 @@ test('teacher generator failure does not invoke a platform fallback or persisten
         }),
         error => {
             assert.ok(error instanceof GenerationServiceError);
-            assert.equal(error.code, 'TEACHER_KEY_GENERATION_FAILED');
-            assert.equal(error.message.includes('raw upstream'), false);
+            assert.equal(error.code, 'GENERATION_FAILED');
             return true;
         }
     );
 
-    assert.equal(generatedCalls, 1);
+    assert.equal(generatedCalls, 2);
     assert.equal(persistedCalls, 0);
 });
 

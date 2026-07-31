@@ -62,17 +62,19 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     setVerifying(true);
 
     try {
-      await verifyTeacherKey({
-        teacherDisplayName: teacherName,
-        geminiApiKey: apiKey,
-      });
+      if (apiKey && apiKey.length >= 10) {
+        await verifyTeacherKey({
+          teacherDisplayName: teacherName || 'Teacher',
+          geminiApiKey: apiKey,
+        });
+      }
 
       saveTeacherSettings({
-        teacherDisplayName: teacherName,
+        teacherDisplayName: teacherName || 'Teacher',
         geminiApiKey: apiKey,
       });
 
-      setVerifiedSuccess('Game server connected & Gemini key verified!');
+      setVerifiedSuccess('Preferences saved! Server AI pool active.');
       setSavedStatus(true);
       setTimeout(() => {
         onClose();
@@ -97,41 +99,37 @@ export default function ApiKeyModal({ isOpen, onClose }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h2>🔑 Teacher Settings & API Key</h2>
+          <h2>🔑 Teacher Settings (Optional Custom Key)</h2>
           <button className={styles.btnClose} onClick={onClose}>✕</button>
         </div>
 
         <p className={styles.description}>
-          Set the teacher name recorded with generated decks and play sessions. A personal
-          Gemini key is kept only in this browser tab and is never stored by the server.
+          OpenClassTools runs using the server-side AI provider pool out-of-the-box. Providing a teacher name or custom Gemini key is completely optional.
         </p>
 
         <form onSubmit={handleSave} className={styles.form}>
           <div className={styles.fieldGroup}>
-            <label>Teacher / Classroom Name</label>
+            <label>Teacher / Classroom Name (Optional)</label>
             <input
               type="text"
               className={styles.inputField}
               value={teacherName}
               onChange={e => setTeacherName(e.target.value)}
               placeholder="e.g. Mr. Smith - Room 302"
-              required
             />
           </div>
 
           <div className={styles.fieldGroup}>
-            <label>Google Gemini API Key</label>
+            <label>Google Gemini API Key (Optional Override)</label>
             <input
               type="password"
               className={styles.inputField}
               value={apiKey}
               onChange={e => setApiKey(e.target.value)}
-              placeholder="AIzaSy..."
-              required
+              placeholder="AIzaSy... (Leave empty to use server AI pool)"
             />
             <span className={styles.hint}>
-              Get a key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>.
-              If it fails, the app will not silently retry with another key.
+              Leave empty to use the server AI provider pool (Google Gemini, Groq, Kimi, OpenRouter).
             </span>
           </div>
 

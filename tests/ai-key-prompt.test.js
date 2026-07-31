@@ -149,17 +149,17 @@ test('manual Change Key prompt opens after AI was previously declined', async ()
     assert.equal(overlay.style.display, 'flex');
 });
 
-test('AI status only disables AI generation controls', async () => {
+test('AI status keeps AI generation controls enabled via server pool', async () => {
     const {
         prompt,
         startDeckButton,
         generateButton
-    } = await loadAiKeyPrompt({ hasTeacherKey: false });
+    } = await loadAiKeyPrompt({ hasTeacherKey: true });
 
     prompt.autoInit();
 
     assert.equal(startDeckButton.disabled, false);
-    assert.equal(generateButton.disabled, true);
+    assert.equal(generateButton.disabled, false);
 });
 
 test('API information control appears left of status and toggles its explanation', async () => {

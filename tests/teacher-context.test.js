@@ -23,18 +23,14 @@ test('selects a teacher key without exposing platform credentials', () => {
     });
 });
 
-test('rejects missing teacher name and teacher key', () => {
-    assert.throws(
-        () => extractTeacherContext({ headers: {}, body: {} }),
-        error => error instanceof TeacherContextError && error.code === 'TEACHER_NAME_REQUIRED'
-    );
-    assert.throws(
-        () => extractTeacherContext({
-            headers: { 'x-teacher-name': 'Ms Ada' },
-            body: {}
-        }),
-        error => error.code === 'TEACHER_AI_KEY_REQUIRED'
-    );
+test('defaults missing teacher name and key to Teacher and platform pool', () => {
+    const context = extractTeacherContext({ headers: {}, body: {} });
+    assert.deepEqual(context, {
+        teacherDisplayName: 'Teacher',
+        keySource: 'platform',
+        apiKey: null,
+        teacherKeyUsed: false
+    });
 });
 
 test('sanitizes teacher names and never accepts arrays as headers', () => {

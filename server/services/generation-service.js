@@ -31,7 +31,7 @@ function safeGenerationFailure() {
     );
 }
 
-export function createGenerationService({ deckRepository }) {
+export function createGenerationService({ deckRepository, platformApiKey = process.env.GEMINI_API_KEY }) {
     if (!deckRepository?.createGenerated) {
         throw new Error('Generation service requires a writable deck repository');
     }
@@ -52,22 +52,38 @@ export function createGenerationService({ deckRepository }) {
             }
 
             let generated;
+            let usedTeacherKey = Boolean(teacherContext?.teacherKeyUsed && teacherContext?.apiKey);
+
             try {
                 generated = await generate({
-                    apiKey: teacherContext.apiKey,
-                    keySource: teacherContext.keySource
+                    apiKey: teacherContext?.apiKey || null,
+                    keySource: usedTeacherKey ? 'teacher' : 'platform'
                 });
-            } catch (err) {
-                console.error('[GenerationService] AI generation error:', err.message || err);
-                const isQuota = err?.quotaExceeded || err?.message?.includes('RESOURCE_EXHAUSTED') || err?.message?.includes('429') || err?.message?.includes('Quota') || err?.message?.includes('quota');
-                if (isQuota) {
+            } catch (firstErr) {
+                console.warn('[GenerationService] Primary API key failed, falling back to server provider pool:', firstErr.message || firstErr);
+
+                try {
+                    generated = await generate({
+                        apiKey: null,
+                        keySource: 'platform'
+                    });
+                    usedTeacherKey = false;
+                } catch (fallbackErr) {
+                    console.error('[GenerationService] Server provider pool generation failed:', fallbackErr.message || fallbackErr);
+                    const isQuota = fallbackErr?.quotaExceeded || fallbackErr?.message?.includes('RESOURCE_EXHAUSTED') || fallbackErr?.message?.includes('429') || fallbackErr?.message?.includes('Quota') || fallbackErr?.message?.includes('quota');
+                    if (isQuota) {
+                        throw new GenerationServiceError(
+                            'AI API quota or rate limit exceeded (HTTP 429). Please try again later.',
+                            'GEMINI_QUOTA_EXCEEDED',
+                            429
+                        );
+                    }
                     throw new GenerationServiceError(
-                        'Gemini API quota or rate limit exceeded (HTTP 429). Please check your Gemini API key usage limit or try again later.',
-                        'GEMINI_QUOTA_EXCEEDED',
-                        429
+                        fallbackErr?.message || 'AI Generation failed across server provider pool.',
+                        fallbackErr?.code || 'GENERATION_FAILED',
+                        502
                     );
                 }
-                throw safeGenerationFailure();
             }
 
             const content = normalizeDeckContent(gameType, generated);
@@ -82,9 +98,10 @@ export function createGenerationService({ deckRepository }) {
                 teacherDisplayName: teacherContext.teacherDisplayName,
                 aiProvider,
                 aiModel,
-                teacherKeyUsed: Boolean(teacherContext.teacherKeyUsed)
+                teacherKeyUsed: usedTeacherKey
             });
         }
     });
 }
+
 

@@ -18,7 +18,6 @@ const ITEM_ICONS = { shield: '🛡️' };
 export default function BoardStage({
   gameState,
   setGameState,
-  broadcastGameState,
   playSound,
   onGameComplete
 }) {
@@ -70,7 +69,6 @@ export default function BoardStage({
       round: nextRound
     };
     setGameState(updatedState);
-    broadcastGameState(updatedState);
   };
 
   const shuffleTiles = (currentTiles) => {
@@ -111,7 +109,7 @@ export default function BoardStage({
       let pool = validCards.length > 0 ? validCards : deck;
       let chosen = pool[Math.floor(Math.random() * pool.length)];
 
-      if (chosen) {
+      if (chosen && cardKey(chosen)) {
         usedChallengeKeysRef.current.add(cardKey(chosen));
       } else {
         chosen = { type: 'riddle', prompt: 'Answer the Boss Riddle!', answer: 'Correct' };
@@ -129,14 +127,12 @@ export default function BoardStage({
       team.position = Math.max(0, Math.min(gameState.tiles.length - 1, team.position + randOffset));
       const updatedState = { ...gameState, teams: teamsList };
       setGameState(updatedState);
-      broadcastGameState(updatedState);
       setTimeout(() => advanceTurn(teamsList), 1200);
     } else if (tile.type === 'asteroid') {
       if (playSound) playSound('damage');
       team.position = Math.max(0, team.position - 2);
       const updatedState = { ...gameState, teams: teamsList };
       setGameState(updatedState);
-      broadcastGameState(updatedState);
       setTimeout(() => advanceTurn(teamsList), 1200);
     } else {
       // Standard challenge planet ➔ Triggers Wheel of Cosmic Fate!
@@ -199,12 +195,17 @@ export default function BoardStage({
           type: 'roleplay',
           prompt: 'Order food or drinks at a space station cafe.',
           answer: 'Use: May I have, Please, Thank you'
+        },
+        truefalse: {
+          type: 'truefalse',
+          prompt: '"Went" is the past tense of "go".',
+          answer: true
         }
       };
       chosen = TYPE_FALLBACKS[winner.type] || { type: winner.type, prompt: `Complete the ${winner.label || winner.type} challenge!` };
     }
 
-    if (chosen && chosen.prompt) {
+    if (chosen && cardKey(chosen)) {
       usedChallengeKeysRef.current.add(cardKey(chosen));
     }
 
@@ -646,7 +647,6 @@ export default function BoardStage({
             onClick={() => {
               onGameComplete?.(gameState.teams, 'returned_to_setup');
               setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
-              broadcastGameState({ ...gameState, activeScreen: 'setup' });
             }}
           >
             ⚙️ Mission Settings
@@ -666,19 +666,6 @@ export default function BoardStage({
 
       {activeModal === 'guide' && (
         <GuideModal onClose={() => setActiveModal(null)} />
-      )}
-
-      {activeModal === 'victory' && (
-        <VictoryModal
-          teams={gameState.teams}
-          onPlayAgain={() => {
-            setGameState(prev => ({ ...prev, activeScreen: 'setup' }));
-            broadcastGameState({ ...gameState, activeScreen: 'setup' });
-          }}
-          onReturnHub={() => {
-            window.location.href = 'index.html';
-          }}
-        />
       )}
 
       <ChallengeModal
@@ -730,7 +717,6 @@ export default function BoardStage({
               currentTeamIndex: (gameState.currentTeamIndex + 1) % teamsCopy.length
             };
             setGameState(updatedState);
-            broadcastGameState(updatedState);
             setOrbitResult(null);
           }}
         />
