@@ -253,6 +253,18 @@ const TABOO_CARD_SCHEMA = {
     }
 };
 
+const HANGMAN_WORD_SCHEMA = {
+    type: 'array',
+    items: {
+        type: 'object',
+        properties: {
+            word: { type: 'string' },
+            category: { type: 'string' }
+        },
+        required: ['word']
+    }
+};
+
 const WORD_GAME_SCHEMA = {
     type: 'array',
     items: {
@@ -990,6 +1002,13 @@ CEFR target: ${cefrLevel}
 - Avoid using words in the clue that are harder than the target CEFR level
 - Do not make the clue language more advanced than necessary
 - Prefer definition-style, simple paraphrase, function, category, synonym, antonym, or context clues
+- GRAMMAR TOPICS BY CEFR LEVEL:
+  - For A1: Present Simple, "to be", basic prepositions (in/on/at), articles (a/an/the), possessive adjectives, basic can/can't.
+  - For A2: Past Simple, Present Continuous, Comparatives & Superlatives, Future with going to, Countable/Uncountable nouns.
+  - For B1: Present Perfect, Past Continuous, 1st & 2nd Conditionals, Modal verbs of obligation (must/have to), Passive Voice (simple).
+  - For B1+: Present Perfect Continuous, Used to / Would for past habits, Reported Speech, Gerunds & Infinitives.
+  - For B2: 3rd Conditional, Passive with Modals, Modals of Deduction (must have/could have), Wish / If only, Relative Clauses.
+  - For C1: Inversion (Hardly had... / Not only...), Subjunctive mood, Advanced Passive & Causatives, Complex Cleft Sentences.
 - For A1 use very short, very simple clues with common words and basic sentence patterns
 - For A2 use simple everyday English and short direct explanations
 - For B1 use clear sentence-level paraphrases and familiar school/everyday vocabulary
@@ -1124,18 +1143,18 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
         const templates = [
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: Narrate a 30-second mission log about "${cleanTheme}" as if reporting to mission control. Use at least 3 key vocabulary words! Perform ${roleplayFraming}.`,
-                answer: `Key phrases: "Could you tell me...", "In my opinion...", "I suggest that..."`
+                prompt: `🎭 Roleplay Scenario: You are discussing "${cleanTheme}" with a partner. Politely express your opinion and ask for their perspective! Perform ${roleplayFraming}.`,
+                answer: `Key phrases: "In my opinion...", "What do you think about...", "I agree because..."`
             },
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: You are ordering or requesting assistance regarding "${cleanTheme}". Express your request clearly in English! Perform ${roleplayFraming}.`,
-                answer: `Key phrases: "Excuse me, I need help with...", "How much does it cost?"`
+                prompt: `🎭 Roleplay Scenario: You are requesting assistance regarding "${cleanTheme}". Express your request clearly and politely in English! Perform ${roleplayFraming}.`,
+                answer: `Key phrases: "Could you help me with...", "Would it be possible to...", "Thank you for your help."`
             },
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: Narrate a mission log describing what you would do if you were an expert in "${cleanTheme}" for a day. Perform ${roleplayFraming}.`,
-                answer: `Key phrases: "If I were...", "The first thing I would do is...", "I'd also..."`
+                prompt: `🎭 Roleplay Scenario: Explain why "${cleanTheme}" is important to a visitor. Give two clear recommendations! Perform ${roleplayFraming}.`,
+                answer: `Key phrases: "I strongly recommend...", "The main reason is...", "You should also try..."`
             },
             {
                 type: 'riddle',
@@ -1156,46 +1175,54 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
                 type: 'scramble',
                 scrambledWord: 'C-H-A-L-L-E-N-G-E',
                 targetWord: 'CHALLENGE',
-                clue: `A test of your abilities or skills related to ${cleanTheme}.`
+                clue: `A demanding task or test that measures your skills.`
             },
             {
                 type: 'scramble',
                 scrambledWord: 'V-O-C-A-B-U-L-A-R-Y',
                 targetWord: 'VOCABULARY',
-                clue: 'All the words known and used in a language.'
+                clue: 'The collection of words used within a language.'
             },
             {
                 type: 'scramble',
                 scrambledWord: 'A-D-V-E-N-T-U-R-E',
                 targetWord: 'ADVENTURE',
-                clue: `An exciting or unusual experience related to ${cleanTheme}.`
+                clue: `An exciting journey into unfamiliar territory.`
             },
             {
                 type: 'pronunciation',
-                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear accent: "The enthusiastic explorers discovered mysterious cosmic anomalies!"`
+                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear sentence stress: "We need to CONFIRM our RESERVATIONS before TONIGHT!"`,
+                answer: 'Emphasize: CONFIRM, RESERVATIONS, TONIGHT'
             },
             {
                 type: 'pronunciation',
-                prompt: `🗣️ Pronunciation Challenge: Read out loud clearly: "Thirty-three thrifty thinkers thought thoroughly about ${cleanTheme}."`
+                prompt: `🗣️ Pronunciation Challenge: Read out loud focusing on natural intonation: "Would you MIND passing me that STRATEGY document?"`,
+                answer: 'Emphasize: MIND, STRATEGY'
             },
             {
                 type: 'pronunciation',
-                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear stress: "She carefully considered several unusual solutions."`
+                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear stress: "She CAREFULLY considered SEVERAL innovative SOLUTIONS."`,
+                answer: 'Emphasize: CAREFULLY, SEVERAL, SOLUTIONS'
             },
             {
                 type: 'association',
-                prompt: `🔗 Word Association: Name 4 key vocabulary collocations associated with "${cleanTheme}".`,
-                answer: `Valid collocations related to ${cleanTheme}`
+                prompt: `🔗 Word Association: Name 3 action verbs commonly associated with "${cleanTheme}".`,
+                answer: `Any 3 valid functional verbs related to ${cleanTheme}`
             },
             {
                 type: 'association',
-                prompt: `🔗 Word Association: Name 3 adjectives that could describe "${cleanTheme}".`,
+                prompt: `🔗 Word Association: Name 3 descriptive adjectives associated with "${cleanTheme}".`,
                 answer: `Any 3 valid descriptive adjectives`
             },
             {
                 type: 'association',
-                prompt: `🔗 Word Association: Name 3 verbs commonly used when talking about "${cleanTheme}".`,
-                answer: `Any 3 valid related verbs`
+                prompt: `🔗 Word Association: Name 3 common collocations used when discussing "${cleanTheme}".`,
+                answer: `Any 3 valid collocations related to ${cleanTheme}`
+            },
+            {
+                type: 'grammar',
+                prompt: `✍️ Grammar Focus: Fill in the blank: "If we [___] earlier, we would have caught the train." (study/leave/arrive)`,
+                answer: 'HAD LEFT (or HAD ARRIVED)'
             },
             {
                 type: 'grammar',
@@ -1208,24 +1235,19 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
                 answer: 'If I WERE you, I WOULD practice every day.'
             },
             {
-                type: 'grammar',
-                prompt: `✍️ Grammar Trap: Correct the mistake: "He have been study English for three years."`,
-                answer: 'He HAS BEEN STUDYING English for three years.'
+                type: 'speed',
+                prompt: `☄️ Speed Relay: Name 3 useful phrases for "${cleanTheme}" in under 15 seconds!`,
+                answer: `Any 3 valid phrases for ${cleanTheme}`
             },
             {
                 type: 'speed',
-                prompt: `☄️ Speed Relay: Name 3 items or verbs related to "${cleanTheme}" in under 15 seconds!`,
-                answer: `Any 3 valid items for ${cleanTheme}`
+                prompt: `☄️ Speed Relay: Name 3 key objects or tools related to "${cleanTheme}" in under 15 seconds!`,
+                answer: `Any 3 valid objects related to ${cleanTheme}`
             },
             {
-                type: 'speed',
-                prompt: `☄️ Speed Relay: Name 3 adjectives that describe "${cleanTheme}" in under 15 seconds!`,
-                answer: `Any 3 valid adjectives for ${cleanTheme}`
-            },
-            {
-                type: 'speed',
-                prompt: `☄️ Speed Relay: Name 3 places associated with "${cleanTheme}" in under 15 seconds!`,
-                answer: `Any 3 valid places related to ${cleanTheme}`
+                type: 'ordering',
+                prompt: `B: I would recommend checking out the local market.\nA: Excuse me, what is the best place to visit around here?\nB: It has great traditional crafts and delicious food.`,
+                answer: `A: Excuse me, what is the best place to visit around here? -> B: I would recommend checking out the local market. -> B: It has great traditional crafts and delicious food.`
             }
         ];
 
@@ -1401,12 +1423,16 @@ app.post('/api/generate-hangman', apiRateLimit, createGenerationHandler({
     }),
     generate: async ({ theme, count }, { apiKey }) => {
         const prompt = loadPrompt('hangman', { count, theme });
-        const text = await callTextAI(prompt, { apiKey });
-        const words = text
-            .split('\n')
-            .map(line => line.trim().toUpperCase())
-            .filter(line => line.length >= 3 && line.length <= 60 && /^[A-ZÀ-ÖØ-ÝÇĞİÖŞÜ\s'-]+$/u.test(line))
-            .slice(0, count);
+        const res = await callJsonAI(prompt, HANGMAN_WORD_SCHEMA, {
+            apiKey,
+            temperature: 0.7,
+            validate: (result) => {
+                const list = Array.isArray(result) ? result : (result?.words || result?.items || []);
+                return (!list || list.length === 0) ? 'Invalid response format' : null;
+            }
+        });
+        const rawList = Array.isArray(res) ? res : (res?.words || res?.items || []);
+        const words = rawList.slice(0, count);
         if (words.length === 0) throw new Error('Empty AI result');
         return words;
     }
@@ -1576,8 +1602,9 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     parseInput: body => {
         const playerCount = sanitizeCount(body.playerCount || body.teamCount, 8) || 3;
         const orbitCount = sanitizeCount(body.orbitCount, 5) || 1;
-        const calculatedCount = 5 * playerCount * orbitCount;
-        const count = Math.min(120, Math.max(10, sanitizeCount(body.count || calculatedCount, 120)));
+        const perCategory = Math.max(5, Math.floor((5 * playerCount * orbitCount) / 4));
+        const calculatedCount = Math.min(120, perCategory * 8);
+        const count = Math.min(120, Math.max(40, sanitizeCount(body.count || calculatedCount, 120)));
 
         return {
             theme: sanitizeTheme(body.theme) || 'General English',
@@ -1591,14 +1618,22 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
     },
     generate: async ({ theme, count, cefr, mode }, { apiKey }) => {
         const cefrInstruction = getCEFRInstruction(cefr);
-        const BATCH_SIZE = 24;
+        const BATCH_SIZE = 40;
         const numBatches = Math.max(1, Math.ceil(count / BATCH_SIZE));
         const perBatchTarget = Math.ceil(count / numBatches);
+
+        const batchFocusAngles = [
+            'Focus on core terminology, basic equipment, primary actions, and immediate scenarios.',
+            'Focus on intermediate processes, environmental details, teamwork interactions, and problem solving.',
+            'Focus on advanced situations, specialized vocabulary, emergency protocols, and descriptive expressions.'
+        ];
 
         const batchPrompts = Array.from({ length: numBatches }, (_, i) => {
             const perCategoryCount = Math.max(1, Math.floor(perBatchTarget / 8));
             const batchIndex = i + 1;
+            const subFocus = batchFocusAngles[i % batchFocusAngles.length];
             return loadPrompt('lingoparty', { count: perBatchTarget, perCategoryCount, batchIndex, numBatches, theme, cefrInstruction })
+                + `\n\nSUB-FOCUS DIRECTIVE (BATCH ${batchIndex}): ${subFocus}`
                 + `\n\n${getModeInstruction(mode)}`;
         });
 
@@ -1624,19 +1659,33 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
         );
 
         const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse'];
-        const seenKeys = new Set();
+        const seenPromptKeys = new Set();
+        const seenTargetWords = new Set();
+        const seenAnswers = new Set();
         const validCards = [];
+
+        const extractKey = str => String(str ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
         for (const c of rawCards) {
             if (!c || typeof c !== 'object' || !c.type || !validTypes.includes(c.type)) continue;
 
-            const rawText = c.prompt || c.scrambledWord || c.targetWord || c.word || '';
-            const key = String(rawText).toLowerCase().replace(/[^a-z0-9]/g, '');
+            const promptKey = extractKey(c.prompt || c.scrambledWord || c.clue || '');
+            const targetWordKey = extractKey(c.targetWord || c.word || '');
+            const answerKey = extractKey(c.answer || '');
 
-            if (key && seenKeys.has(key)) {
-                continue; // Strictly filter out duplicate questions!
+            // Strict anti-repetition filters across prompt, target word, and answer concept
+            if (c.type === 'scramble' && targetWordKey) {
+                if (seenTargetWords.has(targetWordKey)) continue;
             }
-            if (key) seenKeys.add(key);
+            if (promptKey && seenPromptKeys.has(promptKey)) continue;
+            if (['riddle', 'scramble'].includes(c.type) && (targetWordKey || answerKey)) {
+                const checkAns = targetWordKey || answerKey;
+                if (seenAnswers.has(checkAns)) continue;
+                seenAnswers.add(checkAns);
+            }
+
+            if (promptKey) seenPromptKeys.add(promptKey);
+            if (targetWordKey) seenTargetWords.add(targetWordKey);
 
             let normalized;
             if (c.type === 'riddle') {
