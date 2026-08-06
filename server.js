@@ -1908,6 +1908,38 @@ app.post('/api/ai/compare-providers', apiRateLimit, async (req, res) => {
     });
 });
 
+// ---- POST /api/generate-campaign (4-stage lesson campaign package) ----
+app.post('/api/generate-campaign', async (req, res) => {
+    try {
+        const theme = String(req.body?.theme || 'General Knowledge').trim();
+        const cefr = String(req.body?.cefr || 'B1').toUpperCase().trim();
+        const campaignName = String(req.body?.campaignName || `${theme} — ${cefr} Quest`).trim();
+
+        const campaignId = `camp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+        const warmupContent = createFallbackQuestions('who', theme, 8);
+        const lexicalContent = createFallbackQuestions('taboo', theme, 10);
+        const mainContent = createFallbackQuestions('lingoparty', theme, 24);
+        const reviewContent = createFallbackQuestions('millionaire', theme, 15);
+
+        return res.json({
+            campaignId,
+            campaignName,
+            theme,
+            cefr,
+            stages: [
+                { stageIndex: 1, name: 'Warm-Up', gameType: 'who', content: warmupContent },
+                { stageIndex: 2, name: 'Lexical Focus', gameType: 'taboo', content: lexicalContent },
+                { stageIndex: 3, name: 'Main Mission', gameType: 'lingoparty', content: mainContent },
+                { stageIndex: 4, name: 'Quiz Review', gameType: 'millionaire', content: reviewContent }
+            ]
+        });
+    } catch (err) {
+        console.error('Error generating lesson campaign:', err);
+        return res.status(500).json({ error: 'Failed to generate lesson campaign' });
+    }
+});
+
 // ---- Serve static files (React + Vite build & legacy html) ----
 const frontendDist = path.join(__dirname, 'frontend', 'dist');
 if (fs.existsSync(frontendDist)) {
@@ -1955,3 +1987,6 @@ app.listen(PORT, () => {
     console.log(`   4. [Backup 3] OpenRouter Free Suite (${OPENROUTER_FREE_MODELS.length} free models) -> ${OPENROUTER_API_KEY ? 'Configured' : 'Missing key'}`);
     console.log('✨ Strict JSON output formatting & safe JSON unwrapping active across all providers.');
 });
+
+export { createFallbackQuestions, loadPrompt };
+
