@@ -490,14 +490,14 @@ export default function BoardStage({
 
   const finalizePurchase = (teamsCopy) => {
     setActiveModal(null);
+    setGameState({ ...gameState, teams: teamsCopy });
     if (checkVictory(teamsCopy)) return;
-    advanceTurn(teamsCopy);
+    // Current active team gets to roll the dice after shopping!
   };
 
   const handleShopClose = () => {
-    const teamsCopy = gameState.teams.map(t => ({ ...t }));
     setActiveModal(null);
-    advanceTurn(teamsCopy);
+    // Current active team gets to roll the dice after visiting the shop!
   };
 
   const handleBuyItem = (item) => {
