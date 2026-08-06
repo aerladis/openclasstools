@@ -1,0 +1,141 @@
+/* Clean A4 Printable CSS Stylesheet for Classroom Handouts */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .no-print,
+  nav,
+  header,
+  button,
+  .modal-backdrop,
+  .glass-panel-close {
+    display: none !important;
+  }
+
+  .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 15mm 20mm !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+  }
+
+  .print-page {
+    page-break-after: always;
+  }
+
+  .print-header {
+    border-bottom: 2px solid #111827;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .print-title {
+    font-size: 20pt;
+    font-weight: 800;
+    margin: 0;
+    color: #111827;
+  }
+
+  .print-subtitle {
+    font-size: 10pt;
+    color: #4b5563;
+    margin-top: 4px;
+  }
+
+  .print-student-info {
+    font-size: 11pt;
+    border: 1px solid #d1d5db;
+    padding: 8px 16px;
+    border-radius: 6px;
+  }
+
+  /* Information Gap A/B Columns */
+  .info-gap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 16px;
+  }
+
+  .info-gap-column {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fafafa;
+  }
+
+  .info-gap-heading {
+    font-size: 14pt;
+    font-weight: 700;
+    border-bottom: 1px solid #d1d5db;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    color: #1f2937;
+  }
+
+  /* Flashcard Cutout Grid */
+  .flashcard-print-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .flashcard-cutout-box {
+    border: 2px dashed #9ca3af;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+  }
+
+  .flashcard-cutout-word {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .flashcard-cutout-sub {
+    font-size: 10pt;
+    color: #4b5563;
+    margin-top: 6px;
+  }
+
+  /* Quiz Item List */
+  .quiz-item-list {
+    margin-top: 16px;
+  }
+
+  .quiz-item-box {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 0;
+  }
+
+  .quiz-item-prompt {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .quiz-item-blank {
+    border-bottom: 1px solid #374151;
+    display: inline-block;
+    width: 120px;
+    margin: 0 4px;
+  }
+}

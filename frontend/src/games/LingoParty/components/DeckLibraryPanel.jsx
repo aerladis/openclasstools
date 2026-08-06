@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './DeckLibraryPanel.module.css';
 import GenerationConsole from '../../../components/Common/GenerationConsole';
+import WorksheetExportModal from '../../../components/WorksheetExportModal';
 
 export default function DeckLibraryPanel({
   decks,
@@ -21,6 +22,14 @@ export default function DeckLibraryPanel({
   onLaunch,
   onGenerate,
 }) {
+  const [showPrintModal, setShowPrintModal] = useState(false);
+
+  const selectedDeckObject = selectedDeck ? {
+    gameType: 'lingoparty',
+    name: selectedDeck.name,
+    content: selectedDeck.currentVersion?.content || []
+  } : null;
+
   return (
     <section className={styles.panel} aria-label="Registered LingoParty decks">
       <div className={styles.heading}>
@@ -44,9 +53,20 @@ export default function DeckLibraryPanel({
           ))}
         </select>
       </label>
-      <button type="button" onClick={onLaunch} disabled={!selectedDeck || launching}>
-        Launch selected deck
-      </button>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button type="button" onClick={onLaunch} disabled={!selectedDeck || launching} style={{ flex: 1 }}>
+          Launch selected deck
+        </button>
+        {selectedDeckObject && (
+          <button
+            type="button"
+            onClick={() => setShowPrintModal(true)}
+            style={{ background: '#7c3aed', color: '#ffffff', fontWeight: 600, border: 'none', borderRadius: '8px', padding: '0 12px', cursor: 'pointer' }}
+          >
+            🖨️ Print
+          </button>
+        )}
+      </div>
 
       <div className={styles.generator}>
         <label>
@@ -77,6 +97,14 @@ export default function DeckLibraryPanel({
 
       {(error || launchError) && <p className={styles.error}>{launchError || error}</p>}
       <GenerationConsole logs={logs} />
+
+      {showPrintModal && selectedDeckObject && (
+        <WorksheetExportModal
+          deck={selectedDeckObject}
+          onClose={() => setShowPrintModal(false)}
+        />
+      )}
     </section>
   );
 }
+
