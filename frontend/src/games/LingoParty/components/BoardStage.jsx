@@ -68,7 +68,26 @@ export default function BoardStage({
     });
   }, [gameState.teams]);
 
-  const activeTeam = gameState.teams[gameState.currentTeamIndex] || gameState.teams[0];
+  const activeTeam = (gameState.teams && gameState.teams[gameState.currentTeamIndex]) || (gameState.teams && gameState.teams[0]) || { name: 'Crew 1', position: 0, trophies: 0 };
+
+  if (!gameState || !gameState.tiles || gameState.tiles.length === 0 || !gameState.teams || gameState.teams.length === 0) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#050311', color: '#a855f7', padding: '3rem' }}>
+        <div style={{
+          width: '56px',
+          height: '56px',
+          border: '4px solid rgba(168, 85, 247, 0.2)',
+          borderTopColor: '#a855f7',
+          borderRightColor: '#ec4899',
+          borderRadius: '50%',
+          animation: 'cosmicSpin 0.8s linear infinite'
+        }} />
+        <h2 style={{ marginTop: '1.5rem', fontWeight: 800, fontSize: '1.35rem', color: '#f8fafc' }}>
+          🚀 Initializing Space Odyssey Grid...
+        </h2>
+      </div>
+    );
+  }
 
   const triggerConfetti = () => {
     confetti({

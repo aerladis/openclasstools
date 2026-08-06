@@ -268,8 +268,32 @@ export default function LingoPartyGame() {
         </div>
       )}
 
+      <style>{`
+        @keyframes cosmicSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
       {gameState.activeScreen === 'setup' ? (
         <SetupScreen onStartGame={handleStartGame} playSound={playSound} />
+      ) : (!gameState.tiles || gameState.tiles.length === 0) ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#050311', color: '#a855f7', padding: '3rem' }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            border: '4px solid rgba(168, 85, 247, 0.2)',
+            borderTopColor: '#a855f7',
+            borderRightColor: '#ec4899',
+            borderRadius: '50%',
+            animation: 'cosmicSpin 0.8s linear infinite'
+          }} />
+          <h2 style={{ marginTop: '1.5rem', fontWeight: 800, fontSize: '1.35rem', color: '#f8fafc', letterSpacing: '0.5px' }}>
+            🚀 Launching Space Odyssey Board...
+          </h2>
+          <p style={{ color: '#94a3b8', marginTop: '0.4rem', fontSize: '0.95rem' }}>
+            Preparing planetary orbit grid and crew standees
+          </p>
+        </div>
       ) : (
         <BoardStage
           gameState={gameState}
