@@ -54,6 +54,28 @@ function parseOrderingLines(rawPrompt) {
     .filter(Boolean);
 }
 
+function getShuffledOrderingLines(parsedLines) {
+  if (!Array.isArray(parsedLines) || parsedLines.length <= 1) return parsedLines || [];
+
+  const originalStr = parsedLines.join('\n');
+  let shuffled = [...parsedLines];
+  let attempts = 0;
+
+  while (attempts < 20 && shuffled.join('\n') === originalStr) {
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    attempts++;
+  }
+
+  if (shuffled.join('\n') === originalStr && shuffled.length >= 2) {
+    [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+  }
+
+  return shuffled;
+}
+
 export default function ChallengeModal({ challenge, activeTeam, onResolve, playSound, scaffolding }) {
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [isClueUnlocked, setIsClueUnlocked] = useState(false);
@@ -68,7 +90,8 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     setTimerActive(true);
 
     if (challenge?.type === 'ordering' && challenge.prompt) {
-      setOrderedLines(parseOrderingLines(challenge.prompt));
+      const parsed = parseOrderingLines(challenge.prompt);
+      setOrderedLines(getShuffledOrderingLines(parsed));
     } else {
       setOrderedLines([]);
     }
