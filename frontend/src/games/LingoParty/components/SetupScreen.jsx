@@ -244,7 +244,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
     deckLibrary.clearLogs();
     addLog('🚀 Initializing Gemini AI Challenge Generation...', 'info');
 
-    const cardCount = Math.min(120, 5 * teamCount * orbitCount);
+    const perCategory = Math.max(5, Math.floor((5 * teamCount * orbitCount) / 4));
+    const cardCount = Math.min(120, perCategory * 8);
     addLog(`📌 Topic: "${topic}" | CEFR: ${cefr} | Crews: ${teamCount} | Orbits: ${orbitCount} | Mode: ${mode.toUpperCase()} | Target: ${cardCount} Unique Challenges`, 'info');
 
     const startTime = Date.now();
@@ -329,7 +330,8 @@ export default function SetupScreen({ onStartGame, playSound }) {
     setLaunching(true);
     setLaunchError('');
     try {
-      const cardCount = 5 * teamCount * orbitCount * 8;
+      const perCategory = Math.max(5, Math.floor((5 * teamCount * orbitCount) / 4));
+      const cardCount = Math.min(120, perCategory * 8);
       const deck = await deckLibrary.generate({
         endpoint: '/api/generate-lingoparty',
         deckName,
@@ -570,6 +572,17 @@ export default function SetupScreen({ onStartGame, playSound }) {
                         onChange={e => setTopic(e.target.value)}
                         placeholder="e.g. Space Exploration, Environmental Issues, Travel & Airport"
                       />
+                    </div>
+
+                    <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          defaultChecked={true}
+                          style={{ width: '18px', height: '18px', accentColor: '#a855f7' }}
+                        />
+                        <span>⚡ Adaptive Scaffolding (Auto-adjust difficulty & hint support based on performance)</span>
+                      </label>
                     </div>
                   </div>
 

@@ -53,7 +53,7 @@ function parseOrderingLines(rawPrompt) {
     .filter(Boolean);
 }
 
-export default function ChallengeModal({ challenge, activeTeam, onResolve, playSound }) {
+export default function ChallengeModal({ challenge, activeTeam, onResolve, playSound, scaffolding }) {
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [isClueUnlocked, setIsClueUnlocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45);
@@ -267,6 +267,22 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
           <div className={styles.memoryRecallBadge}>
             <span className={styles.memoryIcon}>🧠</span>
             <span className={styles.memoryText}>MEMORY RECALL — You've seen this question earlier in the mission!</span>
+          </div>
+        )}
+
+        {scaffolding && scaffolding.badgeText && (
+          <div style={{
+            background: scaffolding.isStreakBoost ? 'rgba(168, 85, 247, 0.25)' : 'rgba(245, 158, 11, 0.25)',
+            border: `1px solid ${scaffolding.isStreakBoost ? '#a855f7' : '#f59e0b'}`,
+            color: scaffolding.isStreakBoost ? '#d8b4fe' : '#fcd34d',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            marginBottom: '0.8rem',
+            textAlign: 'center'
+          }}>
+            {scaffolding.badgeText}
           </div>
         )}
 
