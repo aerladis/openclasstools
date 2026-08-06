@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './ChallengeModal.module.css';
+import SpeechMicButton from '../../../components/SpeechMicButton';
 
 function getGuaranteedScramble(scrambledWord, targetWord) {
   const target = String(targetWord || '').toUpperCase().trim();
@@ -295,6 +296,13 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
             challenge.prompt || challenge.question || challenge.word || 'Complete the language challenge!'
           )}
         </h2>
+
+        {(challenge.type === 'pronunciation' || challenge.type === 'roleplay' || challenge.type === 'speech') && (
+          <SpeechMicButton
+            targetText={challenge.prompt || challenge.question || ''}
+            focusWords={typeof challenge.answer === 'string' ? challenge.answer.split(/[\s,]+/) : []}
+          />
+        )}
 
         {/* Interactive Conversation Ordering UI */}
         {challenge.type === 'ordering' && (
