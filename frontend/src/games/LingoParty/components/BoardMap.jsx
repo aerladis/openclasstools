@@ -49,7 +49,7 @@ export function getMapCoordinates(index, totalLength) {
 const TILE_CONFIG = {
   start:         { color: '#10b981', glow: 'rgba(16,185,129,0.5)',  icon: '🌍',  label: 'LAUNCH', cssClass: 'tileStart' },
   trophy:        { color: '#f59e0b', glow: 'rgba(245,158,11,0.5)', icon: '⭐',  label: 'GOAL',   cssClass: 'tileTrophy' },
-  chance:        { color: '#ec4899', glow: 'rgba(236,72,153,0.5)', icon: '🪐',  label: 'FATE',   cssClass: 'tileChance' },
+  chance:        { color: '#ec4899', glow: 'rgba(236,72,153,0.5)', icon: '🃏',  label: 'CARD',   cssClass: 'tileChance' },
   shop:          { color: '#3b82f6', glow: 'rgba(59,130,246,0.5)', icon: '🛸',  label: 'SHOP',   cssClass: 'tileShop' },
   challenge:     { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
   riddle:        { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
@@ -60,8 +60,8 @@ const TILE_CONFIG = {
   speed:         { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
   roleplay:      { color: '#a855f7', glow: 'rgba(168,85,247,0.5)', icon: '🎯',  label: 'Challenge' },
   vortex:        { color: '#312e81', glow: 'rgba(99,102,241,0.9)', icon: '🌀', label: 'VORTEX', cssClass: 'tileVortex' },
-  asteroid:      { color: '#451a03', glow: 'rgba(245,158,11,0.9)', icon: '☄️', label: 'ASTEROID', cssClass: 'tileAsteroid' },
   ordering:      { color: '#f97316', glow: 'rgba(249,115,22,0.5)', icon: '🔢', label: 'Challenge' },
+  cube:          { color: '#06b6d4', glow: 'rgba(6,182,212,0.8)', icon: '🧊', label: 'CUBE', cssClass: 'tileCube' },
 };
 
 const DEFAULT_CONF = { color: '#64748b', glow: 'rgba(100,116,139,0.5)', icon: '🌑', label: '???' };
@@ -225,7 +225,7 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
         {tilePoints.map((tp) => {
           const conf = TILE_CONFIG[tp.type] || DEFAULT_CONF;
           const isSpecial = tp.type === 'start' || tp.type === 'trophy';
-          const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'vortex', 'asteroid'].includes(tp.type);
+          const isIconicTile = ['start', 'trophy', 'chance', 'shop', 'cube', 'vortex', 'asteroid'].includes(tp.type);
 
           const orbitColor = currentOrbitTheme.color;
           const tileColor = isIconicTile ? conf.color : orbitColor;
@@ -247,10 +247,18 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
           const sphereRadius = Math.round(radius * 1.3);
           const cssClass = conf.cssClass || '';
 
+          const isLandedTile = teams.some(t => t.position === tp.idx);
+          const nodeClasses = [
+            styles.tileNode,
+            styles[cssClass] || '',
+            isLandedTile ? styles.shinyLandedTile : '',
+            tp.type === 'chance' ? styles.chanceTilePrism : ''
+          ].filter(Boolean).join(' ');
+
           return (
             <g
               key={tp.idx}
-              className={`${styles.tileNode} ${styles[cssClass] || ''}`}
+              className={nodeClasses}
               transform={`translate(${tp.sx}, ${tp.sy})`}
               onClick={() => onTileClick && onTileClick(tp, tp.idx)}
               onMouseEnter={() => onHoverPlanet && onHoverPlanet(tp)}
@@ -297,6 +305,31 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                     <text y="1" textAnchor="middle" dominantBaseline="central" className={styles.tileEmoji} fontSize={hexRadius * 0.46}>{conf.icon}</text>
                   )}
                 </>
+              )}
+              {/* ── Shiny Landed Tile Pulse Ring Overlay ── */}
+              {isLandedTile && (
+                <circle
+                  r={tileStyle === 'sphere' ? sphereRadius + 6 : hexRadius * 0.82}
+                  fill="none"
+                  stroke="#38bdf8"
+                  strokeWidth="3.5"
+                  strokeDasharray="10 6"
+                  className={styles.shinyLandedPulseRing}
+                />
+              )}
+              {/* ── Top-Right Gibel Cube Badge for Cube Tiles ── */}
+              {tp.type === 'cube' && (
+                <g transform={`translate(${tileStyle === 'sphere' ? sphereRadius * 0.55 : hexRadius * 0.45}, ${tileStyle === 'sphere' ? -sphereRadius * 0.55 : -hexRadius * 0.45})`}>
+                  <circle r="15" fill="#06b6d4" stroke="#ffffff" strokeWidth="2" filter="drop-shadow(0 0 6px rgba(6,182,212,0.9))" />
+                  <text y="1" textAnchor="middle" dominantBaseline="central" fontSize="13">🧊</text>
+                </g>
+              )}
+              {/* ── Top-Right Playing Card Badge for Chance Tiles ── */}
+              {tp.type === 'chance' && (
+                <g transform={`translate(${tileStyle === 'sphere' ? sphereRadius * 0.55 : hexRadius * 0.45}, ${tileStyle === 'sphere' ? -sphereRadius * 0.55 : -hexRadius * 0.45})`}>
+                  <circle r="15" fill="#ec4899" stroke="#ffffff" strokeWidth="2" filter="drop-shadow(0 0 6px rgba(236,72,153,0.9))" />
+                  <text y="1" textAnchor="middle" dominantBaseline="central" fontSize="13">🃏</text>
+                </g>
               )}
             </g>
           );

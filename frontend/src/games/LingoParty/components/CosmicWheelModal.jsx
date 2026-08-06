@@ -3,14 +3,28 @@ import confetti from 'canvas-confetti';
 import styles from './CosmicWheelModal.module.css';
 
 const WHEEL_SEGMENTS = [
-  { type: 'riddle', label: 'Riddle', color: '#8b5cf6', icon: '🧩' },
-  { type: 'scramble', label: 'Scramble', color: '#06b6d4', icon: '🔤' },
-  { type: 'pronunciation', label: 'Tongue-Twister', color: '#14b8a6', icon: '👅' },
-  { type: 'grammar', label: 'Grammar', color: '#f43f5e', icon: '✍️' },
-  { type: 'speed', label: 'Speed Trivia', color: '#eab308', icon: '⚡' },
-  { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬' },
-  { type: 'ordering', label: 'Ordering', color: '#f97316', icon: '🔢' }
+  { type: 'riddle', label: 'Riddle', color: '#8b5cf6', icon: '🧩', weight: 1.0 },
+  { type: 'scramble', label: 'Scramble', color: '#06b6d4', icon: '🔤', weight: 1.0 },
+  { type: 'pronunciation', label: 'Tongue-Twister', color: '#14b8a6', icon: '👅', weight: 1.0 },
+  { type: 'cube', label: 'CUBE JACKPOT!', color: '#0284c7', icon: '🧊', weight: 0.3, isSpecial: true },
+  { type: 'grammar', label: 'Grammar', color: '#f43f5e', icon: '✍️', weight: 1.0 },
+  { type: 'speed', label: 'Speed Trivia', color: '#eab308', icon: '⚡', weight: 1.0 },
+  { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬', weight: 1.0 },
+  { type: 'ordering', label: 'Ordering', color: '#f97316', icon: '🔢', weight: 1.0 }
 ];
+
+const totalWeight = WHEEL_SEGMENTS.reduce((sum, seg) => sum + (seg.weight || 1), 0);
+
+const getSegmentAngles = () => {
+  let current = 0;
+  return WHEEL_SEGMENTS.map(seg => {
+    const arc = (2 * Math.PI * (seg.weight || 1)) / totalWeight;
+    const startAngle = current;
+    const endAngle = current + arc;
+    current = endAngle;
+    return { ...seg, startAngle, endAngle, arc };
+  });
+};
 
 export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, playSound }) {
   const canvasRef = useRef(null);
@@ -40,11 +54,41 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
   };
 
   const getSegmentAtAngle = (angle) => {
-    const n = WHEEL_SEGMENTS.length;
-    const arc = (2 * Math.PI) / n;
+    const segmentsWithAngles = getSegmentAngles();
     const pointerAngle = ((-Math.PI / 2 - angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-    const idx = Math.floor(pointerAngle / arc) % n;
-    return WHEEL_SEGMENTS[idx];
+    const found = segmentsWithAngles.find(s => pointerAngle >= s.startAngle && pointerAngle < s.endAngle);
+    return found || segmentsWithAngles[0];
+  };
+
+  const isGrindingRef = useRef(false);
+  const grindPosRef = useRef({ x: 260, y: 260 });
+  const sparksRef = useRef([]);
+  const frictionTimeRef = useRef(0);
+
+  const handlePointerDown = (e) => {
+    if (!isSpinning) return;
+    isGrindingRef.current = true;
+    updateGrindPos(e);
+  };
+
+  const handlePointerMove = (e) => {
+    if (isGrindingRef.current) {
+      updateGrindPos(e);
+    }
+  };
+
+  const handlePointerUp = () => {
+    isGrindingRef.current = false;
+  };
+
+  const updateGrindPos = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    grindPosRef.current = {
+      x: (e.clientX - rect.left) * (520 / rect.width),
+      y: (e.clientY - rect.top) * (520 / rect.height)
+    };
   };
 
   const drawWheel = (angle) => {
@@ -56,8 +100,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     const cx = size / 2;
     const cy = size / 2;
     const r = size / 2 - 16;
-    const n = WHEEL_SEGMENTS.length;
-    const arc = (2 * Math.PI) / n;
+    const segmentsWithAngles = getSegmentAngles();
 
     ctx.clearRect(0, 0, size, size);
 
@@ -65,10 +108,8 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     ctx.translate(cx, cy);
     ctx.rotate(angle);
 
-    for (let i = 0; i < n; i++) {
-      const seg = WHEEL_SEGMENTS[i];
-      const startAngle = i * arc;
-      const endAngle = startAngle + arc;
+    for (const seg of segmentsWithAngles) {
+      const { startAngle, endAngle, arc } = seg;
 
       // Segment wedge
       ctx.beginPath();
@@ -77,19 +118,19 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       ctx.closePath();
       ctx.fillStyle = seg.color;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = seg.isSpecial ? '#38bdf8' : 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = seg.isSpecial ? 4 : 2.5;
       ctx.stroke();
 
       // Label text & icon
       ctx.save();
       ctx.rotate(startAngle + arc / 2);
       ctx.textAlign = 'right';
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 17px Outfit, sans-serif';
+      ctx.fillStyle = seg.isSpecial ? '#fef08a' : '#ffffff';
+      ctx.font = seg.isSpecial ? '900 15px Outfit, sans-serif' : '900 17px Outfit, sans-serif';
       ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
       ctx.shadowBlur = 6;
-      ctx.fillText(`${seg.icon} ${seg.label}`, r - 24, 6);
+      ctx.fillText(`${seg.icon} ${seg.label}`, r - (seg.isSpecial ? 16 : 24), 6);
       ctx.restore();
     }
 
@@ -110,6 +151,42 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     ctx.stroke();
 
     ctx.restore();
+
+    // Spawn friction sparks if user is grinding the turning wheel
+    if (isGrindingRef.current && isSpinning) {
+      const { x, y } = grindPosRef.current;
+      for (let i = 0; i < 6; i++) {
+        const speed = Math.random() * 9 + 3;
+        const sparkAngle = Math.random() * Math.PI * 2;
+        sparksRef.current.push({
+          x,
+          y,
+          vx: Math.cos(sparkAngle) * speed,
+          vy: Math.sin(sparkAngle) * speed - 1,
+          life: 1.0,
+          decay: Math.random() * 0.08 + 0.05,
+          size: Math.random() * 5 + 2,
+          color: ['#fef08a', '#f59e0b', '#ef4444', '#ffffff'][Math.floor(Math.random() * 4)]
+        });
+      }
+    }
+
+    // Draw and update active friction sparks overlay
+    sparksRef.current = sparksRef.current.filter(p => p.life > 0);
+    for (const p of sparksRef.current) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.life), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   };
 
   useEffect(() => {
@@ -130,6 +207,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     if (isSpinning) return;
     setIsSpinning(true);
     setSelectedResult(null);
+    frictionTimeRef.current = 0;
 
     const n = WHEEL_SEGMENTS.length;
     const arc = (2 * Math.PI) / n;
@@ -139,14 +217,19 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     const totalSpinDelta = -((minTurns + extraTurns) * Math.PI * 2 + Math.random() * Math.PI * 2);
 
     const startAngle = currentAngleRef.current;
-    const duration = 7500; // 7.5 seconds long, dramatic slow-deceleration spin
+    const baseDuration = 7500; // 7.5 seconds long spin
     const startTime = performance.now();
     let lastSegmentIndex = -1;
 
     const animateSpin = (now) => {
-      const elapsed = now - startTime;
-      const t = Math.min(1, elapsed / duration);
-      const easeOut = 1 - Math.pow(1 - t, 5); // Quintic ease-out for ultra smooth slow stop
+      // Apply physical friction deceleration time boost when user holds finger on canvas
+      if (isGrindingRef.current) {
+        frictionTimeRef.current += 20; // Accelerates slowdown phase (physical control illusion)
+      }
+
+      const elapsed = now - startTime + frictionTimeRef.current;
+      const t = Math.min(1, elapsed / baseDuration);
+      const easeOut = 1 - Math.pow(1 - t, 5); // Quintic ease-out
 
       const current = startAngle + totalSpinDelta * easeOut;
       currentAngleRef.current = current;
@@ -169,21 +252,16 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       if (t < 1) {
         requestAnimationFrame(animateSpin);
       } else {
-        // Spin complete
-        const finalPointerAngle = ((-Math.PI / 2 - current) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-        const winningIdx = Math.floor(finalPointerAngle / arc) % n;
-        const winner = WHEEL_SEGMENTS[winningIdx];
-
+        isGrindingRef.current = false;
+        const winner = getSegmentAtAngle(current);
         setSelectedResult(winner);
         setPointerColor(winner.color);
 
         if (playSound) playSound('trophy');
         triggerConfetti();
 
-        // Keep isSpinning true so button stays disabled until modal closes
         setTimeout(() => {
           onSpinResult(winner);
-          // isSpinning stays true — modal will unmount
         }, 1600);
       }
     };
@@ -210,7 +288,16 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
             </svg>
           </div>
 
-          <canvas ref={canvasRef} className={styles.wheelCanvas} />
+          <canvas
+            ref={canvasRef}
+            className={styles.wheelCanvas}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            style={{ cursor: isSpinning ? 'grab' : 'pointer', touchAction: 'none' }}
+          />
 
           {selectedResult && (
             <div className={styles.resultBanner} style={{ '--res-color': selectedResult.color }}>

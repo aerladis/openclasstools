@@ -93,38 +93,38 @@ export default function LingoPartyGame() {
 
   const generateTiles = (length) => {
     const tiles = [];
-    const chance1 = Math.floor(length / 4);
-    const chance2 = Math.floor((3 * length) / 4);
 
     for (let i = 0; i < length; i++) {
       if (i === 0) {
         tiles.push({ id: 0, type: 'start', label: 'Launch Pad' });
       } else if (i === length - 1) {
         tiles.push({ id: i, type: 'trophy', label: 'Goal Sanctuary' });
-      } else if (i === chance1 || i === chance2) {
-        tiles.push({ id: i, type: 'chance', label: 'Cosmic Fate' });
-      } else if (i === Math.floor(length / 2)) {
-        tiles.push({ id: i, type: 'shop', label: 'Space Station' });
+      } else if (i % 5 === 2) {
+        tiles.push({ id: i, type: 'chance', label: 'Chance Card' });
       } else {
         tiles.push({ id: i, type: 'challenge', label: 'Challenge Tile' });
       }
     }
 
-    // Sprinkle remaining hazard planets (Cosmic Vortex, Asteroid Belt) on challenge tiles
+    // Sprinkle remaining hazard planets (Cosmic Vortex) & 1 random Cosmic Cube tile on challenge tiles
     const remainingEligible = tiles
       .map((t, idx) => idx)
-      .filter(idx => !['start', 'trophy', 'chance', 'shop'].includes(tiles[idx].type));
+      .filter(idx => !['start', 'trophy', 'chance'].includes(tiles[idx].type));
 
-    const hazardTypes = ['vortex', 'asteroid'];
-    let hazardCount = Math.min(Math.floor(length / 7), 4);
+    // Guarantee 1 random Cosmic Cube block on the board
+    if (remainingEligible.length > 0) {
+      const pickCube = Math.floor(Math.random() * remainingEligible.length);
+      const cubeIdx = remainingEligible.splice(pickCube, 1)[0];
+      tiles[cubeIdx] = { id: cubeIdx, type: 'cube', label: 'Cosmic Cube' };
+    }
+
+    let hazardCount = Math.min(Math.floor(length / 9), 3);
     if (hazardCount < 1) hazardCount = 1;
 
     for (let n = 0; n < hazardCount && remainingEligible.length > 0; n++) {
       const pick = Math.floor(Math.random() * remainingEligible.length);
       const tileIdx = remainingEligible.splice(pick, 1)[0];
-      const hType = hazardTypes[n % hazardTypes.length];
-      const hLabels = { vortex: 'Cosmic Vortex', asteroid: 'Asteroid Belt' };
-      tiles[tileIdx] = { id: tileIdx, type: hType, label: hLabels[hType] };
+      tiles[tileIdx] = { id: tileIdx, type: 'vortex', label: 'Cosmic Vortex' };
     }
 
     return tiles;

@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styles from './BoardStage.module.css';
 import BoardMap from './BoardMap';
 import ChallengeModal from './ChallengeModal';
-import ShopModal from './ShopModal';
+import ShopModal, { SHOP_ITEMS } from './ShopModal';
 import MysteryFateModal from './MysteryFateModal';
 import AttackTargetModal from './AttackTargetModal';
 import GuideModal from './GuideModal';
@@ -44,6 +44,29 @@ export default function BoardStage({
     localStorage.setItem('lingoparty_tile_style', nextStyle);
     if (playSound) playSound('roll');
   };
+
+  const [floatingEffects, setFloatingEffects] = useState([]);
+  const prevTrophiesRef = useRef({});
+
+  useEffect(() => {
+    if (!gameState.teams) return;
+    gameState.teams.forEach(team => {
+      const prev = prevTrophiesRef.current[team.id];
+      if (prev !== undefined && prev !== team.trophies) {
+        const diff = team.trophies - prev;
+        const text = diff > 0 ? `+${diff}` : `${diff}`;
+        const type = diff > 0 ? 'plus' : 'minus';
+        const effectId = `${team.id}-${Date.now()}-${Math.random()}`;
+
+        setFloatingEffects(curr => [...curr, { id: effectId, teamId: team.id, text, type }]);
+
+        setTimeout(() => {
+          setFloatingEffects(curr => curr.filter(e => e.id !== effectId));
+        }, 1800);
+      }
+      prevTrophiesRef.current[team.id] = team.trophies;
+    });
+  }, [gameState.teams]);
 
   const activeTeam = gameState.teams[gameState.currentTeamIndex] || gameState.teams[0];
 
@@ -128,12 +151,22 @@ export default function BoardStage({
       const updatedState = { ...gameState, teams: teamsList };
       setGameState(updatedState);
       setTimeout(() => advanceTurn(teamsList), 1200);
-    } else if (tile.type === 'asteroid') {
-      if (playSound) playSound('damage');
-      team.position = Math.max(0, team.position - 2);
-      const updatedState = { ...gameState, teams: teamsList };
-      setGameState(updatedState);
-      setTimeout(() => advanceTurn(teamsList), 1200);
+    } else if (tile.type === 'cube') {
+      // Cosmic Cube tile ➔ Triggers Challenge to earn a Gibel Cube!
+      const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
+      const cardKey = c => c.prompt || c.word || c.scrambledWord || c.targetWord;
+      const validCards = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
+      let pool = validCards.length > 0 ? validCards : deck;
+      let chosen = pool[Math.floor(Math.random() * pool.length)];
+
+      if (chosen && cardKey(chosen)) {
+        usedChallengeKeysRef.current.add(cardKey(chosen));
+      } else {
+        chosen = { type: 'riddle', prompt: 'Solve the Cosmic Cube Riddle!', answer: 'Correct' };
+      }
+
+      setCurrentChallenge({ ...chosen, isCubeTile: true });
+      setActiveModal('challenge');
     } else {
       // Standard challenge planet ➔ Triggers Wheel of Cosmic Fate!
       setActiveModal('wheel');
@@ -141,17 +174,35 @@ export default function BoardStage({
   };
 
   const handleWheelResult = (winner) => {
+    if (winner.type === 'cube') {
+      const teamsCopy = gameState.teams.map(t => ({ ...t }));
+      const curTeam = teamsCopy[gameState.currentTeamIndex];
+      curTeam.gibelCubes = (curTeam.gibelCubes || 0) + 1;
+      setGameState({ ...gameState, teams: teamsCopy });
+      if (playSound) playSound('trophy');
+      triggerConfetti();
+      setActiveModal(null);
+      if (checkVictory(teamsCopy)) return;
+      advanceTurn(teamsCopy);
+      return;
+    }
     const deck = gameState.deck && gameState.deck.length > 0 ? gameState.deck : [];
-    const cardKey = c => c.prompt || c.word || c.scrambledWord || c.targetWord;
+    const cardKey = c => {
+      const raw = c.targetWord || c.prompt || c.scrambledWord || c.word || '';
+      return String(raw).toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
 
     const matchingCards = deck.filter(c => c.type === winner.type);
     const unusedMatching = matchingCards.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
+    const unusedAnyCategory = deck.filter(c => !usedChallengeKeysRef.current.has(cardKey(c)));
 
     let chosen;
     let isMemoryRecall = false;
 
     if (unusedMatching.length > 0) {
       chosen = unusedMatching[Math.floor(Math.random() * unusedMatching.length)];
+    } else if (unusedAnyCategory.length > 0) {
+      chosen = unusedAnyCategory[Math.floor(Math.random() * unusedAnyCategory.length)];
     } else if (matchingCards.length > 0) {
       chosen = matchingCards[Math.floor(Math.random() * matchingCards.length)];
       isMemoryRecall = true;
@@ -159,8 +210,8 @@ export default function BoardStage({
       const TYPE_FALLBACKS = {
         ordering: {
           type: 'ordering',
-          prompt: "B: Fine, thanks! How are you?\nA: Hello! How are you today?\nC: I am doing great as well!",
-          answer: "A: Hello! How are you today? -> B: Fine, thanks! How are you? -> C: I am doing great as well!"
+          prompt: "B: Fine, thanks! How are you?\nA: Hello! How are you today?\nB: I am doing great as well!",
+          answer: "A: Hello! How are you today? -> B: Fine, thanks! How are you? -> B: I am doing great as well!"
         },
         scramble: {
           type: 'scramble',
@@ -331,6 +382,9 @@ export default function BoardStage({
         }
       } else {
         curTeam.trophies += trophies;
+        if (currentChallenge?.isCubeTile) {
+          curTeam.gibelCubes = (curTeam.gibelCubes || 0) + 1;
+        }
         triggerConfetti();
       }
     } else {
@@ -364,15 +418,12 @@ export default function BoardStage({
       if (eventResult.globalTrophies) {
         teamsCopy.forEach(t => t.trophies += eventResult.globalTrophies);
       }
-      setActiveModal(null);
+      setGameState({ ...gameState, teams: teamsCopy });
       if (checkVictory(teamsCopy)) return;
-      advanceTurn(teamsCopy, !!eventResult.doubleRoll);
-      return;
     }
 
-    setActiveModal(null);
-    if (checkVictory(teamsCopy)) return;
-    advanceTurn(teamsCopy);
+    // Normal question flow continues after Chance card: trigger Wheel of Cosmic Fate!
+    setActiveModal('wheel');
   };
 
 
@@ -480,6 +531,19 @@ export default function BoardStage({
               key={team.id}
               className={`${styles.teamItem} ${idx === gameState.currentTeamIndex ? styles.teamItemActive : ''}`}
             >
+              {/* Floating Trophy Change Indicators (+1 / -1) */}
+              <div className={styles.floatingIndicatorContainer}>
+                {floatingEffects
+                  .filter(e => e.teamId === team.id)
+                  .map(e => (
+                    <span
+                      key={e.id}
+                      className={`${styles.floatBadge} ${e.type === 'plus' ? styles.floatBadgePlus : styles.floatBadgeMinus}`}
+                    >
+                      🏆 {e.text}
+                    </span>
+                  ))}
+              </div>
               <div className={styles.teamInfo}>
                 <span className={styles.teamAvatar}>{team.pawn}</span>
                 <div>
@@ -619,13 +683,23 @@ export default function BoardStage({
         </div>
 
         <div className={styles.quickActions}>
-          <button
-            className="btn-secondary"
-            style={{ width: '100%' }}
-            onClick={() => setActiveModal('shop')}
-          >
-            🛸 Space Station Shop
-          </button>
+          {(() => {
+            const affordableCount = SHOP_ITEMS.filter(item => (activeTeam?.trophies || 0) >= item.cost).length;
+            return (
+              <button
+                className="btn-secondary"
+                style={{ width: '100%', position: 'relative' }}
+                onClick={() => setActiveModal('shop')}
+              >
+                🛸 Space Station Shop
+                {affordableCount > 0 && (
+                  <span className={styles.shopBadgeNotification}>
+                    {affordableCount}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
           <button
             className="btn-secondary"
             style={{ width: '100%', marginTop: '0.4rem' }}

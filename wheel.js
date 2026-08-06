@@ -138,17 +138,77 @@ function drawWheel() {
         ctx.restore();
     }
 
-    // Center circle
+    // Outer rim glow
     ctx.beginPath();
-    ctx.arc(0, 0, Math.max(16, r * 0.08), 0, Math.PI * 2);
-    ctx.fillStyle = '#0a0a1a';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.15)';
-    ctx.lineWidth = 2;
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(168,85,247,.4)';
+    ctx.lineWidth = 4;
     ctx.stroke();
 
     ctx.restore();
+
+    // Spawn and render friction sparks if user is touching/grinding the spinning wheel
+    if (isWheelGrinding && spinning) {
+        for (let i = 0; i < 5; i++) {
+            const speed = Math.random() * 8 + 3;
+            const sparkAngle = Math.random() * Math.PI * 2;
+            wheelSparks.push({
+                x: wheelGrindPos.x,
+                y: wheelGrindPos.y,
+                vx: Math.cos(sparkAngle) * speed,
+                vy: Math.sin(sparkAngle) * speed - 1,
+                life: 1.0,
+                decay: Math.random() * 0.08 + 0.05,
+                size: Math.random() * 4 + 2,
+                color: ['#fef08a', '#f59e0b', '#ef4444', '#ffffff'][Math.floor(Math.random() * 4)]
+            });
+        }
+    }
+
+    wheelSparks = wheelSparks.filter(p => p.life > 0);
+    for (const p of wheelSparks) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.life), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
 }
+
+// Touch/Pointer Grinding State
+let isWheelGrinding = false;
+let wheelGrindPos = { x: 210, y: 210 };
+let wheelSparks = [];
+let wheelFrictionTime = 0;
+
+function updateWheelGrindPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const displayW = canvas.clientWidth || 420;
+    const displayH = canvas.clientHeight || 420;
+    wheelGrindPos = {
+        x: (e.clientX - rect.left) * (displayW / rect.width),
+        y: (e.clientY - rect.top) * (displayH / rect.height)
+    };
+}
+
+canvas.addEventListener('pointerdown', e => {
+    if (!spinning) return;
+    isWheelGrinding = true;
+    updateWheelGrindPos(e);
+});
+canvas.addEventListener('pointermove', e => {
+    if (isWheelGrinding) updateWheelGrindPos(e);
+});
+canvas.addEventListener('pointerup', () => { isWheelGrinding = false; });
+canvas.addEventListener('pointercancel', () => { isWheelGrinding = false; });
+canvas.addEventListener('pointerleave', () => { isWheelGrinding = false; });
 
 // ---- Spin ----
 btnSpin.addEventListener('click', async () => {
@@ -166,6 +226,7 @@ btnSpin.addEventListener('click', async () => {
     btnSpin.disabled = true;
     winnerDisplay.textContent = '';
     btnRemoveWinner.style.display = 'none';
+    wheelFrictionTime = 0;
 
     const n = names.length;
     const arc = FULL_TURN / n;
@@ -182,16 +243,15 @@ btnSpin.addEventListener('click', async () => {
     function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
 
     function getWinnerIndex(angle) {
-        // The pointer is at the top of the canvas (12 o'clock = -π/2).
-        // The wheel is rotated by `angle`. Segment i spans from angle i*arc to (i+1)*arc.
-        // The pointer points at wheel-angle: (-π/2 - angle).
-        // Normalize to [0, 2π) and find which segment it falls in.
         let pointerAngle = ((-Math.PI / 2 - angle) % FULL_TURN + FULL_TURN) % FULL_TURN;
         return Math.floor(pointerAngle / arc) % n;
     }
 
     function animate(now) {
-        const elapsed = now - startTime;
+        if (isWheelGrinding) {
+            wheelFrictionTime += 18; // Apply slowdown friction boost when touched
+        }
+        const elapsed = now - startTime + wheelFrictionTime;
         const progress = Math.min(elapsed / duration, 1);
         currentAngle = startAngle + totalDelta * easeOut(progress);
         drawWheel();
