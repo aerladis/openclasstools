@@ -317,20 +317,6 @@ export default function BoardMap({ tiles = [], teams = [], tileStyle = 'hex', ro
                   className={styles.shinyLandedPulseRing}
                 />
               )}
-              {/* ── Top-Right Gibel Cube Badge for Cube Tiles ── */}
-              {tp.type === 'cube' && (
-                <g transform={`translate(${tileStyle === 'sphere' ? sphereRadius * 0.55 : hexRadius * 0.45}, ${tileStyle === 'sphere' ? -sphereRadius * 0.55 : -hexRadius * 0.45})`}>
-                  <circle r="15" fill="#06b6d4" stroke="#ffffff" strokeWidth="2" filter="drop-shadow(0 0 6px rgba(6,182,212,0.9))" />
-                  <text y="1" textAnchor="middle" dominantBaseline="central" fontSize="13">🧊</text>
-                </g>
-              )}
-              {/* ── Top-Right Playing Card Badge for Chance Tiles ── */}
-              {tp.type === 'chance' && (
-                <g transform={`translate(${tileStyle === 'sphere' ? sphereRadius * 0.55 : hexRadius * 0.45}, ${tileStyle === 'sphere' ? -sphereRadius * 0.55 : -hexRadius * 0.45})`}>
-                  <circle r="15" fill="#ec4899" stroke="#ffffff" strokeWidth="2" filter="drop-shadow(0 0 6px rgba(236,72,153,0.9))" />
-                  <text y="1" textAnchor="middle" dominantBaseline="central" fontSize="13">🃏</text>
-                </g>
-              )}
             </g>
           );
         })}

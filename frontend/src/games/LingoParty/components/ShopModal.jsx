@@ -1,10 +1,9 @@
 import React from 'react';
 import styles from './ShopModal.module.css';
 
-const SHOP_ITEMS = [
+export const SHOP_ITEMS = [
   { id: 'double_dice', name: 'Warp Boost', cost: 2, icon: '🚀', effect: 'Advance +3 extra planets immediately!' },
   { id: 'shield', name: 'Grammar Shield', cost: 2, icon: '🛡️', effect: 'Protect your team against attacks & penalty hazards!' },
-  { id: 'crystal_ball', name: 'Crystal Ball', cost: 3, icon: '🔮', effect: 'Peek at the next 3 tiles ahead on the board!' },
   { id: 'sniper_scope', name: 'Sniper Scope', cost: 2, icon: '🎯', effect: 'Steal 1 random item from another crew!' },
   { id: 'time_rewind', name: 'Time Rewind', cost: 3, icon: '⏪', effect: 'Send another crew back to their pre-roll position!' },
   { id: 'meteor_strike', name: 'Meteor Robbery', cost: 3, icon: '☄️', effect: 'ATTACK: Steal 2 Trophies from a crew of your choice!' },

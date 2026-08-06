@@ -204,5 +204,58 @@
   filter: drop-shadow(0 0 12px rgba(236, 72, 153, 0.6));
 }
 
+/* ── Landed Tile Shimmer Animation ── */
+.shinyLandedTile {
+  animation: shinyLandedGlow 1.4s infinite ease-in-out alternate;
+}
+
+.shinyLandedPulseRing {
+  animation: landedRingSpin 3s infinite linear;
+}
+
+@keyframes shinyLandedGlow {
+  0% {
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 26px rgba(168, 85, 247, 0.9));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(236, 72, 153, 0.95)) drop-shadow(0 0 34px rgba(56, 189, 248, 0.95));
+  }
+  100% {
+    filter: drop-shadow(0 0 28px rgba(245, 158, 11, 1)) drop-shadow(0 0 42px rgba(16, 185, 129, 1));
+  }
+}
+
+@keyframes landedRingSpin {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -40;
+  }
+}
+
+/* ── Chance Tile Dynamic Prism Color Cycle ── */
+.chanceTilePrism {
+  animation: chancePrismShift 4s infinite linear;
+}
+
+@keyframes chancePrismShift {
+  0% {
+    filter: hue-rotate(0deg) drop-shadow(0 0 14px rgba(245, 158, 11, 0.85));
+  }
+  25% {
+    filter: hue-rotate(90deg) drop-shadow(0 0 18px rgba(236, 72, 153, 0.9));
+  }
+  50% {
+    filter: hue-rotate(180deg) drop-shadow(0 0 22px rgba(6, 182, 212, 0.95));
+  }
+  75% {
+    filter: hue-rotate(270deg) drop-shadow(0 0 18px rgba(16, 185, 129, 0.9));
+  }
+  100% {
+    filter: hue-rotate(360deg) drop-shadow(0 0 14px rgba(245, 158, 11, 0.85));
+  }
+}
+
 
 

@@ -59,10 +59,10 @@ Teacher-provided Gemini keys are temporary browser-tab values and optional. Neve
   - Logging: Every generation logs the exact AI Provider (`GEMINI`, `GROQ`, `KIMI`, `OPENROUTER`), Model Name, and Key Source (`Platform Provider Pool` or `Teacher Custom Key`) to the AI console.
 
 - **LingoParty Generation & Rules**:
-  - Target Card Formula: `5 * teamCount * orbitCount` (capped at max 120 to guarantee sub-15s response times and prevent Cloudflare HTTP 524 timeouts).
+  - Target Card Formula: 8 categories * `perCategory` cards (where `perCategory = Math.max(5, Math.floor((5 * teamCount * orbitCount) / 4))`, capped at max 120 to guarantee sub-15s response times and prevent Cloudflare HTTP 524 timeouts).
   - Batch Execution: Execute AI generation batches sequentially (never parallel `Promise.all` across 10+ calls) to avoid provider rate-limit 429 errors.
   - Deduplication & Memory Recall: Unshown questions in the deck are prioritized on tile turns. If the deck is cycled and a question repeats, flag it with `isMemoryRecall: true` to display the animated `🧠 MEMORY RECALL` badge in `ChallengeModal`.
-  - Ordering Challenges: Dialogue ordering prompts MUST have strictly logical, chronological conversational flow (`A: Question -> B: Answer -> C: Reaction`). Slot position numbers (`1`, `2`, `3`...) remain fixed on the left while sentence items swap positions. Leading line numbers (`1.`, `2.`) are stripped from sentence text.
+  - Ordering Challenges: Dialogue ordering prompts MUST have strictly logical, chronological conversational flow between 2 speakers (`A: Question -> B: Answer -> A: Reaction`). Slot position numbers (`1`, `2`, `3`...) remain fixed on the left while sentence items swap positions. Leading line numbers (`1.`, `2.`) are stripped from sentence text.
 
 - **Game Launch Resilience**:
   - Launch handlers (React & legacy HTML/JS) MUST transition to active gameplay instantly (0ms delay). Session recording (`startSessionSafely`) runs asynchronously in the background.

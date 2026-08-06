@@ -85,11 +85,48 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
+    const touch = (e.touches && e.touches.length > 0) ? e.touches[0] : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : e);
+    const clientX = touch.clientX ?? e.clientX ?? 0;
+    const clientY = touch.clientY ?? e.clientY ?? 0;
     grindPosRef.current = {
-      x: (e.clientX - rect.left) * (520 / rect.width),
-      y: (e.clientY - rect.top) * (520 / rect.height)
+      x: (clientX - rect.left) * (520 / rect.width),
+      y: (clientY - rect.top) * (520 / rect.height)
     };
   };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onTouchStart = (e) => {
+      if (!isSpinning) return;
+      if (e.cancelable) e.preventDefault();
+      isGrindingRef.current = true;
+      updateGrindPos(e);
+    };
+
+    const onTouchMove = (e) => {
+      if (!isGrindingRef.current) return;
+      if (e.cancelable) e.preventDefault();
+      updateGrindPos(e);
+    };
+
+    const onTouchEnd = () => {
+      isGrindingRef.current = false;
+    };
+
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd, { passive: true });
+    canvas.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+      canvas.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [isSpinning]);
 
   const drawWheel = (angle) => {
     const canvas = canvasRef.current;
@@ -152,23 +189,36 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
 
     ctx.restore();
 
-    // Spawn friction sparks if user is grinding the turning wheel
+    // Spawn high-visibility friction sparks if user touches/grinds the turning wheel (Smartboard optimized)
     if (isGrindingRef.current && isSpinning) {
       const { x, y } = grindPosRef.current;
-      for (let i = 0; i < 6; i++) {
-        const speed = Math.random() * 9 + 3;
+      for (let i = 0; i < 10; i++) {
+        const speed = Math.random() * 14 + 4;
         const sparkAngle = Math.random() * Math.PI * 2;
         sparksRef.current.push({
           x,
           y,
           vx: Math.cos(sparkAngle) * speed,
-          vy: Math.sin(sparkAngle) * speed - 1,
+          vy: Math.sin(sparkAngle) * speed - 2,
           life: 1.0,
-          decay: Math.random() * 0.08 + 0.05,
-          size: Math.random() * 5 + 2,
-          color: ['#fef08a', '#f59e0b', '#ef4444', '#ffffff'][Math.floor(Math.random() * 4)]
+          decay: Math.random() * 0.06 + 0.03,
+          size: Math.random() * 8 + 3,
+          color: ['#ffffff', '#fef08a', '#f59e0b', '#ef4444', '#38bdf8'][Math.floor(Math.random() * 5)]
         });
       }
+    }
+
+    // Draw active contact heat glow and high-brightness sparks
+    if (isGrindingRef.current && isSpinning) {
+      const { x, y } = grindPosRef.current;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, 32, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+      ctx.shadowColor = '#fef08a';
+      ctx.shadowBlur = 24;
+      ctx.fill();
+      ctx.restore();
     }
 
     // Draw and update active friction sparks overlay
@@ -181,9 +231,9 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       ctx.globalAlpha = Math.max(0, p.life);
       ctx.fillStyle = p.color;
       ctx.shadowColor = p.color;
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 16;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.life), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, Math.max(1, p.size * p.life), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
