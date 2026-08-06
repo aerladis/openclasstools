@@ -60,13 +60,14 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     return found || segmentsWithAngles[0];
   };
 
+  const isSpinningRef = useRef(false);
   const isGrindingRef = useRef(false);
   const grindPosRef = useRef({ x: 260, y: 260 });
   const sparksRef = useRef([]);
   const frictionTimeRef = useRef(0);
 
   const handlePointerDown = (e) => {
-    if (!isSpinning) return;
+    if (!isSpinningRef.current) return;
     isGrindingRef.current = true;
     updateGrindPos(e);
   };
@@ -99,7 +100,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     if (!canvas) return;
 
     const onTouchStart = (e) => {
-      if (!isSpinning) return;
+      if (!isSpinningRef.current) return;
       if (e.cancelable) e.preventDefault();
       isGrindingRef.current = true;
       updateGrindPos(e);
@@ -126,7 +127,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       canvas.removeEventListener('touchend', onTouchEnd);
       canvas.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [isSpinning]);
+  }, []);
 
   const drawWheel = (angle) => {
     const canvas = canvasRef.current;
@@ -189,10 +190,10 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
 
     ctx.restore();
 
-    // Spawn high-visibility friction sparks if user touches/grinds the turning wheel (Smartboard optimized)
-    if (isGrindingRef.current && isSpinning) {
+    // Spawn high-visibility friction sparks if user touches/grinds the turning wheel
+    if (isGrindingRef.current && isSpinningRef.current) {
       const { x, y } = grindPosRef.current;
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 12; i++) {
         const speed = Math.random() * 14 + 4;
         const sparkAngle = Math.random() * Math.PI * 2;
         sparksRef.current.push({
@@ -209,12 +210,12 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
     }
 
     // Draw active contact heat glow and high-brightness sparks
-    if (isGrindingRef.current && isSpinning) {
+    if (isGrindingRef.current && isSpinningRef.current) {
       const { x, y } = grindPosRef.current;
       ctx.save();
       ctx.beginPath();
       ctx.arc(x, y, 32, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.45)';
       ctx.shadowColor = '#fef08a';
       ctx.shadowBlur = 24;
       ctx.fill();
@@ -254,7 +255,8 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
   }, []);
 
   const spinWheel = () => {
-    if (isSpinning) return;
+    if (isSpinningRef.current) return;
+    isSpinningRef.current = true;
     setIsSpinning(true);
     setSelectedResult(null);
     frictionTimeRef.current = 0;
@@ -302,6 +304,7 @@ export default function CosmicWheelModal({ activeTeam, onSpinResult, onClose, pl
       if (t < 1) {
         requestAnimationFrame(animateSpin);
       } else {
+        isSpinningRef.current = false;
         isGrindingRef.current = false;
         const winner = getSegmentAtAngle(current);
         setSelectedResult(winner);
