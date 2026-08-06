@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './ChallengeModal.module.css';
 
+function cleanPronunciationSentence(text) {
+  if (!text || typeof text !== 'string') return '';
+  let cleaned = text.trim();
+
+  // Strip leading instruction prefixes and labels
+  cleaned = cleaned.replace(/^(?:tongue[- ]twister(?: challenge)?|pronunciation(?: challenge)?|recite(?: this(?: sentence)?)?(?: out loud)?(?: \d+ times)?|say(?: the following)?(?: out loud)?|repeat(?: after me)?|instruction[s]?)\s*[:|-]\s*/i, '');
+  cleaned = cleaned.replace(/^"(.*)"$/, '$1');
+  cleaned = cleaned.replace(/^'(.*)'$/, '$1');
+
+  // Strip trailing metadata in parentheses or brackets like (Focus: ...) or [Speed: Fast]
+  cleaned = cleaned.replace(/\s*[\(\[][^\)\]]*(?:focus|speed|stress|level|note|challenge)[^\)\]]*[\)\]]\s*$/i, '');
+
+  return cleaned.trim();
+}
+
 function getGuaranteedScramble(scrambledWord, targetWord) {
   const target = String(targetWord || '').toUpperCase().trim();
   const rawScramble = String(scrambledWord || '').toUpperCase().trim();
@@ -314,12 +329,12 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
             `🔤 Scrambled Word: ${getGuaranteedScramble(challenge.scrambledWord, challenge.targetWord || challenge.word)}`
           ) : challenge.type === 'ordering' ? (
             '🔢 Put this conversation in the correct order:'
+          ) : (challenge.type === 'pronunciation' || challenge.type === 'speech') ? (
+            cleanPronunciationSentence(challenge.prompt || challenge.question || challenge.word)
           ) : (
             challenge.prompt || challenge.question || challenge.word || 'Complete the language challenge!'
           )}
         </h2>
-
-
 
         {/* Interactive Conversation Ordering UI */}
         {challenge.type === 'ordering' && (
@@ -370,11 +385,7 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
           </div>
         )}
 
-        {(challenge.type === 'pronunciation' || challenge.type === 'speech') && (
-          <div className={styles.subcontentBox} style={{ background: 'rgba(20, 184, 166, 0.15)', borderColor: 'rgba(20, 184, 166, 0.4)' }}>
-            <strong>👅 Tongue-Twister Challenge: </strong>Recite this tongue-twister out loud 3 times quickly without stumbling!
-          </div>
-        )}
+
 
         {challenge.type === 'roleplay' && (
           <div className={styles.subcontentBox} style={{ background: 'rgba(168, 85, 247, 0.15)', borderColor: 'rgba(168, 85, 247, 0.4)' }}>
