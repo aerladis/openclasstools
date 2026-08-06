@@ -1134,115 +1134,109 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
     const cleanTheme = theme || 'General English';
 
     if (gameType === 'lingoparty') {
-        const mode = sanitizeGameMode(options.mode);
-        const roleplayFraming = mode === 'solo'
-            ? 'individually, as a solo mission-log monologue'
-            : mode === 'duo'
-                ? 'as an exchange of two turns between the pair of students'
-                : 'as a collaboration among three or more participants';
         const templates = [
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: You are discussing "${cleanTheme}" with a partner. Politely express your opinion and ask for their perspective! Perform ${roleplayFraming}.`,
+                prompt: `Discuss "${cleanTheme}" with your partner and express your opinion!`,
                 answer: `Key phrases: "In my opinion...", "What do you think about...", "I agree because..."`
             },
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: You are requesting assistance regarding "${cleanTheme}". Express your request clearly and politely in English! Perform ${roleplayFraming}.`,
+                prompt: `Ask your partner for polite advice about "${cleanTheme}".`,
                 answer: `Key phrases: "Could you help me with...", "Would it be possible to...", "Thank you for your help."`
             },
             {
                 type: 'roleplay',
-                prompt: `🎭 Roleplay Scenario: Explain why "${cleanTheme}" is important to a visitor. Give two clear recommendations! Perform ${roleplayFraming}.`,
+                prompt: `Explain why "${cleanTheme}" is fun or useful!`,
                 answer: `Key phrases: "I strongly recommend...", "The main reason is...", "You should also try..."`
             },
             {
                 type: 'riddle',
-                prompt: `🧩 Linguistic Riddle: I have keys but no locks. I have space but no room. You can enter, but you can't go outside. What am I?`,
+                prompt: `I have keys but no locks, and space but no room. What am I?`,
                 answer: 'A Keyboard'
             },
             {
                 type: 'riddle',
-                prompt: `🧩 Riddle: What gets wetter and wetter the more it dries?`,
+                prompt: `What gets wetter and wetter the more it dries?`,
                 answer: 'A Towel'
             },
             {
                 type: 'riddle',
-                prompt: `🧩 Riddle: The more you take away from me, the bigger I become. What am I?`,
+                prompt: `The more you take away from me, the bigger I become. What am I?`,
                 answer: 'A Hole'
             },
             {
                 type: 'scramble',
                 scrambledWord: 'C-H-A-L-L-E-N-G-E',
                 targetWord: 'CHALLENGE',
-                clue: `A demanding task or test that measures your skills.`
+                clue: `A fun task or test that measures your skills.`
             },
             {
                 type: 'scramble',
                 scrambledWord: 'V-O-C-A-B-U-L-A-R-Y',
                 targetWord: 'VOCABULARY',
-                clue: 'The collection of words used within a language.'
+                clue: 'All the words used in a language.'
             },
             {
                 type: 'scramble',
                 scrambledWord: 'A-D-V-E-N-T-U-R-E',
                 targetWord: 'ADVENTURE',
-                clue: `An exciting journey into unfamiliar territory.`
+                clue: `An exciting journey or trip!`
             },
             {
                 type: 'pronunciation',
-                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear sentence stress: "We need to CONFIRM our RESERVATIONS before TONIGHT!"`,
+                prompt: `We need to confirm our reservations before tonight!`,
                 answer: 'Emphasize: CONFIRM, RESERVATIONS, TONIGHT'
             },
             {
                 type: 'pronunciation',
-                prompt: `🗣️ Pronunciation Challenge: Read out loud focusing on natural intonation: "Would you MIND passing me that STRATEGY document?"`,
+                prompt: `Would you mind passing me that strategy document?`,
                 answer: 'Emphasize: MIND, STRATEGY'
             },
             {
                 type: 'pronunciation',
-                prompt: `🗣️ Pronunciation Challenge: Read out loud with clear stress: "She CAREFULLY considered SEVERAL innovative SOLUTIONS."`,
+                prompt: `She carefully considered several innovative solutions.`,
                 answer: 'Emphasize: CAREFULLY, SEVERAL, SOLUTIONS'
             },
             {
                 type: 'association',
-                prompt: `🔗 Word Association: Name 3 action verbs commonly associated with "${cleanTheme}".`,
+                prompt: `Name 3 action verbs related to "${cleanTheme}"!`,
                 answer: `Any 3 valid functional verbs related to ${cleanTheme}`
             },
             {
                 type: 'association',
-                prompt: `🔗 Word Association: Name 3 descriptive adjectives associated with "${cleanTheme}".`,
+                prompt: `Name 3 adjectives describing "${cleanTheme}"!`,
                 answer: `Any 3 valid descriptive adjectives`
             },
             {
                 type: 'association',
-                prompt: `🔗 Word Association: Name 3 common collocations used when discussing "${cleanTheme}".`,
-                answer: `Any 3 valid collocations related to ${cleanTheme}`
+                prompt: `Name 3 common words associated with "${cleanTheme}"!`,
+                answer: `Any 3 valid words related to ${cleanTheme}`
             },
             {
                 type: 'grammar',
-                prompt: `✍️ Grammar Focus: Fill in the blank: "If we [___] earlier, we would have caught the train." (study/leave/arrive)`,
+                prompt: `Fill in the blank: "If we [___] earlier, we would have caught the train." (study / left / arrived)`,
                 answer: 'HAD LEFT (or HAD ARRIVED)'
             },
             {
                 type: 'grammar',
-                prompt: `✍️ Grammar Trap: Correct the mistake: "She don't like to study grammar during the weekend."`,
-                answer: 'She DOES NOT like to study grammar during the weekend.'
+                prompt: `Correct the mistake: "She don't like to study grammar on weekends."`,
+                answer: 'She DOES NOT like to study grammar on weekends.'
             },
             {
                 type: 'grammar',
-                prompt: `✍️ Grammar Trap: Fix the error: "If I was you, I will practice every day."`,
+                prompt: `Fix the error: "If I was you, I will practice every day."`,
                 answer: 'If I WERE you, I WOULD practice every day.'
             },
             {
                 type: 'speed',
-                prompt: `☄️ Speed Relay: Name 3 useful phrases for "${cleanTheme}" in under 15 seconds!`,
-                answer: `Any 3 valid phrases for ${cleanTheme}`
+                prompt: `Name 3 useful words for "${cleanTheme}" in 10 seconds!`,
+                answer: `Any 3 valid words for ${cleanTheme}`
             },
             {
                 type: 'speed',
-                prompt: `☄️ Speed Relay: Name 3 key objects or tools related to "${cleanTheme}" in under 15 seconds!`,
-                answer: `Any 3 valid objects related to ${cleanTheme}`
+                prompt: `Name 3 items related to "${cleanTheme}" in 10 seconds!`,
+                answer: `Any 3 valid items related to ${cleanTheme}`
             },
             {
                 type: 'ordering',
