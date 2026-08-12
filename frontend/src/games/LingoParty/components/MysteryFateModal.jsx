@@ -77,6 +77,11 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
 
     setDrawnEvent(randomEvt);
 
+    // Dynamic card step based on screen height (mobile landscape vs desktop)
+    const isMobileLandscape = typeof window !== 'undefined' && window.innerHeight <= 520;
+    const cardWidth = isMobileLandscape ? 100 : CARD_WIDTH;
+    const itemStep = isMobileLandscape ? 110 : ITEM_STEP;
+
     // Build 45 cards ribbon with randomEvt forced at WINNING_INDEX (38)
     const newRibbon = Array.from({ length: 45 }, (_, i) => {
       if (i === WINNING_INDEX) return randomEvt;
@@ -87,9 +92,9 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
 
     // Calculate target offset to center WINNING_INDEX under pointer
     const viewportWidth = reelViewportRef.current ? reelViewportRef.current.clientWidth : 540;
-    const centerOffset = viewportWidth / 2 - CARD_WIDTH / 2;
-    const jitter = Math.floor(Math.random() * 40 - 20); // random jitter inside card center
-    const finalOffset = -(WINNING_INDEX * ITEM_STEP - centerOffset + jitter);
+    const centerOffset = viewportWidth / 2 - cardWidth / 2;
+    const jitter = Math.floor(Math.random() * 30 - 15); // random jitter inside card center
+    const finalOffset = -(WINNING_INDEX * itemStep - centerOffset + jitter);
 
     const startTime = performance.now();
     const duration = 4500; // 4.5 seconds reel deceleration
@@ -105,7 +110,7 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
 
       // Track item index under center pointer for audio ticks!
       const pointerPos = -currentX + viewportWidth / 2;
-      const currentIndex = Math.floor(pointerPos / ITEM_STEP);
+      const currentIndex = Math.floor(pointerPos / itemStep);
 
       if (currentIndex !== lastIndexRef.current && currentIndex >= 0 && currentIndex <= WINNING_INDEX) {
         lastIndexRef.current = currentIndex;
