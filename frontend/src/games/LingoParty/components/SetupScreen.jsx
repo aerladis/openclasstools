@@ -90,6 +90,26 @@ const GAME_MODES = [
   { id: 'crew', label: 'Crew', desc: '3+ students per pawn' }
 ];
 
+export function getUniqueDeckName(baseTopic, existingDecks = []) {
+  const cleanBase = (baseTopic || '').trim() || 'Sample Deck';
+  const existingNames = new Set(
+    (existingDecks || [])
+      .map(d => (typeof d === 'string' ? d : d?.name || d?.deckName || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  if (!existingNames.has(cleanBase.toLowerCase())) {
+    return cleanBase;
+  }
+
+  let counter = 2;
+  while (existingNames.has(`${cleanBase} (${counter})`.toLowerCase())) {
+    counter++;
+  }
+
+  return `${cleanBase} (${counter})`;
+}
+
 export default function SetupScreen({ onStartGame, playSound }) {
   const [mode, setMode] = useState('crew');
   const [teamCount, setTeamCount] = useState(3);
@@ -109,7 +129,6 @@ export default function SetupScreen({ onStartGame, playSound }) {
       || localStorage.getItem('oct_teacher_name')
       || '';
   });
-  const [deckTitle, setDeckTitle] = useState('');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [keyActive, setKeyActive] = useState(hasTeacherKey());
   const [aiView, setAiView] = useState('generate'); // 'generate' | 'saved'
@@ -252,9 +271,12 @@ export default function SetupScreen({ onStartGame, playSound }) {
 
     try {
       addLog('📡 Registering new deck via /api/generate-lingoparty...', 'info');
+      const existingDecksList = savedDecks.length > 0 ? savedDecks : (deckLibrary.decks || []);
+      const generatedDeckName = getUniqueDeckName(topic, existingDecksList);
+
       const deck = await deckLibrary.generate({
         endpoint: '/api/generate-lingoparty',
-        deckName: deckTitle.trim() || `${topic} — ${mode.toUpperCase()} Mission`,
+        deckName: generatedDeckName,
         theme: topic,
         cefr,
         count: cardCount,
@@ -534,17 +556,6 @@ export default function SetupScreen({ onStartGame, playSound }) {
                       >
                         {keyActive ? '🟢 AI Key Active' : '🔴 Set Gemini Key'}
                       </button>
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>Deck Title</label>
-                      <input
-                        type="text"
-                        className={styles.inputField}
-                        value={deckTitle}
-                        onChange={e => setDeckTitle(e.target.value)}
-                        placeholder={`e.g. ${topic} — ${mode.toUpperCase()} Mission`}
-                      />
                     </div>
 
                     <div className={styles.formGroup}>
