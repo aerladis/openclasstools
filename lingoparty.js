@@ -644,7 +644,14 @@ function handleTileAction(tileIndex, team) {
     if (tile.type === 'shop') {
         openShopModal(team);
     } else if (tile.type === 'chance') {
-        triggerMysteryBoxEvent(team);
+        gameState.pendingChanceDraw = true;
+        let card = gameState.deck.length > 0 ? gameState.deck.shift() : null;
+        if (!card) {
+            const types = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay'];
+            const randType = types[Math.floor(Math.random() * types.length)];
+            card = { type: randType, prompt: `Complete the ${randType} challenge to unlock Mystery Box!`, answer: 'Target' };
+        }
+        openChallengeModal(card, team);
     } else if (tile.type === 'finish' || tile.type === 'trophy') {
         // Boss challenge at end of board
         let card = gameState.deck.length > 0 ? gameState.deck.shift() : null;
@@ -827,6 +834,11 @@ function gradeChallenge(isCorrect) {
         playSound('correct');
         currentTeam.coins += reward;
         currentTeam.trophies += 1;
+        if (gameState.pendingChanceDraw) {
+            gameState.pendingChanceDraw = false;
+            triggerMysteryBoxEvent(currentTeam);
+            return;
+        }
     } else {
         playSound('damage');
         if (currentTeam.startPos !== undefined) {
@@ -836,6 +848,7 @@ function gradeChallenge(isCorrect) {
         if (card && card.type === 'grammar') {
             currentTeam.coins = Math.max(0, currentTeam.coins - 5);
         }
+        gameState.pendingChanceDraw = false;
     }
 
     gameState.activeChallenge = null;

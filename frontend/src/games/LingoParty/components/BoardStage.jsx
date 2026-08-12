@@ -23,6 +23,8 @@ export default function BoardStage({
 }) {
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+  const [isChanceChallenge, setIsChanceChallenge] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'challenge', 'shop', 'mystery', 'guide', 'victory', 'wheel', 'orbit'
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [categoryAnnouncement, setCategoryAnnouncement] = useState(null);
@@ -160,7 +162,8 @@ export default function BoardStage({
       setCurrentChallenge({ ...chosen, isBoss: true });
       setActiveModal('challenge');
     } else if (tile.type === 'chance') {
-      setActiveModal('mystery');
+      setIsChanceChallenge(true);
+      setActiveModal('wheel');
     } else if (tile.type === 'shop') {
       setActiveModal('shop');
     } else if (tile.type === 'vortex') {
@@ -289,8 +292,9 @@ export default function BoardStage({
   };
 
   const handleRollDice = async () => {
-    if (isRolling || activeModal || showQuestionReady || orbitResult) return;
+    if (isRolling || isMoving || activeModal || showQuestionReady || pendingTileAction || orbitResult) return;
     setIsRolling(true);
+    setIsMoving(true);
     setCategoryAnnouncement(null);
     if (playSound) playSound('roll');
 
@@ -317,6 +321,8 @@ export default function BoardStage({
       await new Promise(r => setTimeout(r, 440)); // 440ms step delay for game-like feel
     }
 
+    setIsMoving(false);
+
     // Check destination tile and trigger Top Category Announcement
     const landedTile = gameState.tiles[curTeam.position];
     if (landedTile) {
@@ -331,7 +337,7 @@ export default function BoardStage({
         roleplay: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         ordering: { text: '🔢 CONVERSATION ORDER TILE LANDED!', color: '#f97316' },
         shop: { text: '🛒 TROPHY STATION LANDED!', color: '#eab308' },
-        chance: { text: '🎁 MYSTERY BOX LANDED!', color: '#ec4899' },
+        chance: { text: '🎁 CHANCE TILE LANDED! ANSWER TO DRAW MYSTERY BOX!', color: '#ec4899' },
         start: { text: '🌍 LAUNCHPAD STATION LANDED!', color: '#10b981' },
         trophy: { text: '⭐ GOAL SANCTUARY REACHED!', color: '#f59e0b' },
         challenge: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' }
@@ -406,12 +412,20 @@ export default function BoardStage({
         }
         triggerConfetti();
       }
+
+      if (isChanceChallenge) {
+        setIsChanceChallenge(false);
+        setActiveModal('mystery');
+        setCurrentChallenge(null);
+        return;
+      }
     } else {
       // If answer is wrong or passed, pawn returns to pre-roll planet!
       if (playSound) playSound('damage');
       if (curTeam.startPos !== undefined) {
         curTeam.position = curTeam.startPos;
       }
+      setIsChanceChallenge(false);
     }
     setActiveModal(null);
     setCurrentChallenge(null);
@@ -441,8 +455,15 @@ export default function BoardStage({
       if (checkVictory(teamsCopy)) return;
     }
 
-    // Normal question flow continues after Chance card: trigger Wheel of Cosmic Fate!
-    setActiveModal('wheel');
+    setActiveModal(null);
+
+    // If Chance card has doubleRoll (roll again), keep current team's turn so they can roll again!
+    if (eventResult && eventResult.doubleRoll) {
+      if (playSound) playSound('trophy');
+      return;
+    }
+
+    advanceTurn(teamsCopy);
   };
 
 
@@ -694,9 +715,9 @@ export default function BoardStage({
             <button
               className={`btn-primary ${styles.rollBtn}`}
               onClick={handleRollDice}
-              disabled={isRolling || activeModal !== null || orbitResult !== null}
+              disabled={isRolling || isMoving || activeModal !== null || showQuestionReady !== null || pendingTileAction !== null || orbitResult !== null}
             >
-              {isRolling ? '⚡ Warping...' : '🎲 Throw the Die!'}
+              {isRolling || isMoving ? '⚡ Warping...' : '🎲 Throw the Die!'}
             </button>
           )}
         </div>
