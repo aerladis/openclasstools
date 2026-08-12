@@ -1013,12 +1013,13 @@ if (btnMysteryAction) {
         btnMysteryAction.disabled = true;
         playSound('roll');
 
-        // Suspense shuffle animation
-        const icons = ['🌟', '🚀', '🎉', '🎒', '⚡', '💎', '🎁'];
-        for (let i = 0; i < 6; i++) {
+        // CS:GO Reel Ticking Animation
+        const icons = ['🌟', '🚀', '🎉', '🎒', '⚡', '💎', '🎁', '🎲', '🧊'];
+        for (let i = 0; i < 8; i++) {
             mysteryGiftIconEl.textContent = icons[i % icons.length];
-            mysteryEventTitleEl.textContent = 'Shuffling Fate...';
-            await new Promise(resolve => setTimeout(resolve, 120));
+            mysteryEventTitleEl.textContent = 'Spinning CS:GO Case...';
+            playSound('tick');
+            await new Promise(resolve => setTimeout(resolve, 90 + i * 65));
         }
 
         const { event } = activeMysteryEvent;
