@@ -150,11 +150,11 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
     <div className={styles.modalOverlay}>
       <div className={`glass-card ${styles.mysteryCardBox}`}>
         <div className={styles.modalHeaderGroup}>
-          <h2 className={styles.modalTitle}>🎁 CS:GO Cosmic Case Opener</h2>
+          <h2 className={styles.modalTitle}>🎁 Cosmic Case Opener</h2>
           <p className={styles.teamSubtitle}>{activeTeam.name} is spinning the Chance Case!</p>
         </div>
 
-        {/* CS:GO Reel Container */}
+        {/* Reel Container */}
         <div className={styles.reelContainer}>
           <div className={styles.needlePointerTop}>🔻</div>
           <div className={styles.needlePointerBottom}>▲</div>
@@ -174,9 +174,6 @@ export default function MysteryFateModal({ isOpen, activeTeam, onResolve, playSo
                 >
                   <span className={styles.cardIcon}>{card.icon}</span>
                   <span className={styles.cardTitle}>{card.title}</span>
-                  <span className={styles.cardTag}>
-                    {card.isGood ? '💙 REWARD' : '❤️ PENALTY'}
-                  </span>
                 </div>
               ))}
             </div>

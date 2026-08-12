@@ -1013,11 +1013,11 @@ if (btnMysteryAction) {
         btnMysteryAction.disabled = true;
         playSound('roll');
 
-        // CS:GO Reel Ticking Animation
+        // Reel Ticking Animation
         const icons = ['🌟', '🚀', '🎉', '🎒', '⚡', '💎', '🎁', '🎲', '🧊'];
         for (let i = 0; i < 8; i++) {
             mysteryGiftIconEl.textContent = icons[i % icons.length];
-            mysteryEventTitleEl.textContent = 'Spinning CS:GO Case...';
+            mysteryEventTitleEl.textContent = 'Spinning Cosmic Case...';
             playSound('tick');
             await new Promise(resolve => setTimeout(resolve, 90 + i * 65));
         }
