@@ -1,0 +1,33 @@
+{
+  "id": "default",
+  "name": "Classic Synthesized Pack",
+  "description": "Standard synthesized sound effects generated for OpenClassTools.",
+  "version": "1.0.0",
+  "author": "OpenClassTools",
+  "sounds": [
+    "roll",
+    "step",
+    "correct",
+    "wrong",
+    "trophy",
+    "damage",
+    "start",
+    "question",
+    "select",
+    "lifeline",
+    "walkAway",
+    "win",
+    "loss",
+    "timeout",
+    "tick",
+    "flip",
+    "mastered",
+    "review",
+    "nav",
+    "sync",
+    "reveal",
+    "pass",
+    "pause",
+    "resume"
+  ]
+}

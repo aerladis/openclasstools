@@ -1,0 +1,15 @@
+{
+  "packs": [
+    {
+      "id": "synth",
+      "name": "Web Audio Synthesizer (Built-in)",
+      "type": "synth"
+    },
+    {
+      "id": "default",
+      "name": "Default WAV Pack",
+      "type": "folder",
+      "path": "/audio_packs/default"
+    }
+  ]
+}
