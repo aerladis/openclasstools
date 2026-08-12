@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { parseOrderingLines, getCorrectOrderingSteps } from '../utils/orderingUtils';
 import styles from './ChallengeModal.module.css';
 
 function cleanPronunciationSentence(text) {
@@ -38,34 +39,6 @@ function getGuaranteedScramble(scrambledWord, targetWord) {
   }
 
   return scrambleChars.split('').join(' - ');
-}
-
-function parseOrderingLines(rawPrompt) {
-  if (!rawPrompt || typeof rawPrompt !== 'string') return [];
-
-  let text = rawPrompt.trim();
-
-  // Strip common header prefix if present (e.g. "Put this conversation in order:")
-  text = text.replace(/^(put\s+this\s+conversation\s+(in\s+)?(correct\s+)?order\s*:?|reorder\s+(the\s+following\s+)?(conversation\s+)?:?|order\s+the\s+dialogue\s*:?)/i, '').trim();
-
-  let lines = [];
-  if (/(^|\s)[1-9]\.\s+/.test(text)) {
-    lines = text.split(/(?=(?:^|\s)[1-9]\.\s+)/).map(s => s.trim()).filter(Boolean);
-  } else if (text.includes('\n')) {
-    lines = text.split('\n').map(s => s.trim()).filter(Boolean);
-  } else if (/[A-Z][a-z]*\s*:\s*/.test(text)) {
-    lines = text.split(/(?=[A-Z][a-z]*\s*:\s*)/).map(s => s.trim()).filter(Boolean);
-  } else {
-    lines = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
-  }
-
-  return lines
-    .map(line => line
-      .replace(/^(put\s+this\s+conversation[^:]*:?)/i, '')
-      .replace(/^([1-9]\d*[\.\)]|step\s*\d+:?|line\s*\d+:?)\s*/i, '')
-      .trim()
-    )
-    .filter(Boolean);
 }
 
 function getShuffledOrderingLines(parsedLines) {
@@ -226,7 +199,7 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     const answerStr = String(targetAnswer);
 
     if (challenge.type === 'ordering') {
-      const steps = answerStr.split(/->|\n/).map(s => s.trim()).filter(Boolean);
+      const steps = getCorrectOrderingSteps(prompt || challenge.question || challenge.word, targetAnswer);
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'left', marginTop: '0.4rem' }}>
           {steps.map((step, i) => (
@@ -235,7 +208,7 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
                 {i + 1}
               </span>
               <span style={{ fontSize: '1.1rem', color: '#f3e8ff', fontWeight: 600 }}>
-                {step.replace(/^([1-9]\d*[\.\)]|step\s*\d+:?|line\s*\d+:?)\s*/i, '')}
+                {step.replace(/^([1-9]\d*[.)]|step\s*\d+:?|line\s*\d+:?)\s*/i, '')}
               </span>
             </div>
           ))}

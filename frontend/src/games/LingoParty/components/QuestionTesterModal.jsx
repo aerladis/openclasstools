@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { parseOrderingLines, getCorrectOrderingSteps } from '../utils/orderingUtils';
 import styles from './QuestionTesterModal.module.css';
 
 const TYPE_ICONS = {
@@ -15,28 +16,6 @@ const TYPE_ICONS = {
 };
 
 const ALL_CATEGORIES = ['ordering', 'riddle', 'scramble', 'pronunciation', 'grammar', 'association', 'speed', 'roleplay'];
-
-function parseOrderingLines(rawPrompt) {
-  if (!rawPrompt || typeof rawPrompt !== 'string') return [];
-
-  let text = rawPrompt.trim();
-  text = text.replace(/^(put\s+this\s+conversation\s+(in\s+)?(correct\s+)?order\s*:?|reorder\s+(the\s+following\s+)?(conversation\s+)?:?|order\s+the\s+dialogue\s*:?)/i, '').trim();
-
-  let lines = [];
-  if (/(^|\s)[1-9]\.\s+/.test(text)) {
-    lines = text.split(/(?=(?:^|\s)[1-9]\.\s+)/).map(s => s.trim()).filter(Boolean);
-  } else if (text.includes('\n')) {
-    lines = text.split('\n').map(s => s.trim()).filter(Boolean);
-  } else if (/[A-Z][a-z]*\s*:\s*/.test(text)) {
-    lines = text.split(/(?=[A-Z][a-z]*\s*:\s*)/).map(s => s.trim()).filter(Boolean);
-  } else {
-    lines = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
-  }
-
-  return lines
-    .map(line => line.replace(/^(put\s+this\s+conversation[^:]*:?)/i, '').replace(/^[1-9]\.\s*/, '').trim())
-    .filter(Boolean);
-}
 
 export default function QuestionTesterModal({ deck = [], onClose, onTestCard }) {
   const [filterType, setFilterType] = useState('all');
@@ -152,6 +131,13 @@ export default function QuestionTesterModal({ deck = [], onClose, onTestCard }) 
                         {card.answer && (
                           <div className={styles.cardAnswer}>
                             <strong>Target Sequence:</strong> {card.answer}
+                            <div style={{ marginTop: '0.3rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                              {getCorrectOrderingSteps(card.prompt, card.answer).map((step, sIdx) => (
+                                <div key={sIdx} style={{ fontSize: '0.88rem', color: '#86efac', fontWeight: 600 }}>
+                                  {sIdx + 1}. {step}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </>
