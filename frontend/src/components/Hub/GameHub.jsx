@@ -1,44 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './GameHub.module.css';
-import ApiKeyModal from '../Common/ApiKeyModal';
-import TeacherKeyPrompt from '../Common/TeacherKeyPrompt';
-import AudioPackModal from '../AudioPackModal/AudioPackModal';
-import {
-  hasTeacherKey,
-  wantsAiFeatures,
-} from '../../services/platformApi';
 
 export default function GameHub() {
-  const [serverHealth, setServerHealth] = useState({ status: 'checking' });
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [isAudioPackModalOpen, setIsAudioPackModalOpen] = useState(false);
-  const [showKeyPrompt, setShowKeyPrompt] = useState(false);
-  const [keyActive, setKeyActive] = useState(hasTeacherKey());
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then(res => res.json())
-      .then(() => {
-        setServerHealth({ status: 'online' });
-      })
-      .catch(() => {
-        setServerHealth({ status: 'offline' });
-      });
-
-    setShowKeyPrompt(!hasTeacherKey() && wantsAiFeatures());
-  }, []);
-
-  const handlePromptClose = () => {
-    setShowKeyPrompt(false);
-    setKeyActive(hasTeacherKey());
-  };
-
-  const handleApiModalClose = () => {
-    setIsApiKeyModalOpen(false);
-    setKeyActive(hasTeacherKey());
-  };
-
   const games = [
     {
       id: 'lingoparty',
@@ -151,79 +115,6 @@ export default function GameHub() {
             <span className={styles.gradientText}>OpenClassTools Game Hub</span>
           </h1>
         </div>
-
-        <div className={styles.headerActions}>
-          <details className={styles.teacherGuide}>
-            <summary>
-              <span aria-hidden="true">🎓</span>
-              Teacher Guide
-            </summary>
-            <div className={styles.teacherGuideBody}>
-              <div className={styles.guideIntro}>
-                <span aria-hidden="true">✨</span>
-                <div>
-                  <strong>Build classroom-ready activities</strong>
-                  <p>Choose a game, match your lesson objective, and reuse shared decks.</p>
-                </div>
-              </div>
-
-              <div className={styles.guideSteps}>
-                <div className={styles.guideStep}>
-                  <span className={styles.guideStepNumber}>1</span>
-                  <div>
-                    <strong>Add your API key</strong>
-                    <p>
-                      Get a Gemini key from{' '}
-                      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">
-                        Google AI Studio
-                      </a>
-                      . It is temporary and stays only in this browser tab.
-                    </p>
-                  </div>
-                </div>
-
-                <div className={styles.guideStep}>
-                  <span className={styles.guideStepNumber}>2</span>
-                  <div>
-                    <strong>Choose a game</strong>
-                    <p>Select the activity that best supports your lesson objective and class level.</p>
-                  </div>
-                </div>
-
-                <div className={styles.guideStep}>
-                  <span className={styles.guideStepNumber}>3</span>
-                  <div>
-                    <strong>Name decks clearly</strong>
-                    <p>Include the topic and CEFR level so other teachers can find and reuse them.</p>
-                  </div>
-                </div>
-              </div>
-
-              <button type="button" onClick={() => setIsApiKeyModalOpen(true)}>
-                {keyActive ? 'Change API key' : 'Add API key'}
-              </button>
-            </div>
-          </details>
-
-          <button
-            className={styles.btnApiKey}
-            onClick={() => setIsAudioPackModalOpen(true)}
-          >
-            🔊 Audio Packs
-          </button>
-
-          <button
-            className={styles.btnApiKey}
-            onClick={() => setIsApiKeyModalOpen(true)}
-          >
-            {keyActive ? '🟢 AI Key Active' : '🔴 AI Generation Disabled'}
-          </button>
-
-          <div className={styles.statusBadge}>
-            <div className={styles.statusDot} style={{ background: serverHealth.status === 'offline' ? '#ef4444' : '#10b981' }}></div>
-            <span>Server: {serverHealth.status === 'offline' ? 'Offline' : 'Online'}</span>
-          </div>
-        </div>
       </header>
 
       <section className={styles.gamesGrid}>
@@ -248,19 +139,6 @@ export default function GameHub() {
           );
         })}
       </section>
-
-      <ApiKeyModal
-        isOpen={isApiKeyModalOpen}
-        onClose={handleApiModalClose}
-      />
-      <TeacherKeyPrompt
-        isOpen={showKeyPrompt}
-        onClose={handlePromptClose}
-      />
-      <AudioPackModal
-        isOpen={isAudioPackModalOpen}
-        onClose={() => setIsAudioPackModalOpen(false)}
-      />
     </div>
   );
 }
