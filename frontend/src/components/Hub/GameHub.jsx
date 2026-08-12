@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import styles from './GameHub.module.css';
 import ApiKeyModal from '../Common/ApiKeyModal';
 import TeacherKeyPrompt from '../Common/TeacherKeyPrompt';
+import AudioPackModal from '../AudioPackModal/AudioPackModal';
 import {
   hasTeacherKey,
   wantsAiFeatures,
@@ -11,6 +12,7 @@ import {
 export default function GameHub() {
   const [serverHealth, setServerHealth] = useState({ status: 'checking' });
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [isAudioPackModalOpen, setIsAudioPackModalOpen] = useState(false);
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
   const [keyActive, setKeyActive] = useState(hasTeacherKey());
 
@@ -206,6 +208,13 @@ export default function GameHub() {
 
           <button
             className={styles.btnApiKey}
+            onClick={() => setIsAudioPackModalOpen(true)}
+          >
+            🔊 Audio Packs
+          </button>
+
+          <button
+            className={styles.btnApiKey}
             onClick={() => setIsApiKeyModalOpen(true)}
           >
             {keyActive ? '🟢 AI Key Active' : '🔴 AI Generation Disabled'}
@@ -248,6 +257,10 @@ export default function GameHub() {
       <TeacherKeyPrompt
         isOpen={showKeyPrompt}
         onClose={handlePromptClose}
+      />
+      <AudioPackModal
+        isOpen={isAudioPackModalOpen}
+        onClose={() => setIsAudioPackModalOpen(false)}
       />
     </div>
   );
