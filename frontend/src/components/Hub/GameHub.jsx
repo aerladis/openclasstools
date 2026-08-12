@@ -150,7 +150,6 @@ export default function GameHub() {
             <span className={styles.titleIcon}>🎮</span>
             <span className={styles.gradientText}>OpenClassTools Game Hub</span>
           </h1>
-          <p>Next-Gen AI-Powered Classroom Party Games & Widescreen Interactive Board Suite</p>
         </div>
 
         <div className={styles.headerActions}>
