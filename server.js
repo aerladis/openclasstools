@@ -1239,9 +1239,24 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
                 answer: `Any 3 valid items related to ${cleanTheme}`
             },
             {
+                type: 'speed',
+                prompt: `Name 3 important actions for "${cleanTheme}" in 10 seconds!`,
+                answer: `Any 3 valid actions related to ${cleanTheme}`
+            },
+            {
                 type: 'ordering',
                 prompt: `B: I would recommend checking out the local market.\nA: Excuse me, what is the best place to visit around here?\nB: It has great traditional crafts and delicious food.`,
                 answer: `A: Excuse me, what is the best place to visit around here? -> B: I would recommend checking out the local market. -> B: It has great traditional crafts and delicious food.`
+            },
+            {
+                type: 'ordering',
+                prompt: `B: Yes, please. I am looking for the science museum.\nA: Hello there! Do you need any assistance?\nA: It is just two blocks straight ahead on the right.`,
+                answer: `A: Hello there! Do you need any assistance? -> B: Yes, please. I am looking for the science museum. -> A: It is just two blocks straight ahead on the right.`
+            },
+            {
+                type: 'ordering',
+                prompt: `B: I am doing very well, thank you for asking.\nA: Good morning! How are you doing today?\nB: Have a wonderful and productive day ahead!`,
+                answer: `A: Good morning! How are you doing today? -> B: I am doing very well, thank you for asking. -> B: Have a wonderful and productive day ahead!`
             },
             {
                 type: 'draw',

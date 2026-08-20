@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { parseOrderingLines, getCorrectOrderingSteps } from '../utils/orderingUtils';
 import styles from './ChallengeModal.module.css';
 
+export { parseOrderingLines, getCorrectOrderingSteps };
+
 function cleanPronunciationSentence(text) {
   if (!text || typeof text !== 'string') return '';
   let cleaned = text.trim();
@@ -12,7 +14,7 @@ function cleanPronunciationSentence(text) {
   cleaned = cleaned.replace(/^'(.*)'$/, '$1');
 
   // Strip trailing metadata in parentheses or brackets like (Focus: ...) or [Speed: Fast]
-  cleaned = cleaned.replace(/\s*[\(\[][^\)\]]*(?:focus|speed|stress|level|note|challenge)[^\)\]]*[\)\]]\s*$/i, '');
+  cleaned = cleaned.replace(/\s*[([][^)\]]*(?:focus|speed|stress|level|note|challenge)[^)\]]*[)\]]\s*$/i, '');
 
   return cleaned.trim();
 }

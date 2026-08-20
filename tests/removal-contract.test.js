@@ -54,7 +54,7 @@ test('Kelime hides setup UI when a round starts', async () => {
     assert.match(source, /setSetupVisible\(false\)/);
 });
 
-test('hub header places the glass Teacher Guide before the API status control', async () => {
+test('hub header renders cleanly centered title and icon without stale room-code or legacy controls', async () => {
     const source = await read('frontend/src/components/Hub/GameHub.jsx');
     const styles = await read('frontend/src/components/Hub/GameHub.module.css');
     const headerStart = source.indexOf('<header className={styles.hubHeader}>');
@@ -63,17 +63,8 @@ test('hub header places the glass Teacher Guide before the API status control', 
     const hubHeaderStyles = styles.match(/\.hubHeader\s*\{([^}]*)\}/)?.[1] ?? '';
 
     assert.ok(headerStart >= 0 && headerEnd > headerStart);
-    assert.match(header, /<details[^>]*className=\{styles\.teacherGuide\}/);
-    assert.match(header, /<summary>[\s\S]*Teacher Guide[\s\S]*<\/summary>/);
-    assert.ok(
-        header.indexOf('className={styles.teacherGuide}') <
-        header.indexOf('className={styles.btnApiKey}'),
-        'Teacher Guide must appear to the left of the API status button'
-    );
-    assert.match(header, /Google AI Studio/i);
-    assert.match(header, /temporary/i);
-    assert.match(header, /Name decks clearly/i);
-    assert.match(header, /setIsApiKeyModalOpen\(true\)/);
+    assert.match(header, /OpenClassTools Game Hub/);
+    assert.match(header, /🎮/);
     assert.doesNotMatch(source, /Why use your own API key\?/i);
     assert.match(hubHeaderStyles, /position:\s*relative/, 'header must establish a positioned layer');
     assert.match(hubHeaderStyles, /z-index:\s*[1-9]\d*/, 'header must paint above the following game grid');

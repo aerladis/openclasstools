@@ -33,8 +33,8 @@ test('Board contains 1 random cube tile and top-right cube badge overlay', async
     // LingoPartyGame should generate a random cube tile
     assert.match(gameSource, /type:\s*'cube'/);
 
-    // BoardMap should render a top-right cube badge on cube tiles
-    assert.match(mapSource, /tp\.type\s*===\s*'cube'/);
+    // BoardMap should render cube tiles with iconic cube icon and coordinates
+    assert.match(mapSource, /['"]cube['"]/);
     assert.match(mapSource, /translate\([\s\S]*?,[\s\S]*?\)/);
     assert.match(mapSource, /🧊/);
 });
@@ -50,11 +50,11 @@ test('MysteryFateModal rotates cards slower for suspense, features positive card
     assert.match(fateSource, /Stardust Crystal Vault/);
     assert.match(fateSource, /Hyperdrive Booster/);
 
-    // Should use progressive slowing delays for suspenseful shuffle
-    assert.match(fateSource, /delays\s*=/);
+    // Should use spinning reel animation for suspenseful reveal
+    assert.match(fateSource, /duration\s*=\s*\d+/);
 
     // Should use weighted selection for rare Gibel Cube cards
-    assert.match(fateSource, /isRareCube/);
+    assert.match(fateSource, /cubeEvents/);
 });
 
 test('Crystal Ball is removed from ShopModal and Shop tile is removed from board generation', async () => {

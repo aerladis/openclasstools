@@ -28,7 +28,7 @@ test('all content generators register named decks through the shared handler', a
     const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
     const generationSection = source.slice(
         source.indexOf('// ---- POST /api/generate (Who Am I? characters) ----'),
-        source.indexOf('// ---- Admin Telemetry API Endpoints ----')
+        source.indexOf('// ---- GET /api/lingoparty-decks')
     );
 
     for (const endpoint of [

@@ -156,7 +156,7 @@ test('ChallengeModal.jsx exports parseOrderingLines and getCorrectOrderingSteps'
     const modalPath = path.join(rootDir, 'frontend', 'src', 'games', 'LingoParty', 'components', 'ChallengeModal.jsx');
     const source = await readFile(modalPath, 'utf8');
 
-    assert.match(source, /export\s+function\s+parseOrderingLines/);
-    assert.match(source, /export\s+function\s+getCorrectOrderingSteps/);
+    assert.match(source, /export\s+(?:function\s+|{[^}]*)parseOrderingLines/);
+    assert.match(source, /export\s+(?:function\s+|{[^}]*)getCorrectOrderingSteps/);
     assert.match(source, /getCorrectOrderingSteps\s*\(/);
 });
