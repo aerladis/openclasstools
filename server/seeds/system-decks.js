@@ -108,7 +108,8 @@ export const SYSTEM_DECKS = Object.freeze([
             { type: 'grammar', prompt: 'Correct: She do not like carrots.', answer: 'She does not like carrots.' },
             { type: 'speed', prompt: 'Name four ball sports in 15 seconds.', answer: 'Football, basketball, tennis, volleyball' },
             { type: 'roleplay', prompt: 'Order a meal and explain a food allergy.', answer: 'Use polite requests and clear allergy language' },
-            { type: 'truefalse', prompt: 'Went is the past tense of go.', answer: true }
+            { type: 'truefalse', prompt: 'Went is the past tense of go.', answer: true },
+            { type: 'draw', prompt: 'A two-wheeled vehicle with handlebars and foot pedals that you ride.', answer: 'BICYCLE' }
         ]
     }
 ]);

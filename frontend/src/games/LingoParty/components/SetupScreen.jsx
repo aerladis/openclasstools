@@ -79,6 +79,13 @@ const DEFAULT_DECK = [
   { type: 'ordering', prompt: 'Put this phone call in the correct order:\n1. "Hold on, I\'ll put you through."\n2. "Good morning, how can I help you?"\n3. "Thank you. I\'ll wait."\n4. "Could I speak to Dr. Smith, please?"', answer: '2, 4, 1, 3' },
   { type: 'ordering', prompt: 'Put this restaurant dialogue in the correct order:\n1. "Could we have the bill, please?"\n2. "Are you ready to order?"\n3. "Yes, I\'ll have the pasta, please."\n4. "Of course. Here it is."\n5. "A table for two, please."', answer: '5, 2, 3, 1, 4' },
   { type: 'ordering', prompt: 'Put this conversation in the correct order:\n1. "Actually, I prefer dogs. Do you have any pets?"\n2. "Do you like cats?"\n3. "Yes, I have a golden retriever named Max."', answer: '2, 1, 3' },
+
+  // --- Draw It (single concrete physical object) ---
+  { type: 'draw', prompt: 'A two-wheeled vehicle with a metal frame, handlebars, and foot pedals that you ride.', answer: 'BICYCLE' },
+  { type: 'draw', prompt: 'A round instrument with two hands and twelve numbers that tells the time on a wall.', answer: 'CLOCK' },
+  { type: 'draw', prompt: 'A long thin writing tool with a colored core that fits in a pocket and needs sharpening.', answer: 'PENCIL' },
+  { type: 'draw', prompt: 'A four-legged piece of furniture with a flat top used for eating meals or working.', answer: 'TABLE' },
+  { type: 'draw', prompt: 'A small round fruit that is red or green, grows on trees, and is often eaten in autumn.', answer: 'APPLE' },
 ];
 
 const EMOJI_PALETTE = ['🐉', '🚀', '🤖', '🦊', '⚡', '🦉', '🦁', '🐬', '👽', '🛸', '⭐', '🪐', '👾', '👑', '🔥', '💎', '🦄', '🐅', '🦅', '🦈'];

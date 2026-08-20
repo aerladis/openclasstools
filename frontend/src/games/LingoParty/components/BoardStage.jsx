@@ -271,6 +271,11 @@ export default function BoardStage({
           prompt: 'Order food or drinks at a space station cafe.',
           answer: 'Use: May I have, Please, Thank you'
         },
+        draw: {
+          type: 'draw',
+          prompt: 'A long optical tube with glass lenses mounted on a tripod to observe distant stars and planets.',
+          answer: 'TELESCOPE'
+        },
         truefalse: {
           type: 'truefalse',
           prompt: '"Went" is the past tense of "go".',
@@ -336,6 +341,8 @@ export default function BoardStage({
         speed: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         roleplay: { text: '🎯 CHALLENGE TILE LANDED!', color: '#a855f7' },
         ordering: { text: '🔢 CONVERSATION ORDER TILE LANDED!', color: '#f97316' },
+        draw: { text: '✏️ DRAW IT CHALLENGE LANDED!', color: '#0ea5e9' },
+        sketch: { text: '✏️ DRAW IT CHALLENGE LANDED!', color: '#0ea5e9' },
         shop: { text: '🛒 TROPHY STATION LANDED!', color: '#eab308' },
         chance: { text: '🎁 CHANCE TILE LANDED! ANSWER TO DRAW MYSTERY BOX!', color: '#ec4899' },
         start: { text: '🌍 LAUNCHPAD STATION LANDED!', color: '#10b981' },

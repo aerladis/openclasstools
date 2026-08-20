@@ -175,7 +175,9 @@ function normalizeLingoParty(content) {
         'speed',
         'roleplay',
         'truefalse',
-        'ordering'
+        'ordering',
+        'draw',
+        'sketch'
     ]);
 
     return content.map((entry, index) => {
@@ -185,6 +187,41 @@ function normalizeLingoParty(content) {
         const type = cleanText(entry.type, `LingoParty type ${index + 1}`, 30).toLowerCase();
         if (!supportedTypes.has(type)) {
             throw new DeckValidationError(`LingoParty card ${index + 1} has an unsupported type`);
+        }
+
+        if (type === 'draw' || type === 'sketch') {
+            const prompt = cleanText(entry.prompt || entry.definition || entry.clue, `Draw prompt ${index + 1}`, 800);
+            let rawAnswer = entry.answer !== undefined && entry.answer !== null ? entry.answer : (entry.targetWord || entry.word || '');
+            rawAnswer = String(rawAnswer).trim();
+
+            if (rawAnswer.includes('/')) {
+                rawAnswer = rawAnswer.split('/')[0].trim();
+            }
+            if (/\bor\b/i.test(rawAnswer)) {
+                rawAnswer = rawAnswer.split(/\bor\b/i)[0].trim();
+            }
+            rawAnswer = rawAnswer.replace(/^(a|an|the)\s+/i, '').trim();
+            rawAnswer = rawAnswer.replace(/[^a-zA-Z\s-]/g, '').trim();
+            const cleanAnswer = cleanText(rawAnswer, `Draw target answer ${index + 1}`, 80, { uppercase: true });
+
+            if (!cleanAnswer) {
+                throw new DeckValidationError(`Draw card ${index + 1} has an invalid or empty target answer`);
+            }
+
+            const targetWords = cleanAnswer.split(/[\s-]+/).filter(w => w.length >= 3);
+            const lowerPrompt = prompt.toLowerCase();
+            for (const word of targetWords) {
+                const wordRegex = new RegExp(`\\b${word.toLowerCase()}\\b`, 'i');
+                if (wordRegex.test(lowerPrompt)) {
+                    throw new DeckValidationError(`Draw card ${index + 1} leaks target word "${word}" in prompt`);
+                }
+            }
+
+            return {
+                type: 'draw',
+                prompt,
+                answer: cleanAnswer
+            };
         }
 
         if (type === 'scramble') {

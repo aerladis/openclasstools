@@ -7,6 +7,7 @@ const WHEEL_SEGMENTS = [
   { type: 'scramble', label: 'Scramble', color: '#06b6d4', icon: '🔤', weight: 1.0 },
   { type: 'pronunciation', label: 'Tongue-Twister', color: '#14b8a6', icon: '👅', weight: 1.0 },
   { type: 'cube', label: 'CUBE JACKPOT!', color: '#0284c7', icon: '🧊', weight: 0.3, isSpecial: true },
+  { type: 'draw', label: 'Draw It', color: '#0ea5e9', icon: '✏️', weight: 1.0 },
   { type: 'grammar', label: 'Grammar', color: '#f43f5e', icon: '✍️', weight: 1.0 },
   { type: 'speed', label: 'Speed Trivia', color: '#eab308', icon: '⚡', weight: 1.0 },
   { type: 'roleplay', label: 'Roleplay', color: '#a855f7', icon: '💬', weight: 1.0 },

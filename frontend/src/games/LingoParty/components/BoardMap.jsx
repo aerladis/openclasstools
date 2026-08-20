@@ -62,6 +62,8 @@ const TILE_CONFIG = {
   vortex:        { color: '#312e81', glow: 'rgba(99,102,241,0.9)', icon: '🌀', label: 'VORTEX', cssClass: 'tileVortex' },
   ordering:      { color: '#f97316', glow: 'rgba(249,115,22,0.5)', icon: '🔢', label: 'Challenge' },
   cube:          { color: '#06b6d4', glow: 'rgba(6,182,212,0.8)', icon: '🧊', label: 'CUBE', cssClass: 'tileCube' },
+  draw:          { color: '#0ea5e9', glow: 'rgba(14,165,233,0.5)', icon: '✏️', label: 'Draw It' },
+  sketch:        { color: '#0ea5e9', glow: 'rgba(14,165,233,0.5)', icon: '✏️', label: 'Draw It' },
 };
 
 const DEFAULT_CONF = { color: '#64748b', glow: 'rgba(100,116,139,0.5)', icon: '🌑', label: '???' };

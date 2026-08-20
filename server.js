@@ -198,7 +198,7 @@ setInterval(async () => {
     } catch {
         console.warn('Unable to classify expired play sessions');
     }
-}, 60 * 60 * 1000);
+}, 60 * 60 * 1000).unref();
 
 // ============================================
 // API Rate Limiting (stricter for AI endpoints)
@@ -1242,6 +1242,36 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
                 type: 'ordering',
                 prompt: `B: I would recommend checking out the local market.\nA: Excuse me, what is the best place to visit around here?\nB: It has great traditional crafts and delicious food.`,
                 answer: `A: Excuse me, what is the best place to visit around here? -> B: I would recommend checking out the local market. -> B: It has great traditional crafts and delicious food.`
+            },
+            {
+                type: 'draw',
+                prompt: `A long optical tube with glass lenses mounted on a tripod to observe distant stars and planets.`,
+                answer: 'TELESCOPE'
+            },
+            {
+                type: 'draw',
+                prompt: `A pocket navigation instrument with a magnetic needle that points toward magnetic north.`,
+                answer: 'COMPASS'
+            },
+            {
+                type: 'draw',
+                prompt: `A hard protective head covering with a transparent visor worn during missions or riding.`,
+                answer: 'HELMET'
+            },
+            {
+                type: 'draw',
+                prompt: `A cloth bag with two shoulder straps worn on the back to carry supplies and equipment.`,
+                answer: 'BACKPACK'
+            },
+            {
+                type: 'draw',
+                prompt: `A handheld battery-powered electric torch with a front bulb used to shine light in the dark.`,
+                answer: 'FLASHLIGHT'
+            },
+            {
+                type: 'draw',
+                prompt: `A two-wheeled vehicle with handlebars, a metal frame, and foot pedals that you ride.`,
+                answer: 'BICYCLE'
             }
         ];
 
@@ -1652,7 +1682,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
             Array.isArray(res) ? res : (res?.cards || res?.items || res?.challenges || [])
         );
 
-        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse'];
+        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse', 'draw'];
         const seenPromptKeys = new Set();
         const seenTargetWords = new Set();
         const seenAnswers = new Set();
@@ -1672,7 +1702,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
                 if (seenTargetWords.has(targetWordKey)) continue;
             }
             if (promptKey && seenPromptKeys.has(promptKey)) continue;
-            if (['riddle', 'scramble'].includes(c.type) && (targetWordKey || answerKey)) {
+            if (['riddle', 'scramble', 'draw'].includes(c.type) && (targetWordKey || answerKey)) {
                 const checkAns = targetWordKey || answerKey;
                 if (seenAnswers.has(checkAns)) continue;
                 seenAnswers.add(checkAns);
@@ -1731,6 +1761,19 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
                     type: 'truefalse',
                     prompt: String(c.prompt || 'Decide whether the statement is true or false.').trim(),
                     answer: Boolean(c.answer)
+                };
+            } else if (c.type === 'draw') {
+                let rawAnswer = String(c.answer !== undefined && c.answer !== null ? c.answer : (c.targetWord || c.word || '')).trim();
+                if (rawAnswer.includes('/')) rawAnswer = rawAnswer.split('/')[0].trim();
+                if (/\bor\b/i.test(rawAnswer)) rawAnswer = rawAnswer.split(/\bor\b/i)[0].trim();
+                rawAnswer = rawAnswer.replace(/^(a|an|the)\s+/i, '').trim();
+                rawAnswer = rawAnswer.replace(/[^a-zA-Z\s-]/g, '').trim();
+                const cleanDrawAnswer = rawAnswer.toUpperCase().trim();
+                if (!cleanDrawAnswer) continue;
+                normalized = {
+                    type: 'draw',
+                    prompt: String(c.prompt || c.definition || c.clue || 'Draw the physical object described above.').trim(),
+                    answer: cleanDrawAnswer
                 };
             } else {
                 normalized = {
@@ -1971,16 +2014,18 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-    console.log(`🎮 OpenClassTools Game Hub running → http://localhost:${PORT}`);
-    console.log('🔒 Security: Rate limiting enabled');
-    console.log('🤖 AI Console & Multi-Provider Backup Chain Options:');
-    console.log(`   1. [Primary]  Google Gemini (${GEMINI_MODEL}) -> ${process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log(`   2. [Backup 1] Groq AI (${GROQ_MODEL}) -> ${GROQ_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log(`   3. [Backup 2] Kimi / Moonshot (${KIMI_MODEL} @ ${KIMI_BASE_URL}) -> ${KIMI_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log(`   4. [Backup 3] OpenRouter Free Suite (${OPENROUTER_FREE_MODELS.length} free models) -> ${OPENROUTER_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log('✨ Strict JSON output formatting & safe JSON unwrapping active across all providers.');
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+    app.listen(PORT, () => {
+        console.log(`🎮 OpenClassTools Game Hub running → http://localhost:${PORT}`);
+        console.log('🔒 Security: Rate limiting enabled');
+        console.log('🤖 AI Console & Multi-Provider Backup Chain Options:');
+        console.log(`   1. [Primary]  Google Gemini (${GEMINI_MODEL}) -> ${process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log(`   2. [Backup 1] Groq AI (${GROQ_MODEL}) -> ${GROQ_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log(`   3. [Backup 2] Kimi / Moonshot (${KIMI_MODEL} @ ${KIMI_BASE_URL}) -> ${KIMI_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log(`   4. [Backup 3] OpenRouter Free Suite (${OPENROUTER_FREE_MODELS.length} free models) -> ${OPENROUTER_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log('✨ Strict JSON output formatting & safe JSON unwrapping active across all providers.');
+    });
+}
 
-export { createFallbackQuestions, loadPrompt };
+export { app, createFallbackQuestions, loadPrompt };
 

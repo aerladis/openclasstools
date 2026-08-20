@@ -73,7 +73,8 @@ test('normalizes every supported LingoParty challenge type', () => {
         { type: 'speed', prompt: 'Quick!', answer: 'Fast' },
         { type: 'roleplay', prompt: 'Act it out.', answer: 'Useful phrases' },
         { type: 'truefalse', prompt: 'Earth is round.', answer: true },
-        { type: 'ordering', prompt: 'Put in order:\n1. B\n2. A', answer: '2, 1' }
+        { type: 'ordering', prompt: 'Put in order:\n1. B\n2. A', answer: '2, 1' },
+        { type: 'draw', prompt: 'A handheld device used to view distant celestial objects.', answer: 'TELESCOPE' }
     ]);
 
     assert.deepEqual(normalized.map(card => card.type), [
@@ -85,7 +86,8 @@ test('normalizes every supported LingoParty challenge type', () => {
         'speed',
         'roleplay',
         'truefalse',
-        'ordering'
+        'ordering',
+        'draw'
     ]);
     assert.equal(normalized[0].trophies, undefined);
 });

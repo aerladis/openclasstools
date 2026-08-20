@@ -12,10 +12,11 @@ const TYPE_ICONS = {
   speed: '⚡',
   roleplay: '💬',
   association: '🎯',
-  truefalse: '🔄'
+  truefalse: '🔄',
+  draw: '✏️'
 };
 
-const ALL_CATEGORIES = ['ordering', 'riddle', 'scramble', 'pronunciation', 'grammar', 'association', 'speed', 'roleplay'];
+const ALL_CATEGORIES = ['ordering', 'riddle', 'scramble', 'pronunciation', 'grammar', 'association', 'speed', 'roleplay', 'draw'];
 
 export default function QuestionTesterModal({ deck = [], onClose, onTestCard }) {
   const [filterType, setFilterType] = useState('all');
@@ -146,7 +147,7 @@ export default function QuestionTesterModal({ deck = [], onClose, onTestCard }) 
                         <div><strong>Prompt:</strong> {card.prompt || card.question || card.word}</div>
                         {(card.answer != null || card.targetWord != null) && (
                           <div className={styles.cardAnswer}>
-                            <strong>Answer:</strong> {String(card.answer || card.targetWord)}
+                            <strong>{card.type === 'draw' ? '✏️ Target Object:' : 'Answer:'}</strong> {String(card.answer || card.targetWord)}
                           </div>
                         )}
                       </>

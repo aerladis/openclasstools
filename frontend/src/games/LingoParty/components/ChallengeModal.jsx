@@ -41,6 +41,11 @@ function getGuaranteedScramble(scrambledWord, targetWord) {
   return scrambleChars.split('').join(' - ');
 }
 
+const DRAW_W = 1100;
+const DRAW_H = 620;
+const BRUSH_SIZES = [4, 10, 18];
+const DRAW_INK = '#0f172a';
+
 function getShuffledOrderingLines(parsedLines) {
   if (!Array.isArray(parsedLines) || parsedLines.length <= 1) return parsedLines || [];
 
@@ -69,6 +74,13 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
   const [timeLeft, setTimeLeft] = useState(45);
   const [timerActive, setTimerActive] = useState(true);
   const [orderedLines, setOrderedLines] = useState([]);
+  const [brushSize, setBrushSize] = useState(10);
+
+  const canvasRef = useRef(null);
+  const drawWrapperRef = useRef(null);
+  const strokesRef = useRef([]);
+  const drawingRef = useRef(false);
+  const currentStrokeRef = useRef(null);
 
   useEffect(() => {
     setIsAnswerRevealed(false);
@@ -174,6 +186,122 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
     return () => clearInterval(timer);
   }, [challenge, timerActive, timeLeft]);
 
+  const redrawDrawCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, DRAW_W, DRAW_H);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, DRAW_W, DRAW_H);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const stroke of strokesRef.current) {
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.beginPath();
+      stroke.points.forEach(([x, y], i) => {
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+  };
+
+  const fitDrawCanvas = () => {
+    const canvas = canvasRef.current;
+    const wrapper = drawWrapperRef.current;
+    if (!canvas || !wrapper) return;
+    const availW = wrapper.clientWidth;
+    const availH = wrapper.clientHeight;
+    const scale = Math.min(availW / DRAW_W, availH / DRAW_H);
+    canvas.style.width = `${Math.floor(DRAW_W * scale)}px`;
+    canvas.style.height = `${Math.floor(DRAW_H * scale)}px`;
+  };
+
+  useEffect(() => {
+    if (challenge?.type !== 'draw') return;
+    strokesRef.current = [];
+    drawingRef.current = false;
+    currentStrokeRef.current = null;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = DRAW_W * dpr;
+    canvas.height = DRAW_H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    redrawDrawCanvas();
+    fitDrawCanvas();
+
+    window.addEventListener('resize', fitDrawCanvas);
+    return () => window.removeEventListener('resize', fitDrawCanvas);
+  }, [challenge]);
+
+  const getDrawPoint = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const clientX = e.clientX ?? ((e.touches && e.touches[0] && e.touches[0].clientX) ?? 0);
+    const clientY = e.clientY ?? ((e.touches && e.touches[0] && e.touches[0].clientY) ?? 0);
+    return {
+      x: Math.max(0, Math.min(DRAW_W, ((clientX - rect.left) / rect.width) * DRAW_W)),
+      y: Math.max(0, Math.min(DRAW_H, ((clientY - rect.top) / rect.height) * DRAW_H))
+    };
+  };
+
+  const handleDrawPointerDown = (e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* older browsers */ }
+    drawingRef.current = true;
+    const point = getDrawPoint(e);
+    if (!point) return;
+    currentStrokeRef.current = { color: DRAW_INK, size: brushSize, points: [point] };
+    strokesRef.current.push(currentStrokeRef.current);
+    redrawDrawCanvas();
+    if (playSound) playSound('step');
+  };
+
+  const handleDrawPointerMove = (e) => {
+    if (!drawingRef.current || !currentStrokeRef.current) return;
+    const point = getDrawPoint(e);
+    if (!point) return;
+    const stroke = currentStrokeRef.current;
+    stroke.points.push(point);
+    const canvas = canvasRef.current;
+    const ctx = canvas && canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = stroke.color;
+    ctx.lineWidth = stroke.size;
+    const pts = stroke.points;
+    ctx.beginPath();
+    ctx.moveTo(pts[pts.length - 2][0], pts[pts.length - 2][1]);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+  };
+
+  const handleDrawPointerUp = () => {
+    drawingRef.current = false;
+    currentStrokeRef.current = null;
+  };
+
+  const handleUndo = () => {
+    strokesRef.current.pop();
+    redrawDrawCanvas();
+    if (playSound) playSound('step');
+  };
+
+  const handleClear = () => {
+    strokesRef.current = [];
+    redrawDrawCanvas();
+    if (playSound) playSound('wrong');
+  };
+
   if (!challenge || !activeTeam) return null;
 
   const handleUnlockClue = () => {
@@ -192,6 +320,11 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
   const handleWrong = () => {
     if (playSound) playSound('wrong');
     onResolve({ result: 'wrong', trophies: 0 });
+  };
+
+  const handlePass = () => {
+    if (playSound) playSound('wrong');
+    onResolve({ result: 'pass', trophies: 0 });
   };
 
   const renderHighlightedAnswer = (prompt, targetAnswer) => {
@@ -254,14 +387,16 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
 
   return (
     <div className={styles.modalOverlay}>
-      <div className={`glass-card ${styles.challengeCard}`}>
+      <div className={`glass-card ${styles.challengeCard} ${challenge.type === 'draw' ? styles.drawCardNoScroll : ''}`}>
         <div className={styles.headerRow}>
           <span className={styles.typeBadge} style={challenge.isBoss ? { background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: '#fff', fontWeight: 'bold' } : (challenge.type === 'pronunciation' || challenge.type === 'speech' ? { background: 'rgba(20, 184, 166, 0.25)', borderColor: '#14b8a6', color: '#2dd4bf' } : {})}>
             {challenge.isBoss
               ? '👑 BOSS CHALLENGE'
               : challenge.type === 'roleplay'
                 ? '🎭 ROLEPLAY SCENARIO'
-                : challenge.type === 'truefalse'
+                : challenge.type === 'draw'
+                  ? '✏️ DRAW IT'
+                  : challenge.type === 'truefalse'
                   ? '🔄 TRUE OR FALSE'
                   : challenge.type === 'ordering'
                     ? '🔢 CONVERSATION ORDER'
@@ -308,6 +443,42 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
             challenge.prompt || challenge.question || challenge.word || 'Complete the language challenge!'
           )}
         </h2>
+
+        {challenge.type === 'draw' && (
+          <div className={styles.drawingContainer}>
+            <div className={styles.canvasWrapper} ref={drawWrapperRef}>
+              <canvas
+                ref={canvasRef}
+                className={styles.drawCanvas}
+                onPointerDown={handleDrawPointerDown}
+                onPointerMove={handleDrawPointerMove}
+                onPointerUp={handleDrawPointerUp}
+                onPointerCancel={handleDrawPointerUp}
+                onPointerLeave={handleDrawPointerUp}
+                style={{ touchAction: 'none' }}
+              />
+            </div>
+            <div className={styles.brushControls}>
+              {BRUSH_SIZES.map(size => (
+                <button
+                  key={size}
+                  className={`${styles.brushBtn} ${brushSize === size ? styles.brushBtnActive : ''}`}
+                  onClick={() => setBrushSize(size)}
+                  title={`Brush size ${size}px`}
+                >
+                  <span className={styles.brushDot} style={{ width: size * 2, height: size * 2 }} />
+                </button>
+              ))}
+              <span className={styles.brushSeparator} />
+              <button className={styles.undoBtn} onClick={handleUndo} title="Undo last stroke">
+                ↩️ Undo
+              </button>
+              <button className={styles.clearBtn} onClick={handleClear} title="Clear the canvas">
+                🧹 Clear
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Interactive Conversation Ordering UI */}
         {challenge.type === 'ordering' && (
@@ -419,6 +590,11 @@ export default function ChallengeModal({ challenge, activeTeam, onResolve, playS
 
         {/* Grading Actions */}
         <div className={styles.actionRow}>
+          {challenge.type === 'draw' && (
+            <button className={styles.btnPass} onClick={handlePass} title="Skip this challenge — no trophy awarded, team returns to their previous planet">
+              ⏭️ Skip / Pass
+            </button>
+          )}
           <button className={styles.btnCorrect} onClick={handleCorrect}>
             ✅ Correct (+1 🏆)
           </button>
