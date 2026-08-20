@@ -47,7 +47,7 @@ test('server routes API keys by prefix for Groq, Kimi, and OpenRouter', async ()
     assert.match(source, /key\.startsWith\('sk-or-'\)/);
 });
 
-test('server mounts /api/ai/compare-providers endpoint for question prompt comparing', async () => {
+test('server mounts /api/ai/compare-providers endpoint and references process.env Gemini key safely', async () => {
     const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
 
     const compareEndpointIndex = source.indexOf("app.post('/api/ai/compare-providers'");
@@ -55,6 +55,14 @@ test('server mounts /api/ai/compare-providers endpoint for question prompt compa
 
     assert.ok(compareEndpointIndex >= 0, '/api/ai/compare-providers endpoint missing');
     assert.ok(compareEndpointIndex < staticMiddlewareIndex, '/api/ai/compare-providers must be mounted before static middleware');
+
+    const compareSection = source.slice(compareEndpointIndex, source.indexOf("app.post('/api/generate-campaign'", compareEndpointIndex));
+
+    // Must safely read Gemini key from process.env and pass it to callGemini
+    assert.match(compareSection, /const\s+geminiKey\s*=\s*process\.env\.GEMINI_API_KEY\s*\|\|\s*process\.env\.GOOGLE_API_KEY/);
+    assert.match(compareSection, /callGemini\(prompt,\s*\{\s*apiKey:\s*geminiKey\s*\}\)/);
+    // Must not contain bare undeclared identifier references
+    assert.doesNotMatch(compareSection, /(?<!process\.env\.)GEMINI_API_KEY\s*\|\|/);
 });
 
 test('server enforces response_format json_object for Groq, Kimi, and OpenRouter for safe JSON', async () => {

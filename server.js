@@ -1912,10 +1912,11 @@ app.post('/api/ai/compare-providers', apiRateLimit, async (req, res) => {
         prompt = `Generate ${count} questions about "${theme}" as JSON.`;
     }
 
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     const providersToTest = [
-        { name: 'Google Gemini', fn: () => (GEMINI_API_KEY || GOOGLE_API_KEY) ? callGemini(prompt, { apiKey: GEMINI_API_KEY || GOOGLE_API_KEY }) : null },
-        { name: 'Groq AI', fn: () => GROQ_API_KEY ? callGroq(prompt) : null },
-        { name: 'Kimi / Moonshot', fn: () => KIMI_API_KEY ? callKimi(prompt) : null },
+        { name: 'Google Gemini', fn: () => geminiKey ? callGemini(prompt, { apiKey: geminiKey }) : null },
+        { name: 'Groq AI', fn: () => GROQ_API_KEY ? callGroq(prompt, { apiKey: GROQ_API_KEY }) : null },
+        { name: 'Kimi / Moonshot', fn: () => KIMI_API_KEY ? callKimi(prompt, { apiKey: KIMI_API_KEY }) : null },
         { name: 'OpenRouter', fn: () => OPENROUTER_API_KEY ? callOpenRouter(prompt, { apiKey: OPENROUTER_API_KEY }) : null }
     ];
 
