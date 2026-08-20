@@ -89,7 +89,7 @@ const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-8k';
 
 // OpenRouter Free Models ordered from best to worst performance based on speed, JSON reliability, and rate limit health:
@@ -468,7 +468,8 @@ async function callGemini(prompt, options = {}) {
                 }
 
                 const err = new Error(apiMessage || `Gemini API returned HTTP ${response.status} ${response.statusText}`);
-                err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400 && response.status !== 403;
+                err.status = response.status;
+                err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400 && response.status !== 401 && response.status !== 403 && response.status !== 429;
                 err.quotaExceeded = apiStatus === 'RESOURCE_EXHAUSTED' || response.status === 429;
                 throw err;
             }
@@ -652,7 +653,9 @@ async function callGroq(prompt, options = {}) {
             const errText = await response.text();
             console.warn(`⚠️ [Groq Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
             const err = new Error(`Groq returned HTTP ${response.status}: ${errText}`);
+            err.status = response.status;
             err.quotaExceeded = response.status === 429;
+            err.retryable = response.status !== 401 && response.status !== 403 && response.status !== 400 && response.status !== 429;
             throw err;
         }
 
@@ -709,7 +712,9 @@ async function callKimi(prompt, options = {}) {
             const errText = await response.text();
             console.warn(`⚠️ [Kimi Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
             const err = new Error(`Kimi returned HTTP ${response.status}: ${errText}`);
+            err.status = response.status;
             err.quotaExceeded = response.status === 429;
+            err.retryable = response.status !== 401 && response.status !== 403 && response.status !== 400 && response.status !== 429;
             throw err;
         }
 
@@ -743,7 +748,7 @@ async function callAI(prompt, options = {}) {
     const geminiKey = options.apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (geminiKey && geminiKey.length > 10) {
         try {
-            return await callGemini(prompt, options);
+            return await callGemini(prompt, { ...options, apiKey: geminiKey });
         } catch (err) {
             console.warn(`[AI Backup Chain] Primary Gemini failed (${err.message}). Trying backup chain...`);
             primaryErr = err;
@@ -754,7 +759,7 @@ async function callAI(prompt, options = {}) {
     if (GROQ_API_KEY && GROQ_API_KEY.length > 10) {
         try {
             console.log('[AI Backup Chain] Attempting backup provider: Groq');
-            return await callGroq(prompt, options);
+            return await callGroq(prompt, { ...options, apiKey: GROQ_API_KEY });
         } catch (err) {
             console.warn(`[AI Backup Chain] Groq failed (${err.message}). Advancing down backup chain...`);
             if (!primaryErr) primaryErr = err;
@@ -765,7 +770,7 @@ async function callAI(prompt, options = {}) {
     if (KIMI_API_KEY && KIMI_API_KEY.length > 10) {
         try {
             console.log('[AI Backup Chain] Attempting backup provider: Kimi');
-            return await callKimi(prompt, options);
+            return await callKimi(prompt, { ...options, apiKey: KIMI_API_KEY });
         } catch (err) {
             console.warn(`[AI Backup Chain] Kimi failed (${err.message}). Advancing down backup chain...`);
             if (!primaryErr) primaryErr = err;

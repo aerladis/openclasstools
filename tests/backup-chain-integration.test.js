@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises';
 test('server configures provider backup chain from Google down to Groq, Kimi, and OpenRouter', async () => {
     const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
 
-    assert.match(source, /callGemini\(prompt, options\)/);
-    assert.match(source, /callGroq\(prompt, options\)/);
-    assert.match(source, /callKimi\(prompt, options\)/);
+    assert.match(source, /callGemini\(prompt,\s*\{\s*\.\.\.options,\s*apiKey:\s*geminiKey\s*\}\)/);
+    assert.match(source, /callGroq\(prompt,\s*\{\s*\.\.\.options,\s*apiKey:\s*GROQ_API_KEY\s*\}\)/);
+    assert.match(source, /callKimi\(prompt,\s*\{\s*\.\.\.options,\s*apiKey:\s*KIMI_API_KEY\s*\}\)/);
     assert.match(source, /callOpenRouter\(prompt,/);
 
     const geminiChainIndex = source.indexOf('// Step 1: Google Gemini');
@@ -19,6 +19,24 @@ test('server configures provider backup chain from Google down to Groq, Kimi, an
     assert.ok(groqChainIndex > geminiChainIndex, 'Groq must follow Google Gemini in backup chain');
     assert.ok(kimiChainIndex > groqChainIndex, 'Kimi must follow Groq in backup chain');
     assert.ok(openrouterChainIndex > kimiChainIndex, 'OpenRouter must follow Kimi in backup chain');
+});
+
+test('platform Gemini fallback receives calculated server key when no teacher key is supplied', async () => {
+    const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+
+    // Verifies the calculation of geminiKey and its injection into callGemini
+    assert.match(source, /const\s+geminiKey\s*=\s*options\.apiKey\s*\|\|\s*process\.env\.GEMINI_API_KEY\s*\|\|\s*process\.env\.GOOGLE_API_KEY/);
+    assert.match(source, /return\s+await\s+callGemini\(prompt,\s*\{\s*\.\.\.options,\s*apiKey:\s*geminiKey\s*\}\)/);
+});
+
+test('server defaults Groq model to openai/gpt-oss-120b and marks 401/403 as non-retryable', async () => {
+    const source = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+
+    // Default Groq model
+    assert.match(source, /const\s+GROQ_MODEL\s*=\s*process\.env\.GROQ_MODEL\s*\|\|\s*['"]openai\/gpt-oss-120b['"]/);
+
+    // Kimi, Groq, and Gemini non-retryable 401/403 error classification
+    assert.match(source, /err\.retryable\s*=\s*response\.status\s*!==\s*401/);
 });
 
 test('server routes API keys by prefix for Groq, Kimi, and OpenRouter', async () => {
