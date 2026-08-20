@@ -59,3 +59,13 @@ test('server mounts /api/ai/verify endpoint for key & connectivity checks before
     assert.match(source, /INVALID_GEMINI_KEY/);
 });
 
+test('production startup listener is decoupled from argv and package.json sets NODE_ENV=test for tests', async () => {
+    const serverSource = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+    const packageSource = await readFile(new URL('../package.json', import.meta.url), 'utf8');
+    const pkg = JSON.parse(packageSource);
+
+    assert.match(serverSource, /process\.env\.NODE_ENV\s*!==\s*['"]test['"]/);
+    assert.doesNotMatch(serverSource, /process\.argv\[1\]/);
+    assert.match(pkg.scripts?.test || '', /NODE_ENV=test/);
+});
+

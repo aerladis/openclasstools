@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node --test",
+    "test": "NODE_ENV=test node --test",
     "export-sounds": "node scripts/export-sounds.js",
     "seed:decks": "node server/scripts/seed-system-decks.js",
     "build": "npm --prefix frontend install && npm --prefix frontend run build",

@@ -2029,7 +2029,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
         console.log(`🎮 OpenClassTools Game Hub running → http://localhost:${PORT}`);
         console.log('🔒 Security: Rate limiting enabled');
