@@ -14,6 +14,33 @@ The board is designed for whole-class use. It includes team tracking, challenge 
 
 ![LingoParty game board](docs/images/lingoparty-board.png)
 
+## For students who want to improve their English
+
+LingoParty turns language practice into a team game. It is best suited to students who want to speak more, remember vocabulary and use English under light time pressure rather than complete another worksheet.
+
+Students practise:
+
+- vocabulary through riddles, word scrambles and association challenges
+- speaking through roleplay and quick team discussions
+- pronunciation through tongue-twisters and read-aloud prompts
+- grammar through sentence correction and gap-fill questions
+- conversation structure through drag-and-drop dialogue ordering
+- recall by meeting previously seen questions again during longer games
+
+The teacher can choose a CEFR level from A1 to C1 and generate a deck around the class topic. Students do not need accounts or phones; they play together from the classroom screen.
+
+## What LingoParty includes
+
+- Solo, duo and crew modes for different class sizes
+- Custom team names, characters, colours and board length
+- Topic-based decks with adjustable CEFR difficulty
+- Riddles, scrambles, pronunciation, grammar, speed, roleplay, association and ordering challenges
+- A cosmic wheel that selects different challenge types
+- Chance cards, hazards and a space-station shop
+- Trophies, Gibel Cubes and multi-orbit matches
+- Saved deck versions and a question tester for teachers
+- Smartboard-friendly controls, including mouse and touch ordering
+
 ## Other classroom games
 
 The hub also includes:
