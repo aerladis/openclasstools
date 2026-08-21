@@ -89,7 +89,7 @@ const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-8k';
 
 // OpenRouter Free Models ordered from best to worst performance based on speed, JSON reliability, and rate limit health:
@@ -198,7 +198,7 @@ setInterval(async () => {
     } catch {
         console.warn('Unable to classify expired play sessions');
     }
-}, 60 * 60 * 1000);
+}, 60 * 60 * 1000).unref();
 
 // ============================================
 // API Rate Limiting (stricter for AI endpoints)
@@ -468,7 +468,8 @@ async function callGemini(prompt, options = {}) {
                 }
 
                 const err = new Error(apiMessage || `Gemini API returned HTTP ${response.status} ${response.statusText}`);
-                err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400 && response.status !== 403;
+                err.status = response.status;
+                err.retryable = apiStatus !== 'RESOURCE_EXHAUSTED' && response.status !== 400 && response.status !== 401 && response.status !== 403 && response.status !== 429;
                 err.quotaExceeded = apiStatus === 'RESOURCE_EXHAUSTED' || response.status === 429;
                 throw err;
             }
@@ -652,7 +653,9 @@ async function callGroq(prompt, options = {}) {
             const errText = await response.text();
             console.warn(`⚠️ [Groq Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
             const err = new Error(`Groq returned HTTP ${response.status}: ${errText}`);
+            err.status = response.status;
             err.quotaExceeded = response.status === 429;
+            err.retryable = response.status !== 401 && response.status !== 403 && response.status !== 400 && response.status !== 429;
             throw err;
         }
 
@@ -709,7 +712,9 @@ async function callKimi(prompt, options = {}) {
             const errText = await response.text();
             console.warn(`⚠️ [Kimi Failure] Model ${model} returned HTTP ${response.status}: ${errText}`);
             const err = new Error(`Kimi returned HTTP ${response.status}: ${errText}`);
+            err.status = response.status;
             err.quotaExceeded = response.status === 429;
+            err.retryable = response.status !== 401 && response.status !== 403 && response.status !== 400 && response.status !== 429;
             throw err;
         }
 
@@ -743,7 +748,7 @@ async function callAI(prompt, options = {}) {
     const geminiKey = options.apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (geminiKey && geminiKey.length > 10) {
         try {
-            return await callGemini(prompt, options);
+            return await callGemini(prompt, { ...options, apiKey: geminiKey });
         } catch (err) {
             console.warn(`[AI Backup Chain] Primary Gemini failed (${err.message}). Trying backup chain...`);
             primaryErr = err;
@@ -754,7 +759,7 @@ async function callAI(prompt, options = {}) {
     if (GROQ_API_KEY && GROQ_API_KEY.length > 10) {
         try {
             console.log('[AI Backup Chain] Attempting backup provider: Groq');
-            return await callGroq(prompt, options);
+            return await callGroq(prompt, { ...options, apiKey: GROQ_API_KEY });
         } catch (err) {
             console.warn(`[AI Backup Chain] Groq failed (${err.message}). Advancing down backup chain...`);
             if (!primaryErr) primaryErr = err;
@@ -765,7 +770,7 @@ async function callAI(prompt, options = {}) {
     if (KIMI_API_KEY && KIMI_API_KEY.length > 10) {
         try {
             console.log('[AI Backup Chain] Attempting backup provider: Kimi');
-            return await callKimi(prompt, options);
+            return await callKimi(prompt, { ...options, apiKey: KIMI_API_KEY });
         } catch (err) {
             console.warn(`[AI Backup Chain] Kimi failed (${err.message}). Advancing down backup chain...`);
             if (!primaryErr) primaryErr = err;
@@ -1239,9 +1244,54 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
                 answer: `Any 3 valid items related to ${cleanTheme}`
             },
             {
+                type: 'speed',
+                prompt: `Name 3 important actions for "${cleanTheme}" in 10 seconds!`,
+                answer: `Any 3 valid actions related to ${cleanTheme}`
+            },
+            {
                 type: 'ordering',
                 prompt: `B: I would recommend checking out the local market.\nA: Excuse me, what is the best place to visit around here?\nB: It has great traditional crafts and delicious food.`,
                 answer: `A: Excuse me, what is the best place to visit around here? -> B: I would recommend checking out the local market. -> B: It has great traditional crafts and delicious food.`
+            },
+            {
+                type: 'ordering',
+                prompt: `B: Yes, please. I am looking for the science museum.\nA: Hello there! Do you need any assistance?\nA: It is just two blocks straight ahead on the right.`,
+                answer: `A: Hello there! Do you need any assistance? -> B: Yes, please. I am looking for the science museum. -> A: It is just two blocks straight ahead on the right.`
+            },
+            {
+                type: 'ordering',
+                prompt: `B: I am doing very well, thank you for asking.\nA: Good morning! How are you doing today?\nB: Have a wonderful and productive day ahead!`,
+                answer: `A: Good morning! How are you doing today? -> B: I am doing very well, thank you for asking. -> B: Have a wonderful and productive day ahead!`
+            },
+            {
+                type: 'draw',
+                prompt: `A long optical tube with glass lenses mounted on a tripod to observe distant stars and planets.`,
+                answer: 'TELESCOPE'
+            },
+            {
+                type: 'draw',
+                prompt: `A pocket navigation instrument with a magnetic needle that points toward magnetic north.`,
+                answer: 'COMPASS'
+            },
+            {
+                type: 'draw',
+                prompt: `A hard protective head covering with a transparent visor worn during missions or riding.`,
+                answer: 'HELMET'
+            },
+            {
+                type: 'draw',
+                prompt: `A cloth bag with two shoulder straps worn on the back to carry supplies and equipment.`,
+                answer: 'BACKPACK'
+            },
+            {
+                type: 'draw',
+                prompt: `A handheld battery-powered electric torch with a front bulb used to shine light in the dark.`,
+                answer: 'FLASHLIGHT'
+            },
+            {
+                type: 'draw',
+                prompt: `A two-wheeled vehicle with handlebars, a metal frame, and foot pedals that you ride.`,
+                answer: 'BICYCLE'
             }
         ];
 
@@ -1355,6 +1405,52 @@ function createFallbackQuestions(gameType, theme = 'General Knowledge', count = 
     }
 
     return [];
+}
+
+const DRAW_CARD_FALLBACKS = [
+    { type: 'draw', prompt: 'Draw a two-wheeled vehicle with handlebars and foot pedals that a person rides.', answer: 'BICYCLE' },
+    { type: 'draw', prompt: 'Draw a round instrument with two hands and twelve numbers that tells the time.', answer: 'CLOCK' },
+    { type: 'draw', prompt: 'Draw a long wooden writing tool with a graphite core that needs sharpening.', answer: 'PENCIL' },
+    { type: 'draw', prompt: 'Draw a four-legged piece of furniture with a flat top used for meals or work.', answer: 'TABLE' },
+    { type: 'draw', prompt: 'Draw a small round fruit that grows on trees and may be red or green.', answer: 'APPLE' },
+    { type: 'draw', prompt: 'Draw a handheld object that opens above your head to keep rain off.', answer: 'UMBRELLA' },
+    { type: 'draw', prompt: 'Draw a musical instrument with six strings, a long neck, and a hollow body.', answer: 'GUITAR' },
+    { type: 'draw', prompt: 'Draw a flying vehicle with two wings, windows, and engines.', answer: 'AIRPLANE' },
+    { type: 'draw', prompt: 'Draw a small animal with pointed ears, whiskers, four paws, and a long tail.', answer: 'CAT' },
+    { type: 'draw', prompt: 'Draw a tall plant with a trunk, branches, and many leaves.', answer: 'TREE' },
+    { type: 'draw', prompt: 'Draw a building with a roof, windows, a front door, and a chimney.', answer: 'HOUSE' },
+    { type: 'draw', prompt: 'Draw a round object with a handle that is used to drink hot liquids.', answer: 'MUG' },
+    { type: 'draw', prompt: 'Draw a wheeled vehicle with four doors, headlights, and a steering wheel.', answer: 'CAR' },
+    { type: 'draw', prompt: 'Draw a piece of furniture with a seat, four legs, and a backrest.', answer: 'CHAIR' },
+    { type: 'draw', prompt: 'Draw a handheld device with a screen and buttons used to make calls.', answer: 'PHONE' },
+    { type: 'draw', prompt: 'Draw a bound object with many paper pages that people read.', answer: 'BOOK' },
+    { type: 'draw', prompt: 'Draw a round object with a curved peel that grows in yellow bunches.', answer: 'BANANA' }
+];
+
+function ensureMinimumDrawCards(cards, requestedCount) {
+    const limit = Math.max(1, Number(requestedCount) || 1);
+    const minimumDrawCount = Math.max(1, Math.floor(limit / 9));
+    const normalizedCards = Array.isArray(cards) ? cards.slice(0, limit) : [];
+    const existingDrawCount = normalizedCards.filter(card => card?.type === 'draw').length;
+    const missingDrawCount = Math.max(0, minimumDrawCount - existingDrawCount);
+
+    if (missingDrawCount === 0) return normalizedCards;
+
+    const fallbackCards = Array.from(
+        { length: missingDrawCount },
+        (_, index) => ({ ...DRAW_CARD_FALLBACKS[index % DRAW_CARD_FALLBACKS.length] })
+    );
+    const availableSlots = Math.max(0, limit - normalizedCards.length);
+    let replacementsNeeded = Math.max(0, fallbackCards.length - availableSlots);
+
+    for (let i = normalizedCards.length - 1; i >= 0 && replacementsNeeded > 0; i -= 1) {
+        if (normalizedCards[i]?.type !== 'draw') {
+            normalizedCards.splice(i, 1);
+            replacementsNeeded -= 1;
+        }
+    }
+
+    return [...normalizedCards, ...fallbackCards].slice(0, limit);
 }
 
 // ============================================
@@ -1652,7 +1748,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
             Array.isArray(res) ? res : (res?.cards || res?.items || res?.challenges || [])
         );
 
-        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse'];
+        const validTypes = ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'truefalse', 'draw'];
         const seenPromptKeys = new Set();
         const seenTargetWords = new Set();
         const seenAnswers = new Set();
@@ -1672,7 +1768,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
                 if (seenTargetWords.has(targetWordKey)) continue;
             }
             if (promptKey && seenPromptKeys.has(promptKey)) continue;
-            if (['riddle', 'scramble'].includes(c.type) && (targetWordKey || answerKey)) {
+            if (['riddle', 'scramble', 'draw'].includes(c.type) && (targetWordKey || answerKey)) {
                 const checkAns = targetWordKey || answerKey;
                 if (seenAnswers.has(checkAns)) continue;
                 seenAnswers.add(checkAns);
@@ -1732,6 +1828,19 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
                     prompt: String(c.prompt || 'Decide whether the statement is true or false.').trim(),
                     answer: Boolean(c.answer)
                 };
+            } else if (c.type === 'draw') {
+                let rawAnswer = String(c.answer !== undefined && c.answer !== null ? c.answer : (c.targetWord || c.word || '')).trim();
+                if (rawAnswer.includes('/')) rawAnswer = rawAnswer.split('/')[0].trim();
+                if (/\bor\b/i.test(rawAnswer)) rawAnswer = rawAnswer.split(/\bor\b/i)[0].trim();
+                rawAnswer = rawAnswer.replace(/^(a|an|the)\s+/i, '').trim();
+                rawAnswer = rawAnswer.replace(/[^a-zA-Z\s-]/g, '').trim();
+                const cleanDrawAnswer = rawAnswer.toUpperCase().trim();
+                if (!cleanDrawAnswer) continue;
+                normalized = {
+                    type: 'draw',
+                    prompt: String(c.prompt || c.definition || c.clue || 'Draw the physical object described above.').trim(),
+                    answer: cleanDrawAnswer
+                };
             } else {
                 normalized = {
                     type: 'roleplay',
@@ -1742,7 +1851,7 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
             validCards.push(normalized);
         }
 
-        return validCards.slice(0, count);
+        return ensureMinimumDrawCards(validCards, count);
     },
     afterSuccess: async (deck, { req, generationInput }) => {
         saveSharedDeck({
@@ -1849,10 +1958,11 @@ app.post('/api/ai/compare-providers', apiRateLimit, async (req, res) => {
         prompt = `Generate ${count} questions about "${theme}" as JSON.`;
     }
 
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     const providersToTest = [
-        { name: 'Google Gemini', fn: () => (GEMINI_API_KEY || GOOGLE_API_KEY) ? callGemini(prompt, { apiKey: GEMINI_API_KEY || GOOGLE_API_KEY }) : null },
-        { name: 'Groq AI', fn: () => GROQ_API_KEY ? callGroq(prompt) : null },
-        { name: 'Kimi / Moonshot', fn: () => KIMI_API_KEY ? callKimi(prompt) : null },
+        { name: 'Google Gemini', fn: () => geminiKey ? callGemini(prompt, { apiKey: geminiKey }) : null },
+        { name: 'Groq AI', fn: () => GROQ_API_KEY ? callGroq(prompt, { apiKey: GROQ_API_KEY }) : null },
+        { name: 'Kimi / Moonshot', fn: () => KIMI_API_KEY ? callKimi(prompt, { apiKey: KIMI_API_KEY }) : null },
         { name: 'OpenRouter', fn: () => OPENROUTER_API_KEY ? callOpenRouter(prompt, { apiKey: OPENROUTER_API_KEY }) : null }
     ];
 
@@ -1971,16 +2081,18 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
-    console.log(`🎮 OpenClassTools Game Hub running → http://localhost:${PORT}`);
-    console.log('🔒 Security: Rate limiting enabled');
-    console.log('🤖 AI Console & Multi-Provider Backup Chain Options:');
-    console.log(`   1. [Primary]  Google Gemini (${GEMINI_MODEL}) -> ${process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log(`   2. [Backup 1] Groq AI (${GROQ_MODEL}) -> ${GROQ_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log(`   3. [Backup 2] Kimi / Moonshot (${KIMI_MODEL} @ ${KIMI_BASE_URL}) -> ${KIMI_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log(`   4. [Backup 3] OpenRouter Free Suite (${OPENROUTER_FREE_MODELS.length} free models) -> ${OPENROUTER_API_KEY ? 'Configured' : 'Missing key'}`);
-    console.log('✨ Strict JSON output formatting & safe JSON unwrapping active across all providers.');
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`🎮 OpenClassTools Game Hub running → http://localhost:${PORT}`);
+        console.log('🔒 Security: Rate limiting enabled');
+        console.log('🤖 AI Console & Multi-Provider Backup Chain Options:');
+        console.log(`   1. [Primary]  Google Gemini (${GEMINI_MODEL}) -> ${process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log(`   2. [Backup 1] Groq AI (${GROQ_MODEL}) -> ${GROQ_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log(`   3. [Backup 2] Kimi / Moonshot (${KIMI_MODEL} @ ${KIMI_BASE_URL}) -> ${KIMI_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log(`   4. [Backup 3] OpenRouter Free Suite (${OPENROUTER_FREE_MODELS.length} free models) -> ${OPENROUTER_API_KEY ? 'Configured' : 'Missing key'}`);
+        console.log('✨ Strict JSON output formatting & safe JSON unwrapping active across all providers.');
+    });
+}
 
-export { createFallbackQuestions, loadPrompt };
+export { app, createFallbackQuestions, ensureMinimumDrawCards, loadPrompt };
 
