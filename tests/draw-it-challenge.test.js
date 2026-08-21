@@ -8,7 +8,9 @@ import {
     DeckValidationError,
     normalizeDeckContent
 } from '../server/domain/deck-schemas.js';
-import { createFallbackQuestions } from '../server.js';
+import * as serverModule from '../server.js';
+
+const { createFallbackQuestions, loadPrompt } = serverModule;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,6 +94,52 @@ test('server lingoparty generation handler accepts and normalizes draw cards end
     // The generation pipeline must not silently drop AI-generated draw cards
     assert.match(serverSource, /validTypes\s*=\s*\[[\s\S]*['"]draw['"]/);
     assert.match(serverSource, /c\.type\s*===\s*['"]draw['"]/);
+});
+
+test('AI structured generation permits draw and explicitly allocates draw cards', async () => {
+    const requiredTypes = [
+        'riddle',
+        'scramble',
+        'pronunciation',
+        'association',
+        'grammar',
+        'speed',
+        'roleplay',
+        'ordering',
+        'draw'
+    ];
+    const schemaTypes = serverModule.LINGOPARTY_SCHEMA?.items?.properties?.type?.enum;
+    assert.ok(Array.isArray(schemaTypes), 'LingoParty structured-output schema must expose its permitted types');
+    for (const type of requiredTypes) {
+        assert.ok(schemaTypes.includes(type), `structured schema must permit ${type}`);
+    }
+
+    assert.equal(typeof serverModule.allocateLingoPartyCategories, 'function');
+    const allocation = serverModule.allocateLingoPartyCategories(18);
+    assert.deepEqual(allocation, {
+        riddle: 2,
+        scramble: 2,
+        pronunciation: 2,
+        association: 2,
+        grammar: 2,
+        speed: 2,
+        roleplay: 2,
+        ordering: 2,
+        draw: 2
+    });
+    assert.equal(Object.values(serverModule.allocateLingoPartyCategories(64)).reduce((sum, value) => sum + value, 0), 64);
+
+    const categoryAllocation = Object.entries(allocation)
+        .map(([type, amount]) => `${amount} ${type}`)
+        .join(', ');
+    const prompt = loadPrompt('lingoparty', {
+        count: '18',
+        categoryAllocation,
+        theme: 'Space',
+        cefrInstruction: 'Use CEFR B1 vocabulary.'
+    });
+    assert.match(prompt, /2 draw/i, 'generation prompt must explicitly require draw cards');
+    assert.match(prompt, /2 riddle/i, 'generation prompt must preserve explicit allocation for existing categories');
 });
 
 test('prompts.json contains Draw It category directives for concrete physical objects and zero leaks', async () => {

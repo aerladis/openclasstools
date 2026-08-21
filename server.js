@@ -332,7 +332,7 @@ const LINGOPARTY_SCHEMA = {
         properties: {
             type: {
                 type: 'string',
-                enum: ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay']
+                enum: ['riddle', 'scramble', 'pronunciation', 'association', 'grammar', 'speed', 'roleplay', 'ordering', 'draw']
             },
             word: { type: 'string' },
             scrambledWord: { type: 'string' },
@@ -344,6 +344,25 @@ const LINGOPARTY_SCHEMA = {
         required: ['type']
     }
 };
+
+const LINGOPARTY_GENERATION_CATEGORIES = LINGOPARTY_SCHEMA.items.properties.type.enum;
+
+function allocateLingoPartyCategories(count) {
+    const total = Math.max(0, Math.floor(Number(count) || 0));
+    const baseCount = Math.floor(total / LINGOPARTY_GENERATION_CATEGORIES.length);
+    const remainder = total % LINGOPARTY_GENERATION_CATEGORIES.length;
+
+    return Object.fromEntries(LINGOPARTY_GENERATION_CATEGORIES.map((type, index) => [
+        type,
+        baseCount + (index < remainder ? 1 : 0)
+    ]));
+}
+
+function formatLingoPartyCategoryAllocation(count) {
+    return Object.entries(allocateLingoPartyCategories(count))
+        .map(([type, amount]) => `${amount} ${type}`)
+        .join(', ');
+}
 
 async function callAnthropicProvider(prompt, options = {}) {
     const apiUrl = 'https://api.anthropic.com/v1/messages';
@@ -1125,6 +1144,9 @@ function loadPrompt(key, replacements = {}) {
         for (const [k, v] of Object.entries(replacements)) {
             promptTemplate = promptTemplate.split(`{${k}}`).join(v);
         }
+        if (key === 'lingoparty' && replacements.categoryAllocation) {
+            promptTemplate += `\n\nEXACT CATEGORY ALLOCATION DIRECTIVE:\nGenerate exactly: ${replacements.categoryAllocation}. The category counts must sum to ${replacements.count}.`;
+        }
         return promptTemplate;
     } catch (err) {
         console.error(`Error loading prompt key "${key}" from prompts.json:`, err);
@@ -1673,10 +1695,10 @@ app.post('/api/generate-lingoparty', apiRateLimit, createGenerationHandler({
         ];
 
         const batchPrompts = Array.from({ length: numBatches }, (_, i) => {
-            const perCategoryCount = Math.max(1, Math.floor(perBatchTarget / 8));
             const batchIndex = i + 1;
             const subFocus = batchFocusAngles[i % batchFocusAngles.length];
-            return loadPrompt('lingoparty', { count: perBatchTarget, perCategoryCount, batchIndex, numBatches, theme, cefrInstruction })
+            const categoryAllocation = formatLingoPartyCategoryAllocation(perBatchTarget);
+            return loadPrompt('lingoparty', { count: perBatchTarget, categoryAllocation, batchIndex, numBatches, theme, cefrInstruction })
                 + `\n\nSUB-FOCUS DIRECTIVE (BATCH ${batchIndex}): ${subFocus}`
                 + `\n\n${getModeInstruction(mode)}`;
         });
@@ -1902,7 +1924,7 @@ app.post('/api/ai/compare-providers', apiRateLimit, async (req, res) => {
         cefrInstruction: 'Use CEFR B1 level vocabulary.',
         batchIndex: '1',
         numBatches: '1',
-        perCategoryCount: '1'
+        categoryAllocation: formatLingoPartyCategoryAllocation(count)
     };
 
     let prompt;
@@ -2048,5 +2070,4 @@ if (process.env.NODE_ENV !== 'test') {
     });
 }
 
-export { app, createFallbackQuestions, loadPrompt };
-
+export { app, LINGOPARTY_SCHEMA, allocateLingoPartyCategories, createFallbackQuestions, loadPrompt };
