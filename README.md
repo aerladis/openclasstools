@@ -1,110 +1,86 @@
-# 🚀 OpenClassTools — Interactive Classroom Game Hub
+# OpenClassTools
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-play.metrix.dpdns.org-7c3aed?style=for-the-badge&logo=rocket)](https://play.metrix.dpdns.org)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs)](https://nodejs.org)
-[![React](https://img.shields.io/badge/Frontend-React%20%7C%20Vite-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#license)
+OpenClassTools is a browser-based collection of classroom games for teachers. It works well on a projector or smartboard, and students can play together without creating accounts, joining rooms, or using their own devices.
 
-**OpenClassTools** is a modern, high-energy web application and classroom game suite designed for teachers, ELT/EFL educators, and smartboard activities. It combines interactive board games, quiz shows, discussion tools, reusable **named decks**, and **AI-powered deck generation** with zero setup required out of the box.
+**Live site:** [play.metrix.dpdns.org](https://play.metrix.dpdns.org)
 
-🌐 **Try it Live**: [https://play.metrix.dpdns.org](https://play.metrix.dpdns.org)
+## LingoParty
 
----
+LingoParty is the main game in the collection. The teacher sets up the teams, chooses the number of orbits and launches a deck. Teams move across the board, answer language challenges and collect trophies.
 
-## 🎮 Included Games & Classroom Tools
+![LingoParty mission setup](docs/images/lingoparty-setup.png)
 
-| Game / Tool | Description | Mode |
-| :--- | :--- | :--- |
-| 🚀 **LingoParty (Space Odyssey)** | 5-row interactive cosmic board game with crew pawns, cosmic wheel spins, space station shop items, mystery fate cards, final boss challenges, and **8 challenge categories**. | Deck-Backed |
-| ❓ **Who Am I?** | Interactive character guessing game. Players ask yes/no questions to figure out their hidden identity. | Deck-Backed |
-| 🤫 **Taboo** | Classic vocabulary card game with forbidden taboo words to encourage creative descriptions. | Deck-Backed |
-| 🔤 **Hangman** | Visual word-guessing game with interactive cosmic gallows and clue hints. | Deck-Backed |
-| 💰 **Millionaire** | 15-question progressive quiz show with easy, medium, and hard difficulty stages. | Deck-Backed |
-| 🔤 **Kelime (Word Game)** | Clue-based English/Turkish word guessing game with instant reveal controls. | Deck-Backed |
-| 🎴 **Flashcards** | Vocabulary study cards with definitions, pronunciation notes, and translations. | Deck-Backed |
-| 🎩 **Six Thinking Hats** | Edward de Bono's 6 Hats critical discussion framework for classroom debates. | Deck-Backed |
-| 🍾 **Spin the Bottle** | Interactive classroom decision utility for student selection. | Utility |
-| 🎡 **Wheel of Names** | Customizable spinning wheel for choosing students, topics, or teams. | Utility |
+The board is designed for whole-class use. It includes team tracking, challenge cards, chance tiles, a space-station shop and a final goal tile.
 
----
+![LingoParty game board](docs/images/lingoparty-board.png)
 
-## 🧠 Smart AI Deck Generation & Backup Chain
+## Other classroom games
 
-Teachers can generate custom, theme-specific decks in seconds (e.g., *"Space Exploration"*, *"Job Interview Vocabulary"*, *"B1 CEFR Grammar"*). 
+The hub also includes:
 
-### Features:
-- ⚡ **Multi-Provider Failover Chain**: Google Gemini (`gemini-2.5-flash`) ➔ Groq (`llama-3.3-70b-versatile`) ➔ Kimi (`moonshot-v1-8k`) ➔ OpenRouter Free Suite.
-- 🔓 **Zero Setup Required**: Games generate instantly using built-in server provider pools. Custom teacher API keys are completely optional.
-- 🔒 **Privacy First**: Teacher keys are kept strictly in browser `sessionStorage` for the active tab only—never saved to disk or logged.
-- 🧠 **Memory Recall**: Intelligent deduplication prioritizes unshown questions. If a deck is cycled through, repeated questions are flagged with an animated `🧠 MEMORY RECALL` badge.
-- 🔢 **Logical Conversation Ordering**: Sentence-ordering challenges enforce strict conversational coherence (`A: Question` ➔ `B: Answer` ➔ `C: Reaction`) with fixed slot numbers (`1`, `2`, `3`...).
-- 📊 **Real-Time AI Console**: Live logging shows the exact AI provider, model name, response latency, and category breakdown.
+- **Who Am I?** for character guessing with yes/no questions
+- **Taboo** for vocabulary description without using forbidden words
+- **Hangman** for spelling and word recall
+- **Millionaire** for a 15-question quiz-show round
+- **Word Game** for clue-based vocabulary practice
+- **Vocabulary Flashcards** for review and recall
+- **Six Thinking Hats** for structured classroom discussion
+- **Wheel of Names** and **Spin the Bottle** for quick student selection
 
----
+## Decks and AI generation
 
-## 🛠️ Local Setup & Installation
+Most games use reusable named decks. A teacher can launch an existing deck or generate a new one around a topic and CEFR level.
 
-### Requirements
-- **Node.js**: v18.0.0 or higher
-- **Supabase**: Optional database for persistent custom decks (built-in system decks work out of the box).
+Generated decks are stored as versioned records, so a saved game does not quietly change later. Teacher-provided Gemini keys stay in the current browser tab's `sessionStorage`; OpenClassTools does not save them.
 
-### 1. Clone & Install
+AI generation is optional. The included system decks and ordinary gameplay still work without it.
+
+## Running it locally
+
+You need Node.js 18 or newer. Persistent decks and play-session records use Supabase.
+
 ```bash
 git clone https://github.com/aerladis/openclasstools.git
 cd openclasstools
 npm install
 ```
 
-### 2. Environment Configuration
-Create a `.env` file in the root directory (or copy `.env.example`):
+Copy `.env.example` to `.env` and add your configuration:
 
 ```env
-GEMINI_API_KEY=your_gemini_key
-GROQ_API_KEY=your_groq_key
-KIMI_API_KEY=your_kimi_key
-OPENROUTER_API_KEY=your_openrouter_key
+GEMINI_API_KEY=your_gemini_api_key_here
 PORT=8090
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
 ```
 
-### 3. Build & Run
+Apply the database migration described in [docs/database.md](docs/database.md), then seed the built-in decks and start the server:
+
 ```bash
-# Build React frontend & run server
-npm run build
+npm run seed:decks
 npm start
 ```
 
-Open `http://localhost:8090` in your web browser.
+Open [http://localhost:8090](http://localhost:8090).
 
----
+## How the project is organised
 
-## 🧪 Testing & Code Quality
+React and Vite power the main hub and LingoParty. The other games are focused browser clients served by the same Express server.
 
-Run the comprehensive unit test suite:
+Game state stays in the browser. The server handles named decks, AI generation and optional session records through HTTP APIs. There are no room codes or real-time remote-control connections.
+
+Useful endpoints:
+
+- `GET /api/decks?gameType=...` lists current decks for a game.
+- `POST /api/generate*` generates and registers a named deck.
+- `POST /api/sessions` starts an optional play record.
+- `PATCH /api/sessions/:id/complete` completes a play record.
+- `GET /api/health` reports server health.
+
+## Tests and build checks
 
 ```bash
 npm test
-```
-
-Build and lint verification:
-```bash
 npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
-
----
-
-## 🌐 Production Deployment
-
-OpenClassTools is deployed on a dedicated Linux VPS behind Nginx & PM2:
-
-- **Live URL**: `https://play.metrix.dpdns.org`
-- **Process Manager**: PM2 (`pm2 restart openclasstools`)
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the LICENSE file for details.
-
